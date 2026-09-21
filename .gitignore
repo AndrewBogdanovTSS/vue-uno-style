@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+.nuxt/
+.output/
+*.tgz
+
+# Editors
+.idea/
+.vscode/
+*.swp
+.DS_Store

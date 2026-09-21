@@ -1,0 +1,5 @@
+# `packageManager` in package.json is the exact pnpm source of truth. mise only
+# bootstraps the toolchain on machines where Node and pnpm are not installed.
+[tools]
+node = "24.14.1"
+pnpm = "12"
