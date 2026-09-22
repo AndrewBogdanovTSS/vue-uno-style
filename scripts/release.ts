@@ -251,4 +251,4 @@ if (run('git', ['push', '--follow-tags']) !== 0) {
 }
 
 console.log(`\nPushed v${target}. The release workflow will publish it.`)
-console.log('Watch it: https://github.com/AndrewBogdanovTSS/v-uno-style/actions\n')
+console.log('Watch it: https://github.com/AndrewBogdanovTSS/vue-uno-style/actions\n')

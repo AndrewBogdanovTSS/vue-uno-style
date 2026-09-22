@@ -30,14 +30,14 @@ export const resolveBreakpoints = ({
 
   if (baseBreakpoint && !names.includes(baseBreakpoint)) {
     throw new Error(
-      `[v-uno-style] Base breakpoint "${baseBreakpoint}" does not exist in the configured breakpoints.`,
+      `[vue-uno-style] Base breakpoint "${baseBreakpoint}" does not exist in the configured breakpoints.`,
     )
   }
 
   const base = baseBreakpoint ?? names.find((name) => isBaseValue(breakpoints[name]))
   if (!base) {
     throw new Error(
-      '[v-uno-style] Unable to resolve a base breakpoint. '
+      '[vue-uno-style] Unable to resolve a base breakpoint. '
       + 'Set baseBreakpoint or configure a breakpoint with the value 0, "0", "0px", or an empty string.',
     )
   }

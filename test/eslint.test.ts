@@ -8,12 +8,12 @@ import { styleProps } from '../src/core/getStyle'
 const createConfig = (directiveName?: string): LinterType.Config[] => [{
   files: ['**/*.vue', '*.vue'],
   plugins: {
-    'v-uno-style': {
+    'vue-uno-style': {
       rules: { 'no-multiple-v-style': noMultipleVStyle },
     },
   },
   rules: {
-    'v-uno-style/no-multiple-v-style': directiveName
+    'vue-uno-style/no-multiple-v-style': directiveName
       ? ['error', { directiveName }]
       : 'error',
   },
@@ -26,7 +26,7 @@ const verify = (code: string, directiveName?: string) => new Linter({ configType
 const fix = (code: string, directiveName?: string) => new Linter({ configType: 'flat' })
   .verifyAndFix(code, createConfig(directiveName), { filename: 'test.vue' }).output
 
-describe('v-uno-style/no-multiple-v-style', () => {
+describe('vue-uno-style/no-multiple-v-style', () => {
   describe('valid', () => {
     it('allows a single argument-style directive', () => {
       expect(verify('<template><div v-uno-style:c="color" /></template>')).toHaveLength(0)
@@ -157,14 +157,14 @@ describe('v-uno-style/no-multiple-v-style', () => {
 
   it('exports a flat recommended config', () => {
     expect(plugin.meta).toEqual({
-      name: 'v-uno-style',
+      name: 'vue-uno-style',
       version: '0.0.0-dev',
     })
     expect(plugin.configs.recommended).toEqual([
       expect.objectContaining({
         files: ['**/*.vue'],
-        plugins: { 'v-uno-style': plugin },
-        rules: { 'v-uno-style/no-multiple-v-style': 'error' },
+        plugins: { 'vue-uno-style': plugin },
+        rules: { 'vue-uno-style/no-multiple-v-style': 'error' },
       }),
     ])
   })

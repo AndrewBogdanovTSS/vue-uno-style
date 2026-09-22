@@ -1,5 +1,5 @@
 {
-  "name": "v-uno-style",
+  "name": "vue-uno-style",
   "version": "0.1.0",
   "type": "module",
   "description": "Responsive runtime styles for Vue powered by UnoCSS.",
@@ -14,13 +14,13 @@
   ],
   "license": "MIT",
   "author": "Andrii Bohdanov",
-  "homepage": "https://github.com/AndrewBogdanovTSS/v-uno-style#readme",
+  "homepage": "https://github.com/AndrewBogdanovTSS/vue-uno-style#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AndrewBogdanovTSS/v-uno-style.git"
+    "url": "git+https://github.com/AndrewBogdanovTSS/vue-uno-style.git"
   },
   "bugs": {
-    "url": "https://github.com/AndrewBogdanovTSS/v-uno-style/issues"
+    "url": "https://github.com/AndrewBogdanovTSS/vue-uno-style/issues"
   },
   "engines": {
     "node": ">=24"

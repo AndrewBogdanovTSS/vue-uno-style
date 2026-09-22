@@ -19,7 +19,7 @@ const isVUnoStylePreset = (preset: unknown): boolean => {
   return typeof preset === 'object'
     && preset !== null
     && 'name' in preset
-    && preset.name === 'v-uno-style'
+    && preset.name === 'vue-uno-style'
 }
 
 const hasPreset = (config: UserConfig) => config.presets?.some(isVUnoStylePreset) ?? false
@@ -32,7 +32,7 @@ const hasResolvedPreset = (config: UserConfig) => config.variants?.some(
   (variant) => typeof variant === 'object'
     && variant !== null
     && 'name' in variant
-    && variant.name === 'v-uno-style-override',
+    && variant.name === 'vue-uno-style-override',
 ) ?? false
 
 const addResolvedPreset = (
@@ -54,7 +54,7 @@ const addResolvedPreset = (
 
 const getThemeBreakpoints = (theme: unknown): BreakpointConfig => {
   if (!theme || typeof theme !== 'object') {
-    throw new Error('[v-uno-style] The resolved UnoCSS theme has no breakpoints.')
+    throw new Error('[vue-uno-style] The resolved UnoCSS theme has no breakpoints.')
   }
 
   const breakpoints = (theme as { breakpoints?: unknown }).breakpoints
@@ -67,7 +67,7 @@ const getThemeBreakpoints = (theme: unknown): BreakpointConfig => {
       (value) => typeof value !== 'string' && typeof value !== 'number',
     )
   ) {
-    throw new Error('[v-uno-style] The resolved UnoCSS theme has no valid breakpoints.')
+    throw new Error('[vue-uno-style] The resolved UnoCSS theme has no valid breakpoints.')
   }
 
   return breakpoints as BreakpointConfig
@@ -78,7 +78,7 @@ const renderRuntimePlugin = (
   breakpoints: BreakpointConfig,
   baseBreakpoint: string,
 ) => `import { defineNuxtPlugin } from '#app'
-import { createVUnoStyle } from 'v-uno-style'
+import { createVUnoStyle } from 'vue-uno-style'
 
 const directive = createVUnoStyle(${JSON.stringify({ breakpoints, baseBreakpoint })})
 
@@ -88,11 +88,11 @@ export default defineNuxtPlugin((nuxtApp) => {
 `
 
 /**
- * Registers the v-uno-style preset and a directive configured from the resolved UnoCSS theme.
+ * Registers the vue-uno-style preset and a directive configured from the resolved UnoCSS theme.
  */
 export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
   meta: {
-    name: 'v-uno-style',
+    name: 'vue-uno-style',
     configKey: 'vUnoStyle',
     compatibility: {
       nuxt: '>=3.17.0',
@@ -122,7 +122,7 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
     nuxt.hook('modules:done', async () => {
       if (!hasNuxtModule('unocss', nuxt)) {
         throw new Error(
-          '[v-uno-style] The Nuxt module requires @unocss/nuxt to be installed and registered.',
+          '[vue-uno-style] The Nuxt module requires @unocss/nuxt to be installed and registered.',
         )
       }
 
@@ -149,7 +149,7 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
       })
 
       addPluginTemplate({
-        filename: 'v-uno-style.mjs',
+        filename: 'vue-uno-style.mjs',
         getContents: () => renderRuntimePlugin(
           options.directiveName ?? 'uno-style',
           breakpoints,

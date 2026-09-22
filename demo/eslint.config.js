@@ -1,4 +1,4 @@
-import vUnoStyle from 'v-uno-style/eslint'
+import vUnoStyle from 'vue-uno-style/eslint'
 import vueParser from 'vue-eslint-parser'
 
 export default [

@@ -1,4 +1,4 @@
-# v-uno-style demo
+# vue-uno-style demo
 
 A minimal Nuxt app that exercises the built package through all four public
 integration paths: the Nuxt module, UnoCSS preset, Vue directive, and ESLint
@@ -15,7 +15,7 @@ pnpm demo:verify
 pnpm demo:dev
 ```
 
-`demo:verify` lints the real Vue template with `v-uno-style/eslint`, generates
+`demo:verify` lints the real Vue template with `vue-uno-style/eslint`, generates
 the Nuxt site, and checks the generated HTML and CSS. The assertions prove that
 directive classes and custom properties are present during SSR and that the
 preset emitted the matching base and responsive CSS.
@@ -25,5 +25,5 @@ preset emitted the matching base and responsive CSS.
 - Object syntax for `c`, `bgv`, and `p`.
 - Argument syntax for `bgi`.
 - A zero-valued `sm` base plus `md` and `lg` media-query breakpoints.
-- Nuxt module registration through `v-uno-style/nuxt`.
-- ESLint resolution through the built `v-uno-style/eslint` export.
+- Nuxt module registration through `vue-uno-style/nuxt`.
+- ESLint resolution through the built `vue-uno-style/eslint` export.

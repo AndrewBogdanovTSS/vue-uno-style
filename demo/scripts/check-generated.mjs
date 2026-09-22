@@ -35,5 +35,5 @@ assert.match(css, /\.o\\:c-\\\$c\{color:var\(--c\)/)
 assert.match(css, /\.o\\:bgi-\\\$bgi\{background-image:var\(--bgi\)/)
 assert.match(css, /@media \((?:min-width: 768px|width>=768px)\)/)
 
-console.log('PASS  generated HTML contains v-uno-style SSR classes and variables')
+console.log('PASS  generated HTML contains vue-uno-style SSR classes and variables')
 console.log('PASS  generated CSS contains the preset rules and responsive media query')

@@ -13,7 +13,7 @@ export interface PresetVUnoStyleOptions {
 }
 
 const overrideVariant: Variant = {
-  name: 'v-uno-style-override',
+  name: 'vue-uno-style-override',
   match(matcher) {
     if (!matcher.startsWith('o:')) return
 
@@ -36,7 +36,7 @@ const toUnoBreakpoints = (breakpoints: BreakpointConfig): Record<string, string>
   ]))
 
 const createBreakpointVariant = (configuredBreakpoints?: BreakpointConfig): Variant => ({
-  name: 'v-uno-style-breakpoints',
+  name: 'vue-uno-style-breakpoints',
   match(matcher, { theme }) {
     const breakpoints = configuredBreakpoints
       ?? (theme as { breakpoints?: BreakpointConfig }).breakpoints
@@ -57,7 +57,7 @@ const createBreakpointVariant = (configuredBreakpoints?: BreakpointConfig): Vari
 })
 
 /**
- * Adds the v-uno-style variant, variable rules, safelist, and explicit layer order.
+ * Adds the vue-uno-style variant, variable rules, safelist, and explicit layer order.
  */
 export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions>((options = {}) => {
   const configuredBreakpoints = options.breakpoints
@@ -65,7 +65,7 @@ export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions>((options = {
     : undefined
 
   return {
-    name: 'v-uno-style',
+    name: 'vue-uno-style',
     layers: {
       override: 10,
     },
@@ -79,7 +79,7 @@ export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions>((options = {
         ?? (theme as { breakpoints?: BreakpointConfig }).breakpoints
       if (!breakpoints) {
         throw new Error(
-          '[v-uno-style] No breakpoints found. Configure theme.breakpoints or pass breakpoints to presetVUnoStyle().',
+          '[vue-uno-style] No breakpoints found. Configure theme.breakpoints or pass breakpoints to presetVUnoStyle().',
         )
       }
 

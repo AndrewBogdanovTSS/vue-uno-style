@@ -58,7 +58,7 @@ const setupModule = async (
   return { hooks, nuxt }
 }
 
-describe('v-uno-style Nuxt module', () => {
+describe('vue-uno-style Nuxt module', () => {
   beforeEach(() => {
     vi.mocked(addPluginTemplate).mockReset()
     vi.mocked(hasNuxtModule).mockReset()
@@ -67,7 +67,7 @@ describe('v-uno-style Nuxt module', () => {
 
   it('declares the module metadata and default directive name', () => {
     expect(moduleDefinition.meta).toEqual(expect.objectContaining({
-      name: 'v-uno-style',
+      name: 'vue-uno-style',
       configKey: 'vUnoStyle',
       compatibility: { nuxt: '>=3.17.0' },
     }))
@@ -89,12 +89,12 @@ describe('v-uno-style Nuxt module', () => {
     expect(config.variants?.filter(
       (variant) => typeof variant === 'object'
         && 'name' in variant
-        && variant.name === 'v-uno-style-override',
+        && variant.name === 'vue-uno-style-override',
     )).toHaveLength(1)
     expect(config.rules).toHaveLength(2)
     expect(config.safelist).toHaveLength(1)
     expect(nuxt.options.unocss.presets?.some(
-      (preset) => !Array.isArray(preset) && 'name' in preset && preset.name === 'v-uno-style',
+      (preset) => !Array.isArray(preset) && 'name' in preset && preset.name === 'vue-uno-style',
     )).toBe(true)
   })
 
@@ -114,7 +114,7 @@ describe('v-uno-style Nuxt module', () => {
     if (!template || typeof template === 'string') throw new Error('Expected a plugin template')
     const contents = await template.getContents?.({} as never)
 
-    expect(template).toEqual(expect.objectContaining({ filename: 'v-uno-style.mjs' }))
+    expect(template).toEqual(expect.objectContaining({ filename: 'vue-uno-style.mjs' }))
     expect(contents).toContain('nuxtApp.vueApp.directive("style", directive)')
     expect(contents).toContain('"sm":"640px"')
     expect(contents).toContain('"md":"768px"')

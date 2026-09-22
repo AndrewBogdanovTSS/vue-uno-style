@@ -182,12 +182,12 @@ importers:
       unocss:
         specifier: ^66.10.5
         version: 66.10.5(@unocss/webpack@66.10.5(esbuild@0.28.2)(rolldown@1.2.9)(rollup@4.63.4)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2))(webpack@5.111.1(cssnano@8.0.10(postcss@8.5.28))(csso@5.0.5)(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.28)(svgo@4.1.0)))(rolldown@1.2.9)(rollup@4.63.4)(srvx@0.11.22)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2))
-      v-uno-style:
-        specifier: link:..
-        version: link:..
       vue-eslint-parser:
         specifier: ^10.4.1
         version: 10.4.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)
+      vue-uno-style:
+        specifier: link:..
+        version: link:..
 
 packages:
 

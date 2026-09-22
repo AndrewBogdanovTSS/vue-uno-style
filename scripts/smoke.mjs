@@ -50,7 +50,7 @@ check('the built ESLint plugin reports its version and fixes real Vue input', as
   assert.ok(plugin.rules['no-multiple-v-style'])
   assert.deepEqual(
     Object.keys(plugin.configs.recommended[0].rules),
-    ['v-uno-style/no-multiple-v-style'],
+    ['vue-uno-style/no-multiple-v-style'],
   )
 
   const eslint = new ESLint({
@@ -59,8 +59,8 @@ check('the built ESLint plugin reports its version and fixes real Vue input', as
     overrideConfig: [{
       files: ['**/*.vue'],
       languageOptions: { parser: vueParser, ecmaVersion: 2022, sourceType: 'module' },
-      plugins: { 'v-uno-style': plugin },
-      rules: { 'v-uno-style/no-multiple-v-style': 'error' },
+      plugins: { 'vue-uno-style': plugin },
+      rules: { 'vue-uno-style/no-multiple-v-style': 'error' },
     }],
     fix: true,
   })

@@ -1,8 +1,8 @@
-# v-uno-style
+# vue-uno-style
 
 Responsive runtime styles for Vue, backed by UnoCSS custom properties.
 
-`v-uno-style` turns API- or CMS-provided responsive values into CSS variables and
+`vue-uno-style` turns API- or CMS-provided responsive values into CSS variables and
 UnoCSS classes. The package includes the Vue directive, the UnoCSS preset that
 makes its generated classes work, an ESLint rule, and a Nuxt module that wires
 the pieces together.
@@ -28,7 +28,7 @@ zero-valued breakpoint. The package throws instead of guessing.
 ## Install
 
 ```bash
-npm install v-uno-style unocss vue
+npm install vue-uno-style unocss vue
 ```
 
 Requires Node 24 or newer, Vue 3.4 or newer, and UnoCSS 66 or newer. The Nuxt
@@ -39,12 +39,12 @@ newer. The ESLint integration requires ESLint 9 or newer and
 ## Nuxt module
 
 The Nuxt module is the shortest setup. Register UnoCSS first, then
-`v-uno-style/nuxt`:
+`vue-uno-style/nuxt`:
 
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ['@unocss/nuxt', 'v-uno-style/nuxt'],
+  modules: ['@unocss/nuxt', 'vue-uno-style/nuxt'],
   vUnoStyle: {
     baseBreakpoint: 'sm',
   },
@@ -56,7 +56,7 @@ directive as `v-uno-style`. To keep an existing `v-style` API:
 
 ```ts
 export default defineNuxtConfig({
-  modules: ['@unocss/nuxt', 'v-uno-style/nuxt'],
+  modules: ['@unocss/nuxt', 'vue-uno-style/nuxt'],
   vUnoStyle: {
     directiveName: 'style',
     baseBreakpoint: 'sm',
@@ -74,7 +74,7 @@ For plain Vue, create the directive with the same breakpoints used by UnoCSS:
 ```ts
 // main.ts
 import { createApp } from 'vue'
-import { createVUnoStyle } from 'v-uno-style'
+import { createVUnoStyle } from 'vue-uno-style'
 import App from './App.vue'
 
 const app = createApp(App)
@@ -125,7 +125,7 @@ The preset and directive must use the same breakpoints:
 ```ts
 // uno.config.ts
 import { defineConfig, presetWind3 } from 'unocss'
-import { presetVUnoStyle } from 'v-uno-style/preset'
+import { presetVUnoStyle } from 'vue-uno-style/preset'
 
 const breakpoints = { sm: 0, md: '768px', lg: '1024px' }
 
@@ -152,12 +152,12 @@ runtime values win over ordinary utilities on the same element.
 
 The directive merges its output into one class and style binding. Multiple
 instances on the same element are therefore rejected by
-`v-uno-style/no-multiple-v-style`, which can autofix adjacent directives into
+`vue-uno-style/no-multiple-v-style`, which can autofix adjacent directives into
 the object form. It also reports unsupported argument names.
 
 ```js
 // eslint.config.js
-import vUnoStyle from 'v-uno-style/eslint'
+import vUnoStyle from 'vue-uno-style/eslint'
 import vueParser from 'vue-eslint-parser'
 
 export default [
@@ -176,9 +176,9 @@ the same name:
 export default [{
   files: ['**/*.vue'],
   languageOptions: { parser: vueParser },
-  plugins: { 'v-uno-style': vUnoStyle },
+  plugins: { 'vue-uno-style': vUnoStyle },
   rules: {
-    'v-uno-style/no-multiple-v-style': ['error', { directiveName: 'style' }],
+    'vue-uno-style/no-multiple-v-style': ['error', { directiveName: 'style' }],
   },
 }]
 ```
@@ -246,7 +246,7 @@ import {
   getVarsClasses,
   resolveBreakpoints,
   styleProps,
-} from 'v-uno-style'
+} from 'vue-uno-style'
 ```
 
 ## Demo

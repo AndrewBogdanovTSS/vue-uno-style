@@ -200,7 +200,7 @@ const configs: Record<string, Linter.Config[]> = {}
 
 const plugin: VUnoStyleEslintPlugin = {
   meta: {
-    name: 'v-uno-style',
+    name: 'vue-uno-style',
     version: typeof __PACKAGE_VERSION__ === 'string' ? __PACKAGE_VERSION__ : '0.0.0-dev',
   },
   rules: {
@@ -210,10 +210,10 @@ const plugin: VUnoStyleEslintPlugin = {
 }
 
 configs.recommended = [{
-  name: 'v-uno-style/recommended',
+  name: 'vue-uno-style/recommended',
   files: ['**/*.vue'],
-  plugins: { 'v-uno-style': plugin },
-  rules: { 'v-uno-style/no-multiple-v-style': 'error' },
+  plugins: { 'vue-uno-style': plugin },
+  rules: { 'vue-uno-style/no-multiple-v-style': 'error' },
 }]
 
 export default plugin

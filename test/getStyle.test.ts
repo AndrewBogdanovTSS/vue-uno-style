@@ -38,6 +38,6 @@ describe('getStyle', () => {
 
     getStyle({ sm: '1rem' }, breakpoints, 'paddign')
 
-    expect(warn).toHaveBeenCalledWith('[v-uno-style] Unknown style property "paddign".')
+    expect(warn).toHaveBeenCalledWith('[vue-uno-style] Unknown style property "paddign".')
   })
 })

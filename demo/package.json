@@ -1,8 +1,8 @@
 {
-  "name": "v-uno-style-demo",
+  "name": "vue-uno-style-demo",
   "private": true,
   "type": "module",
-  "description": "Nuxt demo for the built v-uno-style package.",
+  "description": "Nuxt demo for the built vue-uno-style package.",
   "packageManager": "pnpm@12.4.1",
   "scripts": {
     "dev": "nuxt dev",
@@ -20,7 +20,7 @@
     "@unocss/nuxt": "^66.10.5",
     "eslint": "^10.11.0",
     "unocss": "^66.10.5",
-    "v-uno-style": "link:..",
+    "vue-uno-style": "link:..",
     "vue-eslint-parser": "^10.4.1"
   }
 }

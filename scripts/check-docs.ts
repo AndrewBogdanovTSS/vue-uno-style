@@ -63,10 +63,10 @@ const propertyChecks = (): Finding[] => {
 
 const packageChecks = (): Finding[] => {
   const integrations = [
-    ['root directive', "from 'v-uno-style'"],
-    ['UnoCSS preset', "from 'v-uno-style/preset'"],
-    ['ESLint plugin', "from 'v-uno-style/eslint'"],
-    ['Nuxt module', "'v-uno-style/nuxt'"],
+    ['root directive', "from 'vue-uno-style'"],
+    ['UnoCSS preset', "from 'vue-uno-style/preset'"],
+    ['ESLint plugin', "from 'vue-uno-style/eslint'"],
+    ['Nuxt module', "'vue-uno-style/nuxt'"],
   ] as const
   const nodeFloor = /Requires Node (\d+) or newer/.exec(readme)?.[1]
   const declaredNodeFloor = /(\d+)/.exec(pkg.engines?.node ?? '')?.[1]
@@ -105,9 +105,9 @@ const packageChecks = (): Finding[] => {
       'README does not explain that runtime classes require the preset',
     ),
     verdict(
-      readme.includes('v-uno-style/no-multiple-v-style'),
+      readme.includes('vue-uno-style/no-multiple-v-style'),
       'the shipped ESLint rule is documented',
-      'v-uno-style/no-multiple-v-style',
+      'vue-uno-style/no-multiple-v-style',
       'the rule name is missing',
     ),
   ]
