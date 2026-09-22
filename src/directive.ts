@@ -63,9 +63,11 @@ export const createVUnoStyle = (options: VUnoStyleOptions): ObjectDirective<HTML
   }
 
   return {
-    created: (el, binding, vnode) => inject(vnode, binding),
+    // `_el` is positional only - these two hooks write into the vnode props
+    // rather than the element, so Vue owns the class/style patching.
+    created: (_el, binding, vnode) => inject(vnode, binding),
     beforeMount: render,
-    beforeUpdate: (el, binding, vnode) => inject(vnode, binding),
+    beforeUpdate: (_el, binding, vnode) => inject(vnode, binding),
     updated,
     getSSRProps({ arg, value }: DirectiveBinding<VUnoStyleValue>) {
       if (!value) return
