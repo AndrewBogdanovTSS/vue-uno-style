@@ -1,0 +1,26 @@
+{
+  "name": "v-uno-style-demo",
+  "private": true,
+  "type": "module",
+  "description": "Nuxt demo for the built v-uno-style package.",
+  "packageManager": "pnpm@12.4.1",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "lint": "eslint app",
+    "verify:ssr": "node scripts/check-generated.mjs",
+    "verify": "pnpm lint && pnpm generate && pnpm verify:ssr"
+  },
+  "dependencies": {
+    "nuxt": "^4.5.2",
+    "vue": "^3.5.43"
+  },
+  "devDependencies": {
+    "@unocss/nuxt": "^66.10.5",
+    "eslint": "^10.11.0",
+    "unocss": "^66.10.5",
+    "v-uno-style": "link:..",
+    "vue-eslint-parser": "^10.4.1"
+  }
+}

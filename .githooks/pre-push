@@ -1,0 +1,6 @@
+#!/bin/sh
+# The full verification runs in CI. This hook catches fast failures locally.
+# Install with: pnpm hooks:install
+set -e
+pnpm typecheck
+pnpm check:docs

@@ -28,6 +28,30 @@ const addPreset = (config: UserConfig, preset: NonNullable<UserConfig['presets']
   if (!hasPreset(config)) config.presets = [...(config.presets ?? []), preset]
 }
 
+const hasResolvedPreset = (config: UserConfig) => config.variants?.some(
+  (variant) => typeof variant === 'object'
+    && variant !== null
+    && 'name' in variant
+    && variant.name === 'v-uno-style-override',
+) ?? false
+
+const addResolvedPreset = (
+  config: UserConfig,
+  preset: ReturnType<typeof presetVUnoStyle>,
+) => {
+  if (hasResolvedPreset(config)) return
+
+  config.layers = { ...(config.layers ?? {}), ...(preset.layers ?? {}) }
+  config.variants = [...(config.variants ?? []), ...(preset.variants ?? [])]
+  config.rules = [...(config.rules ?? []), ...(preset.rules ?? [])]
+  config.safelist = [...(config.safelist ?? []), ...(preset.safelist ?? [])]
+
+  if (typeof preset.extendTheme === 'function') {
+    const theme = config.theme ?? {}
+    config.theme = preset.extendTheme(theme, config as never) ?? theme
+  }
+}
+
 const getThemeBreakpoints = (theme: unknown): BreakpointConfig => {
   if (!theme || typeof theme !== 'object') {
     throw new Error('[v-uno-style] The resolved UnoCSS theme has no breakpoints.')
@@ -83,8 +107,16 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
       baseBreakpoint: options.baseBreakpoint,
     })
 
+    // @unocss/nuxt captures this options object during module setup and reads
+    // it later in build:before. Adding the preset here covers both module
+    // orders; the hook below also covers config loaded from uno.config.*.
+    const unoModuleOptions = (nuxt.options.unocss ??= {}) as UnocssNuxtOptions
+    addPreset(unoModuleOptions, preset)
+
     nuxt.hook('unocss:config', (config) => {
-      addPreset(config, preset)
+      // @unocss/nuxt fires this hook after resolving configured presets. Merge
+      // the concrete fields so the late addition is not left unexpanded.
+      addResolvedPreset(config, preset)
     })
 
     nuxt.hook('modules:done', async () => {

@@ -75,7 +75,7 @@ describe('v-uno-style Nuxt module', () => {
   })
 
   it('merges the preset into the UnoCSS config once', async () => {
-    const { hooks } = await setupModule(
+    const { hooks, nuxt } = await setupModule(
       { directiveName: 'uno-style', baseBreakpoint: 'sm' },
       { presets: [presetWind3()] },
     )
@@ -86,9 +86,16 @@ describe('v-uno-style Nuxt module', () => {
     await hook?.(config)
     await hook?.(config)
 
-    expect(config.presets?.filter(
-      (preset) => !Array.isArray(preset) && 'name' in preset && preset.name === 'v-uno-style',
+    expect(config.variants?.filter(
+      (variant) => typeof variant === 'object'
+        && 'name' in variant
+        && variant.name === 'v-uno-style-override',
     )).toHaveLength(1)
+    expect(config.rules).toHaveLength(2)
+    expect(config.safelist).toHaveLength(1)
+    expect(nuxt.options.unocss.presets?.some(
+      (preset) => !Array.isArray(preset) && 'name' in preset && preset.name === 'v-uno-style',
+    )).toBe(true)
   })
 
   it('generates a runtime plugin from resolved UnoCSS breakpoints', async () => {
