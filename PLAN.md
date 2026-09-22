@@ -241,11 +241,17 @@ Each phase ends green before the next starts.
 
 **Phase 4 - preset.** `o:` variant, `bgi`/`bgv` rules, declared layer order, safelist from resolved breakpoints times `styleProps`. Generation, layer-order and parity tests.
 
-**Phase 5 - ESLint plugin.** Port the rule with a configurable directive name, port its tests, add renamed-directive cases, add a flat `recommended` config.
+**Phase 5 - ESLint plugin, and the package's own lint gate.** Port the rule with a configurable directive name, port its tests, add renamed-directive cases, add a flat `recommended` config.
+
+Also add `eslint.config.js` and a `lint` script covering `src/` and `test/`. A deliberate addition, not parity: the reference package has no root ESLint config and no `lint` script - its `eslint` dep is for `RuleTester` and `@unocss/eslint-config` serves the demo. Added here because a package whose deliverable is an ESLint plugin should be linted by ESLint and dogfood its own rule, and because this package has four entries to keep consistent rather than three.
+
+In this phase rather than phase 7 because `eslint` is already a dev dependency the rule's tests need, so the config is nearly free here - while deferring it means phases 5 and 6 are written unlinted and the first run drops a large mechanical cleanup into the docs and CI work. Phase 7's CI then calls a script that already exists.
 
 **Phase 6 - Nuxt module.** Registers the plugin, merges the preset, resolves breakpoints from the uno theme, honours `directiveName`. Module test.
 
 **Phase 7 - docs, demo, CI.** README with the full prop table, four install paths, and the breakpoint contract stated up front. Demo app. `check-docs`, `smoke`, both workflows, pre-push hook.
+
+The demo carries its own `eslint.config.js` and a `demo:lint` script running the **published** plugin against real Vue templates - the reference package's pattern, and a different check from phase 5's gate. Phase 5 proves the rule works under `RuleTester`; this proves it survives being resolved from a package export, loaded by a real ESLint, and pointed at a real `uno.config.ts`. CI runs both, plus `lint`.
 
 **Phase 8 - publish.** `pnpm build` green with publint + attw, smoke green, `0.1.0` tagged, release workflow does the rest.
 
