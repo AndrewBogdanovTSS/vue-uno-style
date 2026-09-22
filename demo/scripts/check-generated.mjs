@@ -23,6 +23,12 @@ for (const value of [
   'o:bgi-$bgi',
   'o:md:bgi-$bgi-md',
   '--bgi:url(/dots.svg)',
+  // The palette toggle is what drives the directive's `updated` hook in a real
+  // browser - server rendering and `beforeMount` only ever cover the first
+  // write. If the control disappears, that half of the directive silently stops
+  // being exercisable, so its markers are asserted here.
+  'data-demo-toggle',
+  'data-demo-palette',
 ]) assert.ok(html.includes(value), `SSR HTML is missing ${value}`)
 
 const assets = join(output, '_nuxt')

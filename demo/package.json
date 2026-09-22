@@ -9,8 +9,9 @@
     "build": "nuxt build",
     "generate": "nuxt generate",
     "lint": "eslint app",
+    "verify:lint": "node scripts/check-lint.mjs",
     "verify:ssr": "node scripts/check-generated.mjs",
-    "verify": "pnpm lint && pnpm generate && pnpm verify:ssr"
+    "verify": "pnpm lint && pnpm verify:lint && pnpm generate && pnpm verify:ssr"
   },
   "dependencies": {
     "nuxt": "^4.5.2",
