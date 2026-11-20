@@ -51,6 +51,15 @@ type InjectedProps = Record<string | symbol, unknown> & {
 const EMPTY: StyleResult = { classes: '', style: {} }
 
 /**
+ * The resolved configuration of a directive built by `createVUnoStyle`, or `undefined` for any
+ * other directive. Lets tooling find a vnode's v-uno-style bindings the way the directive does.
+ */
+export const getDirectiveContext = (directive: unknown): {
+  breakpoints: ResolvedBreakpoints
+  properties?: ResolvedProperties
+} | undefined => (directive as MarkedDirective | null | undefined)?.[MARKER]
+
+/**
  * A single-root component can receive a v-uno-style from its usage site as well as define its own
  * on its root element - Vue then merges both bindings onto that one rendered vnode (`vnode.dirs`).
  * Each binding's hook still fires independently, so every hook has to work from the *combined* set
