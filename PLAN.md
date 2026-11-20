@@ -17,24 +17,27 @@ Audited against the running UnoCSS generator on 2026-09-21 at Canvas `13c8288c5e
 
 The directive is the visible part. It does not work alone: the classes it generates are resolved by an UnoCSS variant, two UnoCSS rules, and a safelist, and its core invariant is enforced by an ESLint rule. All of it moves.
 
-| Canvas source                                    | Lines | Role                                                                          | Moves?                       |
-| ------------------------------------------------ | ----- | ----------------------------------------------------------------------------- | ---------------------------- |
-| `domains/core/directives/style.ts`               | 160   | `vStyle` directive, `getStyle`, `styleProps` (40 props), `ResponsiveStyles`    | yes                          |
-| `domains/core/directives/getStyleProps.ts`       | 37    | Responsive value to `{ styles, classList }`                                   | yes                          |
-| `domains/core/utils/style/getVarsClasses.ts`     | 25    | Safelist token generator                                                      | yes                          |
-| `domains/brands/config/unocss/safelist.ts`       | 25    | Feeds `getVarsClasses` output into the uno safelist                           | partial - the v-style rows   |
-| `domains/core/config/unocss/variants/index.ts:9` | 1     | `variantMatcher('o', () => ({ layer: 'override' }))`                          | yes                          |
-| `domains/core/config/unocss/rules/background.ts` | 2     | `bgi-$*` to `background-image: var(--*)`, `bgv-$*` to `background: var(--*)`   | yes                          |
-| `domains/core/plugin/style/index.ts`             | 5     | Nuxt plugin registering the directive                                         | yes, as module               |
-| `eslint/rules/no-multiple-v-style.js`            | 98    | Enforces one directive per element                                            | yes                          |
-| `domains/core/directives/tests/style.test.ts`    | 681   | Directive behaviour, 40+ cases                                                | yes                          |
-| `.../tests/getStyleProps.test.ts`                | 88    | Class/var composition                                                         | yes                          |
-| `domains/core/plugin/style/index.test.ts`        | 22    | Plugin registration                                                           | rewrite as module test       |
-| `eslint/rules/no-multiple-v-style.test.ts`       | 76    | Rule and autofix                                                              | yes                          |
-| `domains/core/directives/README.md`              | -     | Usage docs                                                                    | source for package README    |
-| `docs/core/plugins/style.md`                     | -     | Usage docs, has a stale modifier example                                      | source for package README    |
+Line counts as of Canvas `develop` `599e6fdc04` (2026-11-20).
 
-**Stays in Canvas:** `getResponsiveClasses.ts` and `getStateClasses.ts` (same folder, unrelated to the directive), the brand/typography/button rows of `safelist.ts`, the `text-size-$text-size` allowance in `domains/core/config/unocss/blocklist.ts:135` (Canvas policy, not package behaviour), and every other `o:` consumer.
+| Canvas source                                     | Lines | Role                                                                          | Moves?                       |
+| ------------------------------------------------- | ----- | ----------------------------------------------------------------------------- | ---------------------------- |
+| `domains/core/directives/style.ts`                | 216   | `vStyle` directive, `getStyle`, `styleProps` (40 props), `ResponsiveStyles`    | yes                          |
+| `domains/core/directives/getStyleProps.ts`        | 38    | Responsive value to `{ styles, classList }`                                   | yes                          |
+| `domains/core/utils/style/getVarsClasses.ts`      | 24    | Safelist token generator                                                      | yes                          |
+| `domains/brands/config/unocss/safelist.ts`        | 23    | Feeds `getVarsClasses` output into the uno safelist                           | partial - the v-style rows   |
+| `domains/core/config/unocss/variants/index.ts:10` | 1     | `variantMatcher('o', () => ({ layer: 'override' }))`                          | yes                          |
+| `domains/core/config/unocss/rules/background.ts`  | 2     | `bgi-$*` to `background-image: var(--*)`, `bgv-$*` to `background: var(--*)`   | no - stays as Canvas rules   |
+| `domains/core/plugin/style/index.ts`              | 5     | Nuxt plugin registering the directive                                         | yes, as module               |
+| `eslint/rules/no-multiple-v-style.ts`             | 97    | Enforces one directive per element                                            | yes                          |
+| `domains/core/directives/tests/style.test.ts`     | 784   | Directive behaviour, 40+ cases                                                | yes                          |
+| `.../tests/getStyleProps.test.ts`                 | 88    | Class/var composition                                                         | yes                          |
+| `domains/core/plugin/style/index.test.ts`         | 22    | Plugin registration                                                           | rewrite as module test       |
+| `eslint/rules/no-multiple-v-style.test.ts`        | 76    | Rule and autofix                                                              | yes                          |
+| `domains/core/directives/README.md`               | -     | Usage docs                                                                    | source for package README    |
+| `docs/core/plugins/style.md`                      | -     | Usage docs, has a stale modifier example                                      | source for package README    |
+| `web-types.json`                                  | 75    | WebStorm completion for `v-style`, hand-written and drifted                   | replaced by the package's    |
+
+**Stays in Canvas:** `getResponsiveClasses.ts` and `getStateClasses.ts` (same folder, unrelated to the directive), the brand/typography/button rows of `safelist.ts`, the `text-size-$text-size` allowance in `domains/core/config/unocss/blocklist.ts:171` (Canvas policy, not package behaviour), and every other `o:` consumer.
 
 ### The safelist is load-bearing
 
@@ -48,7 +51,7 @@ The feature is correct. The problems are around it, and phase 0 fixes them in Ca
 
 | # | Sev | Issue |
 | --- | --- | --- |
-| 1 | MEDIUM | `override` layer outranks `default` only by alphabetical tiebreak. Proven: renaming it to `aaa-override` inverts the cascade for all 689 call sites; declaring `layers: { override: 10 }` restores it |
+| 1 | MEDIUM | `override` layer outranks `default` only by alphabetical tiebreak. Proven: renaming it to `aaa-override` inverts the cascade for every call site; declaring `layers: { override: 10 }` restores it |
 | 2 | LOW | `getVarsClasses.ts:12-13` JSDoc claims `md:o:c-$c-md`; code emits `o:md:c-$c-md`. Code and its test are right, only the comment is wrong |
 | 3 | LOW | `docs/core/plugins/style.md:9` documents `v-style.c="color"`. The directive reads `binding.arg`, so that form yields `o:sm-$sm` / `--sm` junk. Do not carry it into the package docs |
 | 4 | LOW | Unknown props in the arg form are silent no-ops - `getStyle({sm:'1rem'}, 'paddign')` returns `o:paddign-$paddign` |
@@ -72,6 +75,13 @@ The package should add a dev-mode `console.warn` on unknown props (stripped in p
 | Scope             | Directive + UnoCSS preset + ESLint plugin + Nuxt module   |
 | Breakpoints       | Read from the UnoCSS theme, with explicit override        |
 | Canvas migration  | Adoption out of scope; defect fixes are phase 0           |
+| Properties        | Consumer-configured; the package predefines none (2026-11-20) |
+
+### Properties are consumer configuration
+
+Decided 2026-11-20, superseding the 40-entry `styleProps` port. The package exports no property list. `properties` is required by the preset and the Nuxt module, which throw without it, since an empty safelist would make every generated class resolve to no CSS. The same list optionally feeds the directive (value formats, development warning), the ESLint rule (unknown-argument check) and the module's web-types rewrite.
+
+The Canvas-specific `bgi`/`bgv` rules left the preset. A property entry can declare `{ name, format: 'url' }`, which replaces the hardcoded `url()` wrap for `bgi` and stays JSON-serialisable through the Nuxt plugin template. A consumer that needs a non-preset utility adds its own `<prefix>-$<variable>` rule.
 
 ### Naming
 
@@ -84,10 +94,10 @@ The package name and the directive name are separate decisions, and they landed 
 - package name: `vue-uno-style`. `v-uno-style` was the first choice but reads as cryptic outside a Vue template, and `vue-uno-style-directive` was rejected for the opposite reason - the package ships four entries, and the directive on its own renders nothing, so a name ending in `-directive` would understate it and encourage exactly the install-the-directive-without-the-preset mistake. Discoverability for "directive" is carried by `keywords`, which npm search matches, so the name does not have to.
 - default registration name: `uno-style`, which Vue renders as `v-uno-style` in templates
 - exported directive: `vUnoStyle`, named after the directive rather than the package
-- Nuxt module option `directiveName`, so Canvas can pass `'style'` and keep `v-style` with zero call-site churn across its 689 call sites
-- the ESLint rule takes the same option. Canvas's copy hardcodes `attr.key?.name?.name === 'style'` (`no-multiple-v-style.js:34`); the port must read a configured name, or the rule silently stops firing for any consumer that renames the directive - the worst failure mode available, since the directive's `inject` docblock names this rule as the guarantee it relies on.
+- Nuxt module option `directiveName`, so Canvas can pass `'style'` and keep `v-style` with zero call-site churn across its 686 template uses in 196 `.vue` files (counted on `develop` `599e6fdc04`, 2026-11-20)
+- the ESLint rule takes the same option. Canvas's copy hardcodes `attr.key?.name?.name === 'style'` (`no-multiple-v-style.ts:34`); the port must read a configured name, or the rule silently stops firing for any consumer that renames the directive. Since Canvas `fd50a1df54` (2026-10-28) the directive composes every binding on a vnode, so duplicate directives on one tag now render correctly; the rule keeps templates in the single object form rather than guarding correctness.
 
-**`vue-uno-style` is free on npm** - confirmed 2026-09-22 against `registry.npmjs.org`. Canvas's `.npmrc` points at a jFrog mirror that returns `E401` for unauthenticated reads, so the check needs `--registry=https://registry.npmjs.org`:
+**`vue-uno-style` is free on npm** - confirmed 2026-09-22 and again 2026-11-20 (`E404`) against `registry.npmjs.org`. Canvas's `.npmrc` points at a jFrog mirror that returns `E401` for unauthenticated reads, so the check needs `--registry=https://registry.npmjs.org`:
 
 ```bash
 npm view vue-uno-style version --registry=https://registry.npmjs.org
@@ -107,16 +117,19 @@ vue-uno-style/
     core/
       breakpoints.ts     resolveBreakpoints(), base-breakpoint rule
       getStyleProps.ts   from Canvas, breakpoints injected not imported
-      getStyle.ts        getStyle() + styleProps + types
+      getStyle.ts        getStyle() + types
+      properties.ts      resolveProperties() - consumer list validation, value formats
       varsClasses.ts     from getVarsClasses.ts, doc corrected
+      webTypes.ts        createWebTypes() - WebStorm completion from styleProps
     directive.ts         createVUnoStyle(options) -> Directive
-    preset.ts            presetVUnoStyle() - variant, rules, safelist, layer
+    preset.ts            presetVUnoStyle() - variants, safelist from properties, layer
     eslint.ts            plugin with the no-multiple rule
-    nuxt.ts              Nuxt module: plugin + preset + directive name
+    nuxt.ts              Nuxt module: plugin + preset + directive name + web-types
+    webTypes.ts          node-only writer for the installed web-types file
     index.ts             directive + types + core re-exports
   test/                  ported suites + preset generation tests
   demo/                  Nuxt app proving all four entries together
-  scripts/               check-docs.ts, release.ts, smoke.mjs
+  scripts/               build-web-types.ts, check-docs.ts, release.ts, smoke.mjs
   .github/workflows/     ci.yml, release.yml
   .githooks/pre-push
   tsdown.config.ts  vitest.config.ts  tsconfig.json
@@ -137,7 +150,7 @@ vue-uno-style/
 
 ### Dependencies
 
-- peer: `vue >= 3.4`, `unocss >= 66` (preset entry), `eslint >= 9` (eslint entry), `@nuxt/kit` (nuxt entry) - all optional peers except `vue`
+- peer: `vue >= 3.4`, `unocss >= 66` (preset entry), `eslint >= 9` (eslint entry), `@nuxt/kit >= 3.17`, `@unocss/nuxt >= 66` and `@unocss/config >= 66` (nuxt entry) - all optional peers except `vue`
 - runtime deps: none. `normalizeClass` / `normalizeStyle` come from `vue`; `isObject` (`domains/core/utils/is.ts:72`, auto-imported in Canvas) is four tokens and gets inlined rather than depended on
 
 ---
@@ -151,7 +164,7 @@ vue-uno-style/
 The directive runs in the browser and cannot read `uno.config.ts`. So the theme is read at build time and handed to the runtime:
 
 1. `presetVUnoStyle()` reads `theme.breakpoints` from the resolved config and generates the safelist from the real keys.
-2. The Nuxt module resolves the UnoCSS config through `@unocss/config`, extracts the breakpoint keys, and injects them into the runtime plugin via `addTemplate` - the directive imports a virtual module, not a config file.
+2. The Nuxt module resolves the UnoCSS config through `@unocss/config`, extracts the breakpoints, and generates the runtime plugin with `addPluginTemplate`. The plugin calls `createVUnoStyle()` with the breakpoints inlined, so the browser never reads a config file.
 3. `createVUnoStyle({ breakpoints, baseBreakpoint })` stays public for consumers with no build step (plain Vue, Vitest, Storybook without the module).
 
 ### The hazard, stated plainly
@@ -221,13 +234,13 @@ Copied from the reference package, adjusted:
 
 | Risk                                                        | Handling                                                                                   |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `vue-uno-style` claimed before publish                      | Confirmed free 2026-09-22; re-check at phase 8. Fallback `vue-unocss-style`                 |
+| `vue-uno-style` claimed before publish                      | Confirmed free 2026-09-22 and 2026-11-20; re-check at phase 8. Fallback `vue-unocss-style`  |
 | Breakpoint semantics divergence (section 4)                 | Explicit base rule + throw + tests on both branches                                         |
 | Layer order accident (section 5)                            | Declared `layers` + ordering test                                                           |
 | ESLint rule silently dead after rename                      | Rule reads the configured name; test with a renamed directive                               |
 | SSR `getSSRProps` in non-Nuxt SSR                           | Covered by existing tests; demo asserts real SSR markup                                     |
-| `transformerCompileClass({ classPrefix: 'vf-' })` in Canvas | Canvas-specific, not ported; confirm it does not touch safelisted tokens during phase 9 |
-| 40 props, no runtime validation                             | Dev-mode warn on unknown prop                                                                |
+| Canvas transformers (`transformerCompileClass({ classPrefix: 'vf-' })`, `unocss-build-themes`) | Canvas-specific, not ported; confirm neither touches safelisted tokens during the Canvas migration (section 10) |
+| Properties not configured, or a prop missing from the list  | Preset and module throw without `properties`; dev-mode warn and ESLint report for an unlisted prop |
 
 ---
 
@@ -263,6 +276,24 @@ The demo carries its own `eslint.config.js` and a `demo:lint` script running the
 
 ## 10. Out of scope
 
-The Canvas migration. Once the package is on npm, a separate change under `GLOBAL15-132320` removes `domains/core/directives/style.ts`, `getStyleProps.ts`, `domains/core/utils/style/getVarsClasses.ts`, `domains/core/plugin/style/`, `eslint/rules/no-multiple-v-style.js`, the `o:` variant line, the `bgi`/`bgv` rules and the v-style safelist rows, adds the dependency, and registers the module with `directiveName: 'style'` so none of the 689 call sites move.
+The Canvas migration. Once the package is on npm, a separate change under `GLOBAL15-132320`:
 
-Worth doing only after the package's own suite is green - proving it against 192 files is a much worse first test than proving it against its own.
+- removes `domains/core/directives/style.ts`, `getStyleProps.ts` and their `tests/`, `domains/core/utils/style/getVarsClasses.ts`, `domains/core/plugin/style/` (plugin and test), the `o:` variant line and the v-style safelist rows
+- removes `eslint/rules/no-multiple-v-style.ts` and its test, its import and registration in `eslint.config.js` (lines 10, 23, 222) and its entry in `eslint/README.md`; registers `vue-uno-style/eslint` with `directiveName: 'style'` instead, so the `vf/no-multiple-v-style` rule id changes and any `eslint-disable` comments naming it must follow
+- adds the dependency and registers the module with `directiveName: 'style'`, so none of the 686 template uses move
+- repoints the 17 files importing from `#core/directives/style`: 11 `ResponsiveStyles` type imports, 1 `StyleProp`, 1 `styleProps` (`safelist.ts`, which goes away with its rows), and 3 `vStyle` imports (`tests/setup.ts`, `ColorSwatch.test.ts`, the plugin)
+- moves the 40 entries of `styleProps` into a Canvas-owned properties file (plain JS, so `eslint.config.js` can import it), with `bgi` as `{ name: 'bgi', format: 'url' }`; passes it to the module (`properties`) and the ESLint rule
+- keeps the `bgi-$*` and `bgv-$*` rules in `domains/core/config/unocss/rules/background.ts`, since the preset no longer ships them
+- replaces the `StyleProp` import with a type derived from the Canvas list, and `ResponsiveStyles` with `ResponsiveStyles<CanvasProperty>` where the narrower key type matters
+- updates `ProductGrid.vue:138`, the one direct `getStyle()` caller: the package signature is `getStyle(config, breakpoints, arg, properties)`, so it passes `resolveBreakpoints({ breakpoints: appConfig.ds.breakpoints })`
+- registers the package's directive in `tests/setup.ts` and `ColorSwatch.test.ts` through `createVUnoStyle({ breakpoints, properties })` with the Canvas list, so `bgi` keeps its `url()` wrap in tests
+- points the `o:` section of `domains/core/config/unocss/variants/README.md`, `domains/core/directives/README.md` and `docs/core/plugins/style.md` at the package README
+
+The same change deletes Canvas's `web-types.json` and the `"web-types": "./web-types.json"` field in its `package.json`. The file was added for `v-style` alone (`71096611aa`, GLOBAL15-66025) and has never described anything else; the package's own web-types, rewritten by the module for `directiveName: 'style'`, replaces it. Two conditions keep completion working:
+
+- `vue-uno-style` must be a direct dependency, since WebStorm reads web-types from direct dependencies only.
+- The module must have run once (`nuxt prepare` on postinstall, or any dev or build run). Until then the shipped file describes `uno-style`.
+
+Keeping Canvas's copy would show the directive twice in completion, and its list has already drifted from `styleProps`.
+
+Worth doing only after the package's own suite is green - proving it against 196 files is a much worse first test than proving it against its own.

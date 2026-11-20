@@ -1,11 +1,10 @@
 import type { ResolvedBreakpoints } from './breakpoints'
-import type { StyleProp } from './getStyle'
 
 /**
  * Composes the complete class list that must be safelisted for a style property.
  */
 export const getVarsClasses = (
-  prop: StyleProp,
+  prop: string,
   breakpoints: ResolvedBreakpoints,
   isOverride = true,
 ): string => ['', ...breakpoints.prefixed].map((breakpoint) => {

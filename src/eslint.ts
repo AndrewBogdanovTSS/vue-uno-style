@@ -1,11 +1,14 @@
+import type { PropertyConfig } from './core/properties'
 import type { Linter, Rule } from 'eslint'
-import { styleProps } from './core/getStyle'
+import { resolveProperties } from './core/properties'
 
 declare const __PACKAGE_VERSION__: string
 
 export interface NoMultipleVStyleOptions {
   /** Directive registration name without the `v-` prefix. */
   directiveName?: string
+  /** The properties configured for the preset. When set, other argument names are reported. */
+  properties?: PropertyConfig[]
 }
 
 export interface VUnoStyleEslintPlugin {
@@ -57,18 +60,18 @@ interface RenderEntry {
 }
 
 const defaultDirectiveName = 'uno-style'
-const supportedStyleProps = new Set<string>(styleProps)
 const asRuleNode = (node: VueNode): Rule.Node => node as unknown as Rule.Node
 
 /**
- * Disallows unsupported properties and multiple v-uno-style directives on one element.
+ * Disallows multiple v-uno-style directives on one element, and argument names outside the
+ * configured properties when they are passed.
  */
 export const noMultipleVStyle: Rule.RuleModule = {
   meta: {
     type: 'problem',
     fixable: 'code',
     docs: {
-      description: 'Disallow unsupported properties and multiple v-uno-style directives',
+      description: 'Disallow multiple v-uno-style directives and unconfigured properties',
     },
     schema: [{
       type: 'object',
@@ -76,6 +79,24 @@ export const noMultipleVStyle: Rule.RuleModule = {
         directiveName: {
           type: 'string',
           minLength: 1,
+        },
+        properties: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            anyOf: [
+              { type: 'string', minLength: 1 },
+              {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', minLength: 1 },
+                  format: { type: 'string' },
+                },
+                required: ['name'],
+                additionalProperties: false,
+              },
+            ],
+          },
         },
       },
       additionalProperties: false,
@@ -85,7 +106,7 @@ export const noMultipleVStyle: Rule.RuleModule = {
         'Multiple v-{{directiveName}} directives on a single element are not allowed. '
         + 'Combine them using the object syntax: v-{{directiveName}}="{ prop1: val1, prop2: val2 }".',
       unknownStyleProp:
-        'Unknown v-{{directiveName}} property "{{prop}}". Use a property exported by styleProps.',
+        'Unknown v-{{directiveName}} property "{{prop}}". Add it to the configured properties.',
     },
   },
 
@@ -96,6 +117,9 @@ export const noMultipleVStyle: Rule.RuleModule = {
     const sourceCode = context.sourceCode
     const options = context.options[0] as NoMultipleVStyleOptions | undefined
     const directiveName = options?.directiveName ?? defaultDirectiveName
+    const configured = options?.properties
+      ? new Set(resolveProperties(options.properties).names)
+      : undefined
 
     return parserServices.defineTemplateBodyVisitor({
       VStartTag(node) {
@@ -106,8 +130,9 @@ export const noMultipleVStyle: Rule.RuleModule = {
         directiveAttributes.forEach((attribute) => {
           const argument = attribute.key?.argument
           if (
-            argument?.type === 'VIdentifier'
-            && !supportedStyleProps.has((argument as VueIdentifier).name)
+            configured
+            && argument?.type === 'VIdentifier'
+            && !configured.has((argument as VueIdentifier).name)
           ) {
             context.report({
               node: asRuleNode(argument),

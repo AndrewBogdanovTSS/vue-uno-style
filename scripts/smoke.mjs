@@ -21,9 +21,9 @@ check('the root entry exports the directive and core API', async () => {
     'getStyleProps',
     'getVarsClasses',
     'resolveBreakpoints',
-    'styleProps',
+    'resolveProperties',
   ]) assert.ok(name in api, `missing export: ${name}`)
-  assert.equal(api.styleProps.length, 40)
+  assert.ok(!('styleProps' in api), 'the package must not predefine properties')
 })
 
 check('the built preset generates runtime CSS and its safelist', async () => {
@@ -31,7 +31,7 @@ check('the built preset generates runtime CSS and its safelist', async () => {
   const { createGenerator, presetWind3 } = await import('unocss')
   const breakpoints = { sm: 0, md: '768px', lg: '1024px' }
   const uno = await createGenerator({
-    presets: [presetWind3(), presetVUnoStyle({ breakpoints })],
+    presets: [presetWind3(), presetVUnoStyle({ breakpoints, properties: ['c'] })],
   })
   const { css, matched } = await uno.generate('', { preflights: false })
 
@@ -39,6 +39,8 @@ check('the built preset generates runtime CSS and its safelist', async () => {
   assert.ok(matched.has('o:md:c-$c-md'))
   assert.match(css, /color:var\(--c\)/)
   assert.match(css, /@media \(min-width: 768px\)/)
+  assert.ok(!matched.has('o:bg-$bg'), 'only configured properties are safelisted')
+  assert.throws(() => presetVUnoStyle({ breakpoints }), /No properties configured/)
 })
 
 check('the built ESLint plugin reports its version and fixes real Vue input', async () => {
@@ -73,6 +75,16 @@ check('the built ESLint plugin reports its version and fixes real Vue input', as
     result.output,
     '<template><div v-uno-style="{ c: color, bg: background }" /></template>',
   )
+})
+
+check('the package points WebStorm at a built web-types file', async () => {
+  const webTypes = JSON.parse(readFileSync(join(root, pkg['web-types']), 'utf8'))
+  const [directive] = webTypes.contributions.html['vue-directives']
+
+  assert.equal(webTypes.version, pkg.version)
+  assert.equal(directive.name, 'uno-style')
+  assert.equal(directive.argument.pattern, undefined, 'the shipped file must not predefine properties')
+  assert.ok(pkg.files.includes('dist'), 'web-types must ship inside a published folder')
 })
 
 check('the Nuxt module entry imports from the built package', async () => {

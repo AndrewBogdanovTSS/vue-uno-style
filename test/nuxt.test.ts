@@ -3,17 +3,27 @@ import { addPluginTemplate, hasNuxtModule } from '@nuxt/kit'
 import { presetWind3 } from 'unocss'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const warn = vi.fn()
+
 vi.mock('@nuxt/kit', () => ({
   addPluginTemplate: vi.fn(),
   defineNuxtModule: vi.fn((definition) => definition),
   hasNuxtModule: vi.fn(() => true),
+  useLogger: vi.fn(() => ({ warn })),
+}))
+
+// The real writer targets the file next to the module, which is `src/` under test
+vi.mock('../src/webTypes', () => ({
+  packageWebTypesPath: vi.fn(() => '/pkg/dist/web-types.json'),
+  writeWebTypes: vi.fn(() => 'written'),
 }))
 
 import module from '../src/nuxt'
+import { writeWebTypes } from '../src/webTypes'
 
 type Hook = (...args: unknown[]) => unknown
 type ModuleDefinition = {
-  defaults: { directiveName: string }
+  defaults: { directiveName: string, webTypes: boolean }
   meta: {
     name: string
     configKey: string
@@ -24,12 +34,15 @@ type ModuleDefinition = {
       baseBreakpoint?: string
       breakpoints?: Record<string, number | string>
       directiveName?: string
+      properties?: Array<string | { name: string, format?: 'url' }>
+      webTypes?: boolean
     },
     nuxt: unknown,
   ) => unknown
 }
 
 const moduleDefinition = module as unknown as ModuleDefinition
+const properties = ['c', 'bg', { name: 'bgi', format: 'url' as const }]
 
 const createNuxt = (unocss: UserConfig & { configFile?: string | false } = {}) => {
   const hooks = new Map<string, Hook>()
@@ -53,7 +66,7 @@ const setupModule = async (
 ) => {
   const { hooks, nuxt } = createNuxt(unocss)
 
-  await moduleDefinition.setup(options, nuxt)
+  await moduleDefinition.setup({ properties, ...options }, nuxt)
 
   return { hooks, nuxt }
 }
@@ -63,6 +76,9 @@ describe('vue-uno-style Nuxt module', () => {
     vi.mocked(addPluginTemplate).mockReset()
     vi.mocked(hasNuxtModule).mockReset()
     vi.mocked(hasNuxtModule).mockReturnValue(true)
+    vi.mocked(writeWebTypes).mockReset()
+    vi.mocked(writeWebTypes).mockReturnValue('written')
+    warn.mockReset()
   })
 
   it('declares the module metadata and default directive name', () => {
@@ -71,7 +87,62 @@ describe('vue-uno-style Nuxt module', () => {
       configKey: 'vUnoStyle',
       compatibility: { nuxt: '>=3.17.0' },
     }))
-    expect(moduleDefinition.defaults).toEqual({ directiveName: 'uno-style' })
+    expect(moduleDefinition.defaults).toEqual({ directiveName: 'uno-style', webTypes: true })
+  })
+
+  it('rewrites the package web-types with the registered directive name', async () => {
+    await setupModule({ directiveName: 'style', webTypes: true })
+
+    expect(writeWebTypes).toHaveBeenCalledTimes(1)
+    const [file, contents] = vi.mocked(writeWebTypes).mock.calls[0]!
+    const [directive] = JSON.parse(contents).contributions.html['vue-directives']
+
+    expect(file).toBe('/pkg/dist/web-types.json')
+    expect(directive.name).toBe('style')
+    expect(directive.argument.pattern.or).toEqual(['c', 'bg', 'bgi'])
+  })
+
+  it.each([
+    ['missing', undefined],
+    ['empty', []],
+  ])('fails the build when properties are %s', async (_label, configured) => {
+    const { nuxt } = createNuxt()
+
+    await expect(async () => moduleDefinition.setup(
+      { directiveName: 'style', properties: configured as never },
+      nuxt,
+    )).rejects.toThrow('No properties configured')
+  })
+
+  it('passes the configured properties to the runtime directive', async () => {
+    const { hooks } = await setupModule({
+      directiveName: 'style',
+      breakpoints: { sm: 0, md: 768 },
+    })
+
+    await hooks.get('modules:done')?.()
+
+    const template = vi.mocked(addPluginTemplate).mock.calls[0]?.[0]
+    if (!template || typeof template === 'string') throw new Error('Expected a plugin template')
+    const contents = await template.getContents?.({} as never)
+
+    expect(contents).toContain('"properties":["c","bg",{"name":"bgi","format":"url"}]')
+  })
+
+  it('leaves the shipped web-types alone when disabled', async () => {
+    await setupModule({ directiveName: 'style', webTypes: false })
+
+    expect(writeWebTypes).not.toHaveBeenCalled()
+  })
+
+  it('warns instead of failing when the web-types cannot be written', async () => {
+    vi.mocked(writeWebTypes).mockImplementation(() => {
+      throw new Error('EROFS: read-only file system')
+    })
+
+    await expect(setupModule({ directiveName: 'style', webTypes: true })).resolves.toBeDefined()
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('EROFS: read-only file system'))
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('v-style'))
   })
 
   it('merges the preset into the UnoCSS config once', async () => {
@@ -91,7 +162,7 @@ describe('vue-uno-style Nuxt module', () => {
         && 'name' in variant
         && variant.name === 'vue-uno-style-override',
     )).toHaveLength(1)
-    expect(config.rules).toHaveLength(2)
+    expect(config.rules ?? []).toHaveLength(0)
     expect(config.safelist).toHaveLength(1)
     expect(nuxt.options.unocss.presets?.some(
       (preset) => !Array.isArray(preset) && 'name' in preset && preset.name === 'vue-uno-style',

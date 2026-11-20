@@ -1,11 +1,18 @@
 import type { BreakpointConfig } from './core/breakpoints'
-import type { Rule, Variant } from 'unocss'
+import type { PropertyConfig } from './core/properties'
+import type { Variant } from 'unocss'
 import { definePreset } from 'unocss'
 import { resolveBreakpoints } from './core/breakpoints'
-import { styleProps } from './core/getStyle'
+import { resolveProperties } from './core/properties'
 import { getVarsClasses } from './core/varsClasses'
 
 export interface PresetVUnoStyleOptions {
+  /**
+   * Every UnoCSS utility prefix the directive may set, e.g. `['c', 'bg', 'p']`. Each needs a
+   * UnoCSS rule that accepts a `<prefix>-$<variable>` value. Required: the classes are composed at
+   * runtime, so only the ones safelisted from this list get CSS.
+   */
+  properties: readonly PropertyConfig[]
   /** Override breakpoints instead of reading them from the resolved UnoCSS theme. */
   breakpoints?: BreakpointConfig
   /** Explicitly select the unprefixed base breakpoint. */
@@ -23,11 +30,6 @@ const overrideVariant: Variant = {
     }
   },
 }
-
-const variableRules: Rule[] = [
-  [/^bgi-\$(.+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })],
-  [/^bgv-\$(.+)$/, ([, name]) => ({ background: `var(--${name})` })],
-]
 
 const toUnoBreakpoints = (breakpoints: BreakpointConfig): Record<string, string> =>
   Object.fromEntries(Object.entries(breakpoints).map(([name, value]) => [
@@ -57,11 +59,14 @@ const createBreakpointVariant = (configuredBreakpoints?: BreakpointConfig): Vari
 })
 
 /**
- * Adds the vue-uno-style variant, variable rules, safelist, and explicit layer order.
+ * Adds the vue-uno-style variants, the safelist for the configured properties, and an explicit
+ * layer order. Throws when no properties are configured.
  */
-export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions>((options = {}) => {
-  const configuredBreakpoints = options.breakpoints
-    ? toUnoBreakpoints(options.breakpoints)
+export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions>((options) => {
+  const { names } = resolveProperties(options?.properties)
+  const { breakpoints, baseBreakpoint } = (options ?? {}) as Partial<PresetVUnoStyleOptions>
+  const configuredBreakpoints = breakpoints
+    ? toUnoBreakpoints(breakpoints)
     : undefined
 
   return {
@@ -70,25 +75,24 @@ export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions>((options = {
       override: 10,
     },
     variants: [overrideVariant, createBreakpointVariant(configuredBreakpoints)],
-    rules: variableRules,
     extendTheme: configuredBreakpoints
       ? (theme) => ({ ...theme, breakpoints: configuredBreakpoints })
       : undefined,
     safelist: [({ theme }) => {
-      const breakpoints = configuredBreakpoints
+      const available = configuredBreakpoints
         ?? (theme as { breakpoints?: BreakpointConfig }).breakpoints
-      if (!breakpoints) {
+      if (!available) {
         throw new Error(
           '[vue-uno-style] No breakpoints found. Configure theme.breakpoints or pass breakpoints to presetVUnoStyle().',
         )
       }
 
       const resolved = resolveBreakpoints({
-        breakpoints,
-        baseBreakpoint: options.baseBreakpoint,
+        breakpoints: available,
+        baseBreakpoint,
       })
 
-      return styleProps.flatMap((prop) => getVarsClasses(prop, resolved).split(' '))
+      return names.flatMap((prop) => getVarsClasses(prop, resolved).split(' '))
     }],
   }
 })

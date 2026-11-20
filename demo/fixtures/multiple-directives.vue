@@ -5,7 +5,7 @@
   whether the rule works or has silently stopped matching.
 -->
 <template>
-  <div v-uno-style:c="titleColor" class="card" v-uno-style:bg="surface" />
+  <div v-uno-style:c="titleColor" class="card" v-uno-style:bgv="surface" />
 </template>
 
 <script setup lang="ts">

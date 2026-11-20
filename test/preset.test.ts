@@ -1,17 +1,17 @@
 import { createGenerator, presetWind3 } from 'unocss'
 import { describe, expect, it } from 'vitest'
 import { resolveBreakpoints } from '../src/core/breakpoints'
-import { styleProps } from '../src/core/getStyle'
 import { getVarsClasses } from '../src/core/varsClasses'
 import { presetVUnoStyle } from '../src/preset'
 
 const canvasBreakpoints = { sm: '0px', md: '768px', lg: '1024px' }
+const properties = ['c', 'bg', 'p']
 
 const createUno = async (
-  options: Parameters<typeof presetVUnoStyle>[0] = {},
+  options: Partial<Parameters<typeof presetVUnoStyle>[0]> = {},
   themeBreakpoints: Record<string, string> = canvasBreakpoints,
 ) => createGenerator({
-  presets: [presetWind3(), presetVUnoStyle(options)],
+  presets: [presetWind3(), presetVUnoStyle({ properties, ...options })],
   theme: { breakpoints: themeBreakpoints },
 })
 
@@ -30,22 +30,23 @@ describe('presetVUnoStyle', () => {
     expect(css).toContain('.o\\:md\\:c-\\$c-md{color:var(--c-md);}')
   })
 
-  it('generates the background-image and background variable rules', async () => {
-    const uno = await createUno()
-    const { css, matched } = await uno.generate(['o:bgi-$bgi', 'o:bgv-$bgv'], {
-      preflights: false,
-      safelist: false,
+  it('ships no rules of its own, so a consumer rule serves a custom property', async () => {
+    const uno = await createGenerator({
+      presets: [presetWind3(), presetVUnoStyle({ properties: [{ name: 'bgi', format: 'url' }] })],
+      rules: [[/^bgi-\$(.+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })]],
+      theme: { breakpoints: canvasBreakpoints },
     })
+    const { css, matched } = await uno.generate('', { preflights: false })
 
-    expect([...matched]).toEqual(['o:bgi-$bgi', 'o:bgv-$bgv'])
+    expect(presetVUnoStyle({ properties }).rules).toBeUndefined()
+    expect(matched).toContain('o:bgi-$bgi')
     expect(css).toContain('background-image:var(--bgi);')
-    expect(css).toContain('background:var(--bgv);')
   })
 
-  it('safelists every runtime class for every supported property', async () => {
+  it('safelists every runtime class for exactly the configured properties', async () => {
     const uno = await createUno({ breakpoints: canvasBreakpoints })
     const resolved = resolveBreakpoints({ breakpoints: canvasBreakpoints })
-    const expected = styleProps.flatMap((prop) => getVarsClasses(prop, resolved).split(' '))
+    const expected = properties.flatMap((prop) => getVarsClasses(prop, resolved).split(' '))
     const { matched } = await uno.generate('', { preflights: false })
 
     expect([...matched].sort()).toEqual(expected.sort())
@@ -55,7 +56,7 @@ describe('presetVUnoStyle', () => {
     const uno = await createUno()
     const breakpoints = (uno.config.theme as { breakpoints: Record<string, string> }).breakpoints
     const resolved = resolveBreakpoints({ breakpoints })
-    const expected = styleProps.flatMap((prop) => getVarsClasses(prop, resolved).split(' '))
+    const expected = properties.flatMap((prop) => getVarsClasses(prop, resolved).split(' '))
     const { matched } = await uno.generate('', { preflights: false })
 
     expect([...matched].sort()).toEqual(expected.sort())
@@ -118,11 +119,19 @@ describe('presetVUnoStyle', () => {
 
   it('throws when neither the theme nor options provide breakpoints', async () => {
     const uno = await createGenerator({
-      presets: [presetVUnoStyle()],
+      presets: [presetVUnoStyle({ properties })],
     })
 
     await expect(uno.generate('', { preflights: false }))
       .rejects.toThrow('No breakpoints found')
+  })
+
+  it.each([
+    ['missing', undefined],
+    ['empty', []],
+  ])('throws at configuration time when properties are %s', (_label, configured) => {
+    expect(() => presetVUnoStyle({ properties: configured as never }))
+      .toThrow('No properties configured')
   })
 
   it('throws when no base breakpoint can be resolved', async () => {

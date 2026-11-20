@@ -1,5 +1,7 @@
 export * from './core/breakpoints'
 export * from './core/getStyle'
 export * from './core/getStyleProps'
+export * from './core/properties'
 export * from './core/varsClasses'
+export * from './core/webTypes'
 export * from './directive'

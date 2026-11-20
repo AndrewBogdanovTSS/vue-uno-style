@@ -3,9 +3,13 @@ import { Linter } from 'eslint'
 import * as vueParser from 'vue-eslint-parser'
 import { describe, expect, it } from 'vitest'
 import plugin, { noMultipleVStyle } from '../src/eslint'
-import { styleProps } from '../src/core/getStyle'
 
-const createConfig = (directiveName?: string): LinterType.Config[] => [{
+const properties = ['c', 'bg', { name: 'bgi', format: 'url' as const }]
+
+const createConfig = (
+  directiveName?: string,
+  configured?: typeof properties,
+): LinterType.Config[] => [{
   files: ['**/*.vue', '*.vue'],
   plugins: {
     'vue-uno-style': {
@@ -13,15 +17,16 @@ const createConfig = (directiveName?: string): LinterType.Config[] => [{
     },
   },
   rules: {
-    'vue-uno-style/no-multiple-v-style': directiveName
-      ? ['error', { directiveName }]
+    'vue-uno-style/no-multiple-v-style': directiveName || configured
+      ? ['error', { directiveName, properties: configured }]
       : 'error',
   },
   languageOptions: { parser: vueParser },
 }]
 
-const verify = (code: string, directiveName?: string) => new Linter({ configType: 'flat' })
-  .verify(code, createConfig(directiveName), { filename: 'test.vue' })
+const verify = (code: string, directiveName?: string, configured?: typeof properties) =>
+  new Linter({ configType: 'flat' })
+    .verify(code, createConfig(directiveName, configured), { filename: 'test.vue' })
 
 const fix = (code: string, directiveName?: string) => new Linter({ configType: 'flat' })
   .verifyAndFix(code, createConfig(directiveName), { filename: 'test.vue' }).output
@@ -47,8 +52,13 @@ describe('vue-uno-style/no-multiple-v-style', () => {
       )).toHaveLength(0)
     })
 
-    it.each(styleProps)('allows the supported "%s" property', (prop) => {
-      expect(verify(`<template><div v-uno-style:${prop}="value" /></template>`))
+    it.each(['c', 'bg', 'bgi'])('allows the configured "%s" property', (prop) => {
+      expect(verify(`<template><div v-uno-style:${prop}="value" /></template>`, undefined, properties))
+        .toHaveLength(0)
+    })
+
+    it('accepts any property when none are configured', () => {
+      expect(verify('<template><div v-uno-style:paddign="value" /></template>'))
         .toHaveLength(0)
     })
 
@@ -63,20 +73,20 @@ describe('vue-uno-style/no-multiple-v-style', () => {
   })
 
   describe('invalid', () => {
-    it('reports an unsupported static property', () => {
-      expect(verify('<template><div v-uno-style:paddign="value" /></template>'))
+    it('reports a static property outside the configured ones', () => {
+      expect(verify('<template><div v-uno-style:paddign="value" /></template>', undefined, properties))
         .toEqual([expect.objectContaining({
           messageId: 'unknownStyleProp',
           message:
-            'Unknown v-uno-style property "paddign". Use a property exported by styleProps.',
+            'Unknown v-uno-style property "paddign". Add it to the configured properties.',
         })])
     })
 
-    it('reports an unsupported property for a renamed directive', () => {
-      expect(verify('<template><div v-style:paddign="value" /></template>', 'style'))
+    it('reports an unconfigured property for a renamed directive', () => {
+      expect(verify('<template><div v-style:paddign="value" /></template>', 'style', properties))
         .toEqual([expect.objectContaining({
           messageId: 'unknownStyleProp',
-          message: 'Unknown v-style property "paddign". Use a property exported by styleProps.',
+          message: 'Unknown v-style property "paddign". Add it to the configured properties.',
         })])
     })
 

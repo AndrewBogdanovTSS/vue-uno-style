@@ -1,77 +1,33 @@
 import type { ResolvedBreakpoints } from './breakpoints'
+import type { ResolvedProperties } from './properties'
 import { getStyleProps } from './getStyleProps'
 
-export const styleProps = [
-  'aspect-ratio',
-  'b',
-  'bg',
-  'bgi',
-  'bgv',
-  'c',
-  'display',
-  'gap',
-  'gap-x',
-  'gap-y',
-  'grid-area',
-  'grid-col',
-  'cols',
-  'grid-row',
-  'rows',
-  'h',
-  'inset',
-  'lh',
-  'max-h',
-  'max-w',
-  'min-h',
-  'min-w',
-  'm',
-  'mb',
-  'mt',
-  'ml',
-  'mr',
-  'mx',
-  'my',
-  'object-position',
-  'p',
-  'pb',
-  'pr',
-  'pt',
-  'px',
-  'py',
-  'row-start',
-  'text-size',
-  'top',
-  'w',
-] as const
-
-export type StyleProp = typeof styleProps[number]
 export type StyleValue = number | string
 export type Responsive<T = StyleValue> = Record<string, T | undefined>
-export type ResponsiveStyles = Partial<Record<StyleProp, Responsive>>
+/** Responsive values per property. Narrow `P` to the configured property names for type safety. */
+export type ResponsiveStyles<P extends string = string> = Partial<Record<P, Responsive>>
 
 export interface StyleResult {
   classes: string
   style: Record<string, StyleValue>
 }
 
-const supportedStyleProps = new Set<string>(styleProps)
 const isObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
 
-const warnUnknownStyleProp = (prop: string) => {
-  const isDevelopment = typeof process === 'undefined' || process.env.NODE_ENV !== 'production'
-  if (isDevelopment && !supportedStyleProps.has(prop)) {
-    console.warn(`[vue-uno-style] Unknown style property "${prop}".`)
-  }
-}
+const isDevelopment = () => typeof process === 'undefined' || process.env.NODE_ENV !== 'production'
 
 /**
  * Converts responsive values into UnoCSS classes and CSS custom properties.
+ *
+ * Pass the resolved `properties` to apply their value formats and to warn, during development,
+ * about a property that is not configured - its classes would never be safelisted.
  */
 export const getStyle = (
   config: Responsive | ResponsiveStyles,
   breakpoints: ResolvedBreakpoints,
   arg?: string,
+  properties?: ResolvedProperties,
 ): StyleResult => {
   const styleConfig = (arg ? { [arg]: config } : config) as Record<string, Responsive | undefined>
 
@@ -81,8 +37,11 @@ export const getStyle = (
   }>((acc, [prop, value]) => {
     if (!value || (isObject(value) && Object.keys(value).length === 0)) return acc
 
-    warnUnknownStyleProp(prop)
-    const { styles = {}, classList = [] } = getStyleProps(prop as StyleProp, value, breakpoints)
+    if (properties && !properties.names.includes(prop) && isDevelopment()) {
+      console.warn(`[vue-uno-style] Property "${prop}" is not configured, so its classes are not safelisted.`)
+    }
+
+    const { styles = {}, classList = [] } = getStyleProps(prop, value, breakpoints, properties?.formats[prop])
 
     return {
       classes: [...acc.classes, ...classList],
