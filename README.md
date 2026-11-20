@@ -298,7 +298,8 @@ pnpm playground:install && pnpm playground:verify
 
 `playground/` is a Nuxt app using every entry, including custom `bgi` and `bgv`
 properties, and is deployed to GitHub Pages from `main`. `pnpm release` bumps, tags and pushes; the tag starts the release
-workflow, which publishes with provenance.
+workflow, which publishes through npm trusted publishing (OIDC, no token) with
+provenance.
 
 ## Licence
 
