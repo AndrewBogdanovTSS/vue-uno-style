@@ -150,10 +150,15 @@ runtime values win over ordinary utilities on the same element.
 
 ## ESLint plugin
 
-The directive merges its output into one class and style binding. Multiple
-instances on the same element are therefore rejected by
+The directive merges its output into one class and style binding. Write one
+directive per element: multiple instances in one template tag are rejected by
 `vue-uno-style/no-multiple-v-style`, which can autofix adjacent directives into
 the object form. It also reports unsupported argument names.
+
+A single-root component may still carry its own directive on its root element
+while its usage site applies another. Vue merges both bindings onto that root,
+and the directive composes them: classes and variables from both apply, and the
+usage site wins when both set the same property.
 
 ```js
 // eslint.config.js
