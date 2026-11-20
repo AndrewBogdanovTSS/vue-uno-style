@@ -11,6 +11,10 @@ export default defineConfig({
     preset: 'src/preset.ts',
     eslint: 'src/eslint.ts',
     nuxt: 'src/nuxt.ts',
+    devtools: 'src/devtools.ts',
+    // The DevTools tab script. The module serves it as a file, so it must stay one
+    // self-contained module: it imports only from src/devtools/clientUtils.ts.
+    'devtools-client': 'src/devtools/client.ts',
   },
   format: ['esm'],
   platform: 'neutral',
@@ -24,6 +28,7 @@ export default defineConfig({
       '@unocss/nuxt',
       'eslint',
       'node:fs',
+      'node:http',
       'node:path',
       'node:process',
       'node:url',

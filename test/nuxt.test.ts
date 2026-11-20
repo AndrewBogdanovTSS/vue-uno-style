@@ -7,6 +7,7 @@ const warn = vi.fn()
 
 vi.mock('@nuxt/kit', () => ({
   addPluginTemplate: vi.fn(),
+  addVitePlugin: vi.fn(),
   defineNuxtModule: vi.fn((definition) => definition),
   hasNuxtModule: vi.fn(() => true),
   useLogger: vi.fn(() => ({ warn })),
@@ -23,7 +24,7 @@ import { writeWebTypes } from '../src/webTypes'
 
 type Hook = (...args: unknown[]) => unknown
 type ModuleDefinition = {
-  defaults: { directiveName: string, webTypes: boolean }
+  defaults: { directiveName: string, webTypes: boolean, devtools: boolean }
   meta: {
     name: string
     configKey: string
@@ -87,7 +88,7 @@ describe('vue-uno-style Nuxt module', () => {
       configKey: 'vUnoStyle',
       compatibility: { nuxt: '>=3.17.0' },
     }))
-    expect(moduleDefinition.defaults).toEqual({ directiveName: 'uno-style', webTypes: true })
+    expect(moduleDefinition.defaults).toEqual({ directiveName: 'uno-style', webTypes: true, devtools: true })
   })
 
   it('rewrites the package web-types with the registered directive name', async () => {

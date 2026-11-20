@@ -88,6 +88,33 @@ export default defineNuxtConfig({
 The module adds the preset, reads breakpoints from the resolved UnoCSS theme
 (or `breakpoints`, when given) and registers the directive.
 
+### Nuxt DevTools
+
+During `nuxt dev`, the module adds a **vue-uno-style** tab to Nuxt DevTools:
+
+- **Overview**: the resolved directive name, properties, formats and
+  breakpoints, and where the breakpoints and the preset came from. It checks
+  every safelisted class against your UnoCSS config, flags a property with no
+  matching rule and suggests the rule to add. It also shows the safelist size,
+  the web-types status, and which properties no page has used yet this session.
+- **Elements**: every element on the current page that carries the directive.
+  For each one it shows the owning component, the value per breakpoint with the
+  active breakpoint marked, each binding's classes and variables, and what one
+  binding overrides in another. You also see the final `class` and `style` on
+  the element and how often it updated. Hover a row to outline the element on
+  the page.
+- **Warnings**: values the directive ignores without a word. That covers a
+  property you did not configure, a breakpoint key that does not exist, a
+  numeric `0` (use `'0'`), and a value that is neither a string nor a number.
+- **Timeline**: the last 200 mounts, updates and unmounts, with the variables
+  each one changed.
+- **REPL**: runs a value through the directive and your UnoCSS generator and
+  shows the classes, variables and CSS.
+
+In development the directive is wrapped to report to the tab, on the client
+only. Production builds and server rendering use the plain directive.
+`devtools: false` leaves the tab out.
+
 ## Vue and UnoCSS without Nuxt
 
 Give the preset and the directive the same properties and breakpoints:
@@ -221,6 +248,7 @@ registered, and fails the build without it.
 | `baseBreakpoint` | `string` | the zero-valued breakpoint | The unprefixed breakpoint. See [Breakpoints](#breakpoints). |
 | `directiveName` | `string` | `'uno-style'` | Registration name without `v-`. `'style'` registers `v-style`. |
 | `webTypes` | `boolean` | `true` | Rewrites the installed package's `web-types.json` with `directiveName` and `properties`. `false` keeps the shipped file. |
+| `devtools` | `boolean` | `true` | Adds the [Nuxt DevTools](#nuxt-devtools) tab during `nuxt dev`. It has no effect in production or when Nuxt DevTools is off. |
 
 Without `breakpoints`, the module reads `theme.breakpoints` from the same
 UnoCSS config that `@unocss/nuxt` loads: `uno.config.*`, the file named in
@@ -281,7 +309,12 @@ result into the file's text.
 The root entry exports the directive and the pure helpers behind it:
 `createVUnoStyle`, `vUnoStyle`, `getStyle`, `getStyleProps`,
 `getVarsClasses`, `formatValue`, `resolveBreakpoints`, `resolveProperties`,
-`createWebTypes`, `serializeWebTypes` and their types.
+`createWebTypes`, `serializeWebTypes`, `getDirectiveContext` and their types.
+
+`vue-uno-style/devtools` exports what the DevTools tab runs on:
+`createDevtoolsRegistry`, which records every element the directive writes,
+and `inspectValue`, which lists what in a value the directive ignores. The Nuxt
+module wires both for you.
 
 ## Development
 
