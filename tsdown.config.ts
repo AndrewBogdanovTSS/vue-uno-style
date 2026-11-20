@@ -16,6 +16,18 @@ export default defineConfig({
   platform: 'neutral',
   target: 'es2022',
   outDir: 'dist',
+  deps: {
+    neverBundle: [
+      '@nuxt/kit',
+      '@nuxt/schema',
+      '@unocss/config',
+      '@unocss/nuxt',
+      'eslint',
+      'node:path',
+      'unocss',
+      'vue',
+    ],
+  },
   dts: true,
   clean: true,
   hash: false,

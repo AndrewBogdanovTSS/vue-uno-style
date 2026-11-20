@@ -99,28 +99,47 @@ describe('createVUnoStyle', () => {
   })
 
   /**
-   * Each factory closes over its own `BASE` symbol, so two factories applied to
-   * one vnode each stash their own pristine class - and the second one's
-   * "pristine" already contains the first one's output. The result is that their
-   * injections compose instead of the later clobbering the earlier.
-   *
-   * Pinned because it is a consequence of the per-factory symbol rather than a
-   * decision anyone wrote down, and the opposite behaviour is just as plausible
-   * to a future reader. Note that a single element carrying two directives is
-   * what the `no-multiple-v-style` lint rule exists to prevent; this documents
-   * what happens anyway, not a configuration to rely on.
+   * A single-root component's own directive and the one applied at its usage site
+   * share one vnode (`vnode.dirs`). Bindings from different factories are
+   * recognised as siblings too, and each is resolved with its own factory's
+   * breakpoints, so every hook writes the same combined result.
    */
-  it('composes injections from separate factories on one vnode', () => {
+  it('composes bindings from separate factories on one vnode, each with its own breakpoints', () => {
     const canvasLike = createVUnoStyle({ breakpoints: { sm: 0, md: 768 } })
     const custom = createVUnoStyle({ breakpoints: { mobile: 0, desktop: '64rem' } })
-    const node = createVNode({ class: 'existing' })
+    const first = { dir: canvasLike, arg: 'c', value: { sm: 'red', md: 'green' } }
+    const second = { dir: custom, arg: 'bg', value: { mobile: 'blue', desktop: 'navy' } }
+    const node = { props: { class: 'existing' }, dirs: [first, second] } as unknown as VNode<any, HTMLElement>
     const element = document.createElement('div')
 
-    canvasLike.created!(element, { arg: 'c', value: { sm: 'red' } } as never, node, null as never)
-    custom.created!(element, { arg: 'bg', value: { mobile: 'blue' } } as never, node, null as never)
+    canvasLike.created!(element, first as never, node, null as never)
+    custom.created!(element, second as never, node, null as never)
 
-    expect(node.props!.class).toBe('existing o:c-$c o:bg-$bg')
-    expect(node.props!.style).toEqual({ '--c': 'red', '--bg': 'blue' })
+    expect(node.props!.class).toBe('existing o:c-$c o:md:c-$c-md o:bg-$bg o:desktop:bg-$bg-desktop')
+    expect(node.props!.style).toEqual({
+      '--c': 'red',
+      '--c-md': 'green',
+      '--bg': 'blue',
+      '--bg-desktop': 'navy',
+    })
+
+    canvasLike.beforeMount!(element, first as never, node, null)
+    custom.beforeMount!(element, second as never, node, null)
+
+    expect(element.className).toBe('o:c-$c o:md:c-$c-md o:bg-$bg o:desktop:bg-$bg-desktop')
+  })
+
+  it('ignores directives that were not built by the factory when combining siblings', () => {
+    const directive = createVUnoStyle({ breakpoints: { sm: 0, md: 768 } })
+    const binding = { dir: directive, arg: 'c', value: { sm: 'red' } }
+    const foreign = { dir: { mounted: () => {} }, arg: 'bg', value: { sm: 'blue' } }
+    const node = { props: {}, dirs: [foreign, binding] } as unknown as VNode<any, HTMLElement>
+    const element = document.createElement('div')
+
+    directive.created!(element, binding as never, node, null as never)
+
+    expect(node.props!.class).toBe('o:c-$c')
+    expect(node.props!.style).toEqual({ '--c': 'red' })
   })
 
   it('stays idempotent when one factory injects into the same vnode twice', () => {

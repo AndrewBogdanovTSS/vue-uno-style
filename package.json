@@ -1,5 +1,5 @@
 {
-  "name": "v-uno-style",
+  "name": "vue-uno-style",
   "version": "0.1.0",
   "type": "module",
   "description": "Responsive runtime styles for Vue powered by UnoCSS.",
@@ -14,13 +14,13 @@
   ],
   "license": "MIT",
   "author": "Andrii Bohdanov",
-  "homepage": "https://github.com/AndrewBogdanovTSS/v-uno-style#readme",
+  "homepage": "https://github.com/AndrewBogdanovTSS/vue-uno-style#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AndrewBogdanovTSS/v-uno-style.git"
+    "url": "git+https://github.com/AndrewBogdanovTSS/vue-uno-style.git"
   },
   "bugs": {
-    "url": "https://github.com/AndrewBogdanovTSS/v-uno-style/issues"
+    "url": "https://github.com/AndrewBogdanovTSS/vue-uno-style/issues"
   },
   "engines": {
     "node": ">=24"
@@ -55,12 +55,22 @@
   ],
   "scripts": {
     "build": "tsdown",
-    "lint": "tsx ./node_modules/eslint/bin/eslint.js src test eslint.config.js tsdown.config.ts vitest.config.ts",
+    "lint": "tsx ./node_modules/eslint/bin/eslint.js src test scripts eslint.config.js tsdown.config.ts vitest.config.ts",
     "test": "pnpm run build && vitest run",
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "pnpm run build"
+    "smoke": "node scripts/smoke.mjs",
+    "check:docs": "tsx scripts/check-docs.ts",
+    "demo:install": "pnpm --dir demo install --frozen-lockfile",
+    "demo:lint": "pnpm --dir demo lint",
+    "demo:build": "pnpm --dir demo build",
+    "demo:verify": "pnpm --dir demo verify",
+    "demo:dev": "pnpm --dir demo dev",
+    "scan": "pnpm audit --registry=https://registry.npmjs.org",
+    "hooks:install": "git config core.hooksPath .githooks",
+    "prepublishOnly": "pnpm run build",
+    "release": "tsx scripts/release.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -68,12 +78,20 @@
   },
   "peerDependencies": {
     "@nuxt/kit": ">=3.17",
+    "@unocss/config": ">=66",
+    "@unocss/nuxt": ">=66",
     "eslint": ">=9",
     "unocss": ">=66",
     "vue": ">=3.4"
   },
   "peerDependenciesMeta": {
     "@nuxt/kit": {
+      "optional": true
+    },
+    "@unocss/config": {
+      "optional": true
+    },
+    "@unocss/nuxt": {
       "optional": true
     },
     "eslint": {
@@ -90,8 +108,10 @@
     "@babel/plugin-syntax-typescript": "^8.0.3",
     "@eslint/js": "^10.0.1",
     "@nuxt/kit": "^4.5.2",
+    "@nuxt/schema": "^4.5.2",
     "@types/node": "^26.6.1",
     "@unocss/config": "^66.10.5",
+    "@unocss/nuxt": "^66.10.5",
     "@vue/test-utils": "^2.5.1",
     "eslint": "^10.11.0",
     "jsdom": "^30.1.0",

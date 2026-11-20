@@ -1,9 +1,13 @@
-# Extraction plan: `v-uno-style`
+# Extraction plan: `vue-uno-style`
 
 Standalone, publishable package extracted from Canvas (`GLOBAL15-132320`).
-Reference for package shape: `Z:/personal/eslint-unocss-normalize-classes`.
+Reference for package shape: `D:/personal/eslint-unocss-normalize-classes`.
 
-Status: **plan only** - nothing extracted yet.
+Status as of 2026-11-20: **phases 1-7 done, phase 8 (publish) pending.** PR AndrewBogdanovTSS/v-style-directive#1 carries the work; `vue-uno-style` is still unclaimed on npm.
+
+- **Phases 1-7:** package, directive, preset, ESLint plugin, Nuxt module, docs, demo and CI are in place. Unit tests, typecheck, lint, build (publint + attw), smoke and `check:docs` are green.
+- **Synced with Canvas `develop` on 2026-11-20:** the directive includes Canvas `fd50a1df54` (2026-10-28, nested v-style fix), which composes every binding on a vnode. The ESLint rule, `getStyleProps`, `getVarsClasses`, the `o:` variant, the `bgi`/`bgv` rules and the safelist have not drifted.
+- **Phase 0 in Canvas: partly done.** Only the `'**/.claude/**'` vitest exclude has landed. Still open: `layers: { override: 10 }`, the `getVarsClasses` docblock (`md:o:c-$c-md`), the `v-style.c` example in `docs/core/plugins/style.md`, unknown-prop linting, and the contract tests. The package already fixes each of these on its side, so none blocks publishing; they matter only for Canvas until it migrates. The two Canvas records cited below are not present in Canvas `develop`.
 
 Audited against the running UnoCSS generator on 2026-09-21 at Canvas `13c8288c5e`. Result: **v-style works** - 40/40 props generate CSS, runtime classes are byte-identical to safelisted tokens, 44/44 directive tests pass. Six issues found around it, now scheduled as phase 0. Recorded in Canvas at `docs/development/proposals/GLOBAL15-132320-extract-v-style-package.md` and `docs/development/findings/GLOBAL15-132320-v-style-extraction-defects.md`.
 
@@ -71,25 +75,25 @@ The package should add a dev-mode `console.warn` on unknown props (stripped in p
 
 ### Naming
 
-**Recommendation: yes to `v-uno-style`, and make it an option.**
+**Decided: package `vue-uno-style`, directive `v-uno-style`.**
 
-The rename is right for three reasons. `v-style` sits next to Vue's own `:style` and means something different, which is a real reading cost in a template that has both. Directive names are a single global namespace per app, and `v-style` is generic enough that an app or another library could reasonably want it. And the UnoCSS coupling is not incidental - strip the preset and the directive emits class names that resolve to nothing - so naming it after UnoCSS is accurate rather than decorative.
+Renaming away from `v-style` is right for three reasons. `v-style` sits next to Vue's own `:style` and means something different, which is a real reading cost in a template that has both. Directive names are a single global namespace per app, and `v-style` is generic enough that an app or another library could reasonably want it. And the UnoCSS coupling is not incidental - strip the preset and the directive emits class names that resolve to nothing - so naming it after UnoCSS is accurate rather than decorative.
 
-But the registration name belongs to the consumer, not the package. Canvas has **689 call sites across 192 files**; a forced rename makes adoption a codemod. So:
+The package name and the directive name are separate decisions, and they landed differently:
 
-- package name: `v-uno-style`
-- exported directive: `vUnoStyle`
-- default registration name: `uno-style`, used as `v-uno-style`
-- Nuxt module option `directiveName`, so Canvas can pass `'style'` and keep `v-style` with zero call-site churn
-- the ESLint rule takes the same option. It currently hardcodes `attr.key?.name?.name === 'style'` (`no-multiple-v-style.js:34`); it must read a configured name, or the rule silently stops firing for any consumer that renames the directive - the worst failure mode available, since the directive's `inject` docblock names this rule as the guarantee it relies on.
+- package name: `vue-uno-style`. `v-uno-style` was the first choice but reads as cryptic outside a Vue template, and `vue-uno-style-directive` was rejected for the opposite reason - the package ships four entries, and the directive on its own renders nothing, so a name ending in `-directive` would understate it and encourage exactly the install-the-directive-without-the-preset mistake. Discoverability for "directive" is carried by `keywords`, which npm search matches, so the name does not have to.
+- default registration name: `uno-style`, which Vue renders as `v-uno-style` in templates
+- exported directive: `vUnoStyle`, named after the directive rather than the package
+- Nuxt module option `directiveName`, so Canvas can pass `'style'` and keep `v-style` with zero call-site churn across its 689 call sites
+- the ESLint rule takes the same option. Canvas's copy hardcodes `attr.key?.name?.name === 'style'` (`no-multiple-v-style.js:34`); the port must read a configured name, or the rule silently stops firing for any consumer that renames the directive - the worst failure mode available, since the directive's `inject` docblock names this rule as the guarantee it relies on.
 
-**`v-uno-style` is free on npm** - confirmed 2026-09-21 against `registry.npmjs.org`. Canvas's `.npmrc` points at a jFrog mirror that returns `E401` for unauthenticated reads, so the check needs `--registry=https://registry.npmjs.org`:
+**`vue-uno-style` is free on npm** - confirmed 2026-09-22 against `registry.npmjs.org`. Canvas's `.npmrc` points at a jFrog mirror that returns `E401` for unauthenticated reads, so the check needs `--registry=https://registry.npmjs.org`:
 
 ```bash
-npm view v-uno-style version --registry=https://registry.npmjs.org
+npm view vue-uno-style version --registry=https://registry.npmjs.org
 ```
 
-Also free: `unocss-v-style`, `v-style-directive`, `vue-uno-style`, `unocss-directive`. Not an option: `@unocss/*` - the scope exists and belongs to the UnoCSS org.
+Also free at that check: `vue-unocss-style`, `unocss-vue-style`, `vue-uno-style-directive`, `vue-unocss-directive`, `v-uno-style`. Not an option: `@unocss/*` - the scope exists and belongs to the UnoCSS org.
 
 ---
 
@@ -98,7 +102,7 @@ Also free: `unocss-v-style`, `v-style-directive`, `vue-uno-style`, `unocss-direc
 Mirrors the reference package: tsdown with named entries, ESM only, `publint` + `attw` on every build, MIT, provenance on publish.
 
 ```
-v-uno-style/
+vue-uno-style/
   src/
     core/
       breakpoints.ts     resolveBreakpoints(), base-breakpoint rule
@@ -124,10 +128,10 @@ v-uno-style/
 
 | Export                | Entry           | Consumer                                 |
 | --------------------- | --------------- | ---------------------------------------- |
-| `v-uno-style`         | `src/index.ts`  | `app.directive('uno-style', vUnoStyle)`  |
-| `v-uno-style/preset`  | `src/preset.ts` | `uno.config.ts` presets array            |
-| `v-uno-style/eslint`  | `src/eslint.ts` | flat config                              |
-| `v-uno-style/nuxt`    | `src/nuxt.ts`   | `nuxt.config.ts` modules                 |
+| `vue-uno-style`       | `src/index.ts`  | `app.directive('uno-style', vUnoStyle)`  |
+| `vue-uno-style/preset`  | `src/preset.ts` | `uno.config.ts` presets array            |
+| `vue-uno-style/eslint`  | `src/eslint.ts` | flat config                              |
+| `vue-uno-style/nuxt`    | `src/nuxt.ts`   | `nuxt.config.ts` modules                 |
 
 `preset` must not import the directive, and the directive must not import the preset. The preset is loaded by the build (including by the ESLint rule's config loader); the directive is loaded by the browser. Same split as the reference package's `config` vs `index` entries, and for the same reason.
 
@@ -217,7 +221,7 @@ Copied from the reference package, adjusted:
 
 | Risk                                                        | Handling                                                                                   |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `v-uno-style` claimed before publish                        | Confirmed free 2026-09-21; re-check at phase 8. Fallback `unocss-v-style`                   |
+| `vue-uno-style` claimed before publish                      | Confirmed free 2026-09-22; re-check at phase 8. Fallback `vue-unocss-style`                 |
 | Breakpoint semantics divergence (section 4)                 | Explicit base rule + throw + tests on both branches                                         |
 | Layer order accident (section 5)                            | Declared `layers` + ordering test                                                           |
 | ESLint rule silently dead after rename                      | Rule reads the configured name; test with a renamed directive                               |

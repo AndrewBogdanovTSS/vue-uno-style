@@ -61,7 +61,7 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
 const warnUnknownStyleProp = (prop: string) => {
   const isDevelopment = typeof process === 'undefined' || process.env.NODE_ENV !== 'production'
   if (isDevelopment && !supportedStyleProps.has(prop)) {
-    console.warn(`[v-uno-style] Unknown style property "${prop}".`)
+    console.warn(`[vue-uno-style] Unknown style property "${prop}".`)
   }
 }
 
