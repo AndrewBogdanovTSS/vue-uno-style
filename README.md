@@ -178,12 +178,105 @@ sharing one installed copy overwrite each other's file. `webTypes: false`
 turns the rewrite off; `createWebTypes()` builds the file for setups without
 Nuxt.
 
+## Options
+
+Every option each entry accepts. The Nuxt module passes `properties`,
+`breakpoints` and `baseBreakpoint` on to the preset and the directive, so a
+Nuxt app sets them once.
+
+### Property entries
+
+Each item in `properties` is a string or an object. `'c'` is the same as
+`{ name: 'c' }`.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | `string` | required | UnoCSS utility prefix: a letter, then letters, digits or dashes. Each name may appear once. |
+| `format` | `'url'` | none | `url` writes each value as `url(<value>)`. No other format exists. |
+
+A missing or empty list, an invalid name, a repeated name or an unknown format
+throws.
+
+### Breakpoint values
+
+`breakpoints` maps names to minimum widths, smallest first, for example
+`{ sm: 0, md: '768px', lg: '1024px' }`. A number means pixels. A string is used
+as written, so `'48rem'` works. Collapsing of repeated values follows this
+order.
+
+### Nuxt module
+
+Set under `vUnoStyle` in `nuxt.config.ts`. The module needs `@unocss/nuxt`
+registered, and fails the build without it.
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `properties` | `PropertyConfig[]` | required | The properties the directive may set. See [Property entries](#property-entries). |
+| `breakpoints` | `Record<string, number \| string>` | the UnoCSS theme's | Breakpoints for the preset and the directive. They replace `theme.breakpoints`. |
+| `baseBreakpoint` | `string` | the zero-valued breakpoint | The unprefixed breakpoint. See [Breakpoints](#breakpoints). |
+| `directiveName` | `string` | `'uno-style'` | Registration name without `v-`. `'style'` registers `v-style`. |
+| `webTypes` | `boolean` | `true` | Rewrites the installed package's `web-types.json` with `directiveName` and `properties`. `false` keeps the shipped file. |
+
+Without `breakpoints`, the module reads `theme.breakpoints` from the same
+UnoCSS config that `@unocss/nuxt` loads: `uno.config.*`, the file named in
+`unocss.configFile`, and the inline `unocss` options.
+
+### UnoCSS preset
+
+`presetVUnoStyle(options)` from `vue-uno-style/preset`.
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `properties` | `PropertyConfig[]` | required | Safelists every class the directive can write for these properties. |
+| `breakpoints` | `Record<string, number \| string>` | `theme.breakpoints` | Breakpoints for the media queries and the safelist. They replace `theme.breakpoints`. |
+| `baseBreakpoint` | `string` | the zero-valued breakpoint | The unprefixed breakpoint. |
+
+The preset throws when it finds neither `breakpoints` nor `theme.breakpoints`.
+
+### Directive
+
+`createVUnoStyle(options)` from `vue-uno-style`. Give it the same values as the
+preset.
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `breakpoints` | `Record<string, number \| string>` | required | Only the names, their order and the base are used; widths live in the CSS. |
+| `baseBreakpoint` | `string` | the zero-valued breakpoint | The unprefixed breakpoint. |
+| `properties` | `PropertyConfig[]` | none | Applies value formats. In development, warns about a property that is not listed. |
+
+`vUnoStyle` is `createVUnoStyle({ breakpoints: { sm: 0, md: 768, lg: 1024 } })`,
+with no properties, so it applies no formats.
+
+### ESLint rule
+
+Options for `vue-uno-style/no-multiple-v-style`.
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `directiveName` | `string` | `'uno-style'` | Directive name without `v-`. |
+| `properties` | `PropertyConfig[]` | none | Reports a static argument (`v-uno-style:x`) that is not listed. Object keys and dynamic arguments are not checked. |
+
+`configs.recommended` turns the rule on as `error` for `**/*.vue`, without
+options and without a parser. The autofix is skipped when another attribute
+sits between the directives.
+
+### Web-types
+
+`createWebTypes(options)` from `vue-uno-style`. `serializeWebTypes()` turns the
+result into the file's text.
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `directiveName` | `string` | required | Directive name without `v-`. |
+| `version` | `string` | required | Version recorded in the file. WebStorm uses it to tell revisions apart. |
+| `properties` | `PropertyConfig[]` | none | Arguments offered for completion. Without them, any argument is accepted. |
+
 ## API
 
 The root entry exports the directive and the pure helpers behind it:
-`createVUnoStyle`, `vUnoStyle` (sm/md/lg breakpoints, no properties),
-`getStyle`, `getStyleProps`, `getVarsClasses`, `resolveBreakpoints`,
-`resolveProperties`, `createWebTypes` and their types.
+`createVUnoStyle`, `vUnoStyle`, `getStyle`, `getStyleProps`,
+`getVarsClasses`, `formatValue`, `resolveBreakpoints`, `resolveProperties`,
+`createWebTypes`, `serializeWebTypes` and their types.
 
 ## Development
 

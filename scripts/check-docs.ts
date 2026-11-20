@@ -85,6 +85,39 @@ const packageChecks = (): Finding[] => {
   ]
 }
 
+/** Every public options interface, with the source file that declares it. */
+const optionInterfaces = [
+  ['src/nuxt.ts', 'VUnoStyleNuxtModuleOptions'],
+  ['src/preset.ts', 'PresetVUnoStyleOptions'],
+  ['src/directive.ts', 'VUnoStyleOptions'],
+  ['src/core/breakpoints.ts', 'ResolveBreakpointsOptions'],
+  ['src/eslint.ts', 'NoMultipleVStyleOptions'],
+  ['src/core/webTypes.ts', 'WebTypesOptions'],
+] as const
+
+/** Field names declared directly in an interface body, ignoring comments. */
+const interfaceFields = (file: string, name: string): string[] | undefined => {
+  const source = readFileSync(join(root, file), 'utf8')
+  const body = new RegExp(`export interface ${name}\\b[^{]*\\{([\\s\\S]*?)\\n\\}`).exec(source)?.[1]
+  if (!body) return undefined
+  const code = body.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+  return [...code.matchAll(/^\s*(\w+)\??:/gm)].map((match) => match[1])
+}
+
+const optionChecks = (): Finding[] => optionInterfaces.map(([file, name]) => {
+  const fields = interfaceFields(file, name)
+  if (!fields?.length) {
+    return verdict(false, `${name} options are documented`, '', `no fields found in ${file}`)
+  }
+  const missing = fields.filter((field) => !readme.includes(`| \`${field}\` |`))
+  return verdict(
+    missing.length === 0,
+    `${name} options are documented`,
+    fields.join(', '),
+    `no README table row for: ${missing.join(', ')}`,
+  )
+})
+
 const buildChecks = (): Finding[] => {
   const files = Object.values(pkg.exports ?? {})
     .flatMap((entry) => typeof entry === 'string'
@@ -109,7 +142,7 @@ const buildChecks = (): Finding[] => {
   )]
 }
 
-const findings = [...packageChecks(), ...buildChecks()]
+const findings = [...packageChecks(), ...optionChecks(), ...buildChecks()]
 const symbol: Record<Level, string> = { pass: 'PASS ', error: 'FAIL ', unverifiable: '?????' }
 
 console.log('\nREADME claims, checked against the package')
