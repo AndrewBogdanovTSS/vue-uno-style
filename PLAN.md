@@ -265,4 +265,11 @@ The demo carries its own `eslint.config.js` and a `demo:lint` script running the
 
 The Canvas migration. Once the package is on npm, a separate change under `GLOBAL15-132320` removes `domains/core/directives/style.ts`, `getStyleProps.ts`, `domains/core/utils/style/getVarsClasses.ts`, `domains/core/plugin/style/`, `eslint/rules/no-multiple-v-style.js`, the `o:` variant line, the `bgi`/`bgv` rules and the v-style safelist rows, adds the dependency, and registers the module with `directiveName: 'style'` so none of the 689 call sites move.
 
+The same change deletes Canvas's `web-types.json` and the `"web-types": "./web-types.json"` field in its `package.json`. The file was added for `v-style` alone (`71096611aa`, GLOBAL15-66025) and has never described anything else; the package's own web-types, rewritten by the module for `directiveName: 'style'`, replaces it. Two conditions keep completion working:
+
+- `vue-uno-style` must be a direct dependency, since WebStorm reads web-types from direct dependencies only.
+- The module must have run once (`nuxt prepare` on postinstall, or any dev or build run). Until then the shipped file describes `uno-style`.
+
+Keeping Canvas's copy would show the directive twice in completion, and its list has already drifted from `styleProps`.
+
 Worth doing only after the package's own suite is green - proving it against 192 files is a much worse first test than proving it against its own.
