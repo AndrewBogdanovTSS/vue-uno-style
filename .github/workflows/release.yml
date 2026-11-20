@@ -12,9 +12,9 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           registry-url: https://registry.npmjs.org
@@ -37,8 +37,8 @@ jobs:
       - run: pnpm test:unit
       - run: pnpm smoke
       - run: pnpm check:docs
-      - run: pnpm demo:install
-      - run: pnpm demo:verify
+      - run: pnpm playground:install
+      - run: pnpm playground:verify
 
       - name: The tag matches package.json
         run: |

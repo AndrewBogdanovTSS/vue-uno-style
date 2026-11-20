@@ -82,8 +82,8 @@ const runChecks = (): number => {
     ['pnpm', ['test:unit']],
     ['pnpm', ['smoke']],
     ['pnpm', ['check:docs']],
-    ['pnpm', ['demo:install']],
-    ['pnpm', ['demo:verify']],
+    ['pnpm', ['playground:install']],
+    ['pnpm', ['playground:verify']],
   ] as const
 
   for (const [command, args] of checks) {
@@ -154,7 +154,7 @@ const preflight = async (
     const code = runChecks()
     findings.push(verdict(
       code === 0,
-      'lint, types, build, tests, smoke, docs, and demo checks pass',
+      'lint, types, build, tests, smoke, docs, and playground checks pass',
       'the full sequence exited 0',
       `the sequence exited ${code}`,
     ))

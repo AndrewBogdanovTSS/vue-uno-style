@@ -14,6 +14,8 @@ renders `class="o:c-$c o:md:c-$c-md"` with `--c: #111827; --c-md: #4f46e5`.
 UnoCSS turns those classes into `color: var(--c)`, the second one inside the
 `md` media query.
 
+See every behaviour live in the [playground](https://andrewbogdanovtss.github.io/vue-uno-style/).
+
 ## Install
 
 ```bash
@@ -41,9 +43,12 @@ value. `presetWind3` already does for most utilities (`c`, `bg`, `p`, `m`, `w`,
 ```ts
 // uno.config.ts
 rules: [
-  [/^bgi-\$(.+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })],
+  [/^bgi-\$([\w-]+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })],
 ]
 ```
+
+Match the variable name with `[\w-]+` rather than `.+`: UnoCSS scans every file, and
+text such as `bgi-$*` would otherwise produce `var(--*)`, which fails CSS minification.
 
 `format: 'url'` wraps each value as `url(<value>)`, for properties fed plain
 image URLs.
@@ -288,11 +293,11 @@ pnpm test:unit
 pnpm build
 pnpm smoke
 pnpm check:docs
-pnpm demo:install && pnpm demo:verify
+pnpm playground:install && pnpm playground:verify
 ```
 
-`demo/` is a Nuxt app using every entry, including custom `bgi` and `bgv`
-properties. `pnpm release` bumps, tags and pushes; the tag starts the release
+`playground/` is a Nuxt app using every entry, including custom `bgi` and `bgv`
+properties, and is deployed to GitHub Pages from `main`. `pnpm release` bumps, tags and pushes; the tag starts the release
 workflow, which publishes with provenance.
 
 ## Licence
