@@ -2,12 +2,12 @@ import { existsSync, linkSync, mkdirSync, mkdtempSync, readdirSync, readFileSync
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { styleProps } from '../src/core/getStyle'
 import { createWebTypes, serializeWebTypes } from '../src/core/webTypes'
 import { packageWebTypesPath, writeWebTypes } from '../src/webTypes'
 
 describe('createWebTypes', () => {
-  const webTypes = createWebTypes({ directiveName: 'style', version: '1.2.3' })
+  const properties = ['c', 'bg', { name: 'bgi', format: 'url' as const }]
+  const webTypes = createWebTypes({ directiveName: 'style', version: '1.2.3', properties })
   const [directive] = webTypes.contributions.html['vue-directives']
 
   it('describes exactly one directive under the registered name', () => {
@@ -18,8 +18,15 @@ describe('createWebTypes', () => {
     expect(webTypes.framework).toBe('vue')
   })
 
-  it('offers every supported property as an argument, and nothing else', () => {
-    expect(directive.argument.pattern.or).toEqual([...styleProps])
+  it('offers exactly the configured properties as arguments', () => {
+    expect(directive.argument.pattern?.or).toEqual(['c', 'bg', 'bgi'])
+  })
+
+  it('accepts any argument when no properties are configured', () => {
+    const [open] = createWebTypes({ directiveName: 'uno-style', version: '1.2.3' })
+      .contributions.html['vue-directives']
+
+    expect(open.argument).not.toHaveProperty('pattern')
   })
 
   it('serialises with a trailing newline', () => {

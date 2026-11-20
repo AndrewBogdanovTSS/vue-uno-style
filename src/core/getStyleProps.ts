@@ -1,5 +1,7 @@
 import type { ResolvedBreakpoints } from './breakpoints'
-import type { Responsive, StyleProp, StyleValue } from './getStyle'
+import type { Responsive, StyleValue } from './getStyle'
+import type { PropertyFormat } from './properties'
+import { formatValue } from './properties'
 
 export interface StylePropsResult {
   styles?: Record<string, StyleValue>
@@ -16,23 +18,17 @@ const getClassValue = (prop: string, breakpoint: string, baseBreakpoint: string)
     ? `${prop}-$${prop}`
     : `${breakpoint}:${prop}-$${prop}-${breakpoint}`
 
-const getStyleValue = (
-  prop: string,
-  breakpoint: string,
-  value: StyleValue,
-  baseBreakpoint: string,
-): [string, StyleValue] => [
-  breakpoint === baseBreakpoint ? `--${prop}` : `--${prop}-${breakpoint}`,
-  prop === 'bgi' ? `url(${value})` : value,
-]
+const getVariableName = (prop: string, breakpoint: string, baseBreakpoint: string) =>
+  breakpoint === baseBreakpoint ? `--${prop}` : `--${prop}-${breakpoint}`
 
 /**
  * Composes responsive CSS variables and their matching UnoCSS class names.
  */
 export const getStyleProps = (
-  prop: StyleProp,
+  prop: string,
   obj: ObjectValue,
   breakpoints: ResolvedBreakpoints,
+  format?: PropertyFormat,
 ): StylePropsResult => {
   if (!obj) return {}
 
@@ -47,8 +43,10 @@ export const getStyleProps = (
 
   return {
     styles: Object.fromEntries(
-      filteredValues.map(([breakpoint, value]) =>
-        getStyleValue(prop, breakpoint, value, breakpoints.base)),
+      filteredValues.map(([breakpoint, value]) => [
+        getVariableName(prop, breakpoint, breakpoints.base),
+        formatValue(value, format),
+      ]),
     ),
     classList: filteredValues.map(([breakpoint]) =>
       `o:${getClassValue(prop, breakpoint, breakpoints.base)}`),

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { resolveBreakpoints } from '../src/core/breakpoints'
-import { styleProps } from '../src/core/getStyle'
 import { getStyleProps } from '../src/core/getStyleProps'
 import { getVarsClasses } from '../src/core/varsClasses'
 
@@ -16,6 +15,9 @@ import { getVarsClasses } from '../src/core/varsClasses'
  * suites next door do - cannot catch that, because the natural way to change the
  * format is to update one function together with its own expectations.
  */
+/** Short, dashed and multi-segment names, the shapes a consumer list can contain. */
+const properties = ['c', 'bg', 'p', 'gap-x', 'aspect-ratio', 'object-position']
+
 const canvasLike = resolveBreakpoints({ breakpoints: { sm: 0, md: 768, lg: 1024 } })
 const stockLike = resolveBreakpoints({
   breakpoints: { sm: '640px', md: '768px', lg: '1024px' },
@@ -33,13 +35,9 @@ describe('runtime and safelist class parity', () => {
       [breakpoints.base, ...breakpoints.prefixed].map((breakpoint) => [breakpoint, breakpoint]),
     )
 
-    it.each(styleProps)('matches for "%s"', (prop) => {
+    it.each(properties)('matches for "%s"', (prop) => {
       expect(getStyleProps(prop, responsive, breakpoints).classList)
         .toEqual(getVarsClasses(prop, breakpoints).split(' '))
     })
-  })
-
-  it('covers every supported style property', () => {
-    expect(styleProps).toHaveLength(40)
   })
 })

@@ -34,6 +34,7 @@ type ModuleDefinition = {
       baseBreakpoint?: string
       breakpoints?: Record<string, number | string>
       directiveName?: string
+      properties?: Array<string | { name: string, format?: 'url' }>
       webTypes?: boolean
     },
     nuxt: unknown,
@@ -41,6 +42,7 @@ type ModuleDefinition = {
 }
 
 const moduleDefinition = module as unknown as ModuleDefinition
+const properties = ['c', 'bg', { name: 'bgi', format: 'url' as const }]
 
 const createNuxt = (unocss: UserConfig & { configFile?: string | false } = {}) => {
   const hooks = new Map<string, Hook>()
@@ -64,7 +66,7 @@ const setupModule = async (
 ) => {
   const { hooks, nuxt } = createNuxt(unocss)
 
-  await moduleDefinition.setup(options, nuxt)
+  await moduleDefinition.setup({ properties, ...options }, nuxt)
 
   return { hooks, nuxt }
 }
@@ -97,6 +99,34 @@ describe('vue-uno-style Nuxt module', () => {
 
     expect(file).toBe('/pkg/dist/web-types.json')
     expect(directive.name).toBe('style')
+    expect(directive.argument.pattern.or).toEqual(['c', 'bg', 'bgi'])
+  })
+
+  it.each([
+    ['missing', undefined],
+    ['empty', []],
+  ])('fails the build when properties are %s', async (_label, configured) => {
+    const { nuxt } = createNuxt()
+
+    await expect(async () => moduleDefinition.setup(
+      { directiveName: 'style', properties: configured as never },
+      nuxt,
+    )).rejects.toThrow('No properties configured')
+  })
+
+  it('passes the configured properties to the runtime directive', async () => {
+    const { hooks } = await setupModule({
+      directiveName: 'style',
+      breakpoints: { sm: 0, md: 768 },
+    })
+
+    await hooks.get('modules:done')?.()
+
+    const template = vi.mocked(addPluginTemplate).mock.calls[0]?.[0]
+    if (!template || typeof template === 'string') throw new Error('Expected a plugin template')
+    const contents = await template.getContents?.({} as never)
+
+    expect(contents).toContain('"properties":["c","bg",{"name":"bgi","format":"url"}]')
   })
 
   it('leaves the shipped web-types alone when disabled', async () => {
@@ -132,7 +162,7 @@ describe('vue-uno-style Nuxt module', () => {
         && 'name' in variant
         && variant.name === 'vue-uno-style-override',
     )).toHaveLength(1)
-    expect(config.rules).toHaveLength(2)
+    expect(config.rules ?? []).toHaveLength(0)
     expect(config.safelist).toHaveLength(1)
     expect(nuxt.options.unocss.presets?.some(
       (preset) => !Array.isArray(preset) && 'name' in preset && preset.name === 'vue-uno-style',

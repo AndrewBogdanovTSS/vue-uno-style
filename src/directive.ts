@@ -1,12 +1,22 @@
 import type { ResolveBreakpointsOptions, ResolvedBreakpoints } from './core/breakpoints'
 import type { Responsive, ResponsiveStyles, StyleResult, StyleValue } from './core/getStyle'
+import type { PropertyConfig, ResolvedProperties } from './core/properties'
 import type { DirectiveBinding, ObjectDirective, VNode } from 'vue'
 import { normalizeClass, normalizeStyle } from 'vue'
 import { resolveBreakpoints } from './core/breakpoints'
 import { getStyle } from './core/getStyle'
+import { resolveProperties } from './core/properties'
 
 export type VUnoStyleValue = Responsive | ResponsiveStyles
-export type VUnoStyleOptions = ResolveBreakpointsOptions
+
+export interface VUnoStyleOptions extends ResolveBreakpointsOptions {
+  /**
+   * The properties configured for the preset. Optional here: without them the directive still
+   * writes classes for any property, but applies no value formats and cannot warn about a
+   * property the preset does not safelist.
+   */
+  properties?: readonly PropertyConfig[]
+}
 
 const DEFAULT_OPTIONS = {
   breakpoints: {
@@ -17,17 +27,22 @@ const DEFAULT_OPTIONS = {
 } as const satisfies VUnoStyleOptions
 
 /**
- * Tags every directive built by `createVUnoStyle` with its resolved breakpoints. `activeBindings`
+ * Tags every directive built by `createVUnoStyle` with its resolved configuration. `activeBindings`
  * uses it to recognise sibling v-uno-style bindings on a vnode by marker rather than by object
  * identity, so bindings from different factory instances still compose, each with its own
- * breakpoints.
+ * breakpoints and properties.
  */
 const MARKER = Symbol('vUnoStyle')
 
 /** Keeps the pristine `class`/`style` of a vnode's props aside before the first injection. */
 const BASE = Symbol('vUnoStyleBase')
 
-type MarkedDirective = { [MARKER]?: ResolvedBreakpoints }
+interface DirectiveContext {
+  breakpoints: ResolvedBreakpoints
+  properties?: ResolvedProperties
+}
+
+type MarkedDirective = { [MARKER]?: DirectiveContext }
 type Binding = DirectiveBinding<VUnoStyleValue | null | undefined>
 type InjectedProps = Record<string | symbol, unknown> & {
   [BASE]?: { class: unknown, style: unknown }
@@ -56,12 +71,12 @@ const activeBindings = (vnode: VNode | null | undefined, binding: Binding): Bind
  * Combines every binding's generated classes and variables into one set. Later bindings win on
  * conflicting variables - Vue lists the usage site's binding after the child's own root binding.
  */
-const combine = (bindings: Binding[], fallback: ResolvedBreakpoints): StyleResult =>
+const combine = (bindings: Binding[], fallback: DirectiveContext): StyleResult =>
   bindings.reduce<StyleResult>((acc, { arg, value, dir }) => {
     if (!value) return acc
 
-    const breakpoints = (dir as MarkedDirective | undefined)?.[MARKER] ?? fallback
-    const { classes, style } = getStyle(value, breakpoints, arg)
+    const { breakpoints, properties } = (dir as MarkedDirective | undefined)?.[MARKER] ?? fallback
+    const { classes, style } = getStyle(value, breakpoints, arg, properties)
 
     return {
       classes: [acc.classes, classes].filter(Boolean).join(' '),
@@ -75,7 +90,10 @@ const splitClasses = (classes: string) => classes ? classes.split(' ') : []
  * Creates a v-uno-style directive for a known breakpoint configuration.
  */
 export const createVUnoStyle = (options: VUnoStyleOptions): ObjectDirective<HTMLElement, VUnoStyleValue> => {
-  const breakpoints: ResolvedBreakpoints = resolveBreakpoints(options)
+  const context: DirectiveContext = {
+    breakpoints: resolveBreakpoints(options),
+    properties: options.properties ? resolveProperties(options.properties) : undefined,
+  }
 
   /**
    * Writes the combined classes and variables into the vnode props, so Vue owns them and its own
@@ -90,7 +108,7 @@ export const createVUnoStyle = (options: VUnoStyleOptions): ObjectDirective<HTML
     const props = vnode?.props as InjectedProps | null | undefined
     if (!props) return
 
-    const { classes, style } = combine(activeBindings(vnode, binding), breakpoints)
+    const { classes, style } = combine(activeBindings(vnode, binding), context)
     const base = props[BASE] ??= { class: props.class, style: props.style }
 
     props.class = normalizeClass([base.class, classes])
@@ -109,13 +127,13 @@ export const createVUnoStyle = (options: VUnoStyleOptions): ObjectDirective<HTML
    */
   const render = (el: HTMLElement, vnode: VNode | null | undefined, binding: Binding) => {
     const bindings = activeBindings(vnode, binding)
-    const current = combine(bindings, breakpoints)
+    const current = combine(bindings, context)
     const classes = splitClasses(current.classes)
 
     if (binding.oldValue) {
       const oldBindings = bindings.map((sibling) =>
         sibling === binding ? { ...binding, value: binding.oldValue } : sibling)
-      const previous = combine(oldBindings, breakpoints)
+      const previous = combine(oldBindings, context)
 
       splitClasses(previous.classes)
         .filter((name) => !classes.includes(name))
@@ -146,21 +164,22 @@ export const createVUnoStyle = (options: VUnoStyleOptions): ObjectDirective<HTML
     updated: (el, binding, vnode) => updated(el, binding, vnode),
     getSSRProps({ arg, value }: DirectiveBinding<VUnoStyleValue>) {
       if (!value) return
-      const { classes, style } = getStyle(value, breakpoints, arg)
+      const { classes, style } = getStyle(value, context.breakpoints, arg, context.properties)
 
       return {
         class: classes,
         style,
       }
     },
-    [MARKER]: breakpoints,
+    [MARKER]: context,
   }
 
   return directive
 }
 
 /**
- * Ready-to-register directive using the Canvas-compatible sm/md/lg breakpoints.
+ * Ready-to-register directive using sm/md/lg breakpoints (`sm: 0`, `md: 768`, `lg: 1024`) and no
+ * configured properties. Use `createVUnoStyle` to match other breakpoints or apply value formats.
  *
  * A single-root component may define its own v-uno-style on its root element while its usage site
  * also applies one. Vue merges both onto the same rendered vnode, and the directive composes their

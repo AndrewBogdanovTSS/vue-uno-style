@@ -59,8 +59,16 @@ describe('getStyleProps', () => {
       })
   })
 
-  it('wraps background-image values with url()', () => {
-    expect(getStyleProps('bgi', { sm: 'image-sm.png', md: 'image-md.png' }, breakpoints))
+  it('passes values through unchanged when no format is configured', () => {
+    expect(getStyleProps('bgi', { sm: 'image-sm.png' }, breakpoints))
+      .toEqual({
+        styles: { '--bgi': 'image-sm.png' },
+        classList: ['o:bgi-$bgi'],
+      })
+  })
+
+  it('wraps values with url() for a property configured with the url format', () => {
+    expect(getStyleProps('bgi', { sm: 'image-sm.png', md: 'image-md.png' }, breakpoints, 'url'))
       .toEqual({
         styles: {
           '--bgi': 'url(image-sm.png)',

@@ -3,7 +3,6 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import { styleProps } from '../src/core/getStyle'
 
 type Level = 'pass' | 'error' | 'unverifiable'
 
@@ -27,39 +26,6 @@ const verdict = (ok: boolean, claim: string, passed: string, failed: string): Fi
   claim,
   detail: ok ? passed : failed,
 })
-
-const documentedProperties = (): string[] => readme
-  .split('\n')
-  .map((line) => /^\|\s*`([^`]+)`\s*\|/.exec(line)?.[1])
-  .filter((value): value is string => Boolean(value))
-
-const propertyChecks = (): Finding[] => {
-  const documented = documentedProperties()
-  const implemented = [...styleProps]
-  const undocumented = implemented.filter((prop) => !documented.includes(prop))
-  const invented = documented.filter((prop) => !implemented.includes(prop as typeof styleProps[number]))
-
-  return [
-    verdict(
-      undocumented.length === 0,
-      'every supported style property is documented',
-      `${implemented.length} properties, all documented`,
-      `missing from README: ${undocumented.join(', ')}`,
-    ),
-    verdict(
-      invented.length === 0,
-      'every property in the README table is implemented',
-      'no invented properties',
-      `documented but unsupported: ${invented.join(', ')}`,
-    ),
-    verdict(
-      documented.length === new Set(documented).size,
-      'the property table contains no duplicates',
-      `${documented.length} unique rows`,
-      'one or more property rows are duplicated',
-    ),
-  ]
-}
 
 const packageChecks = (): Finding[] => {
   const integrations = [
@@ -105,6 +71,12 @@ const packageChecks = (): Finding[] => {
       'README does not explain that runtime classes require the preset',
     ),
     verdict(
+      readme.includes('`properties` is required') && !/^## Supported properties/m.test(readme),
+      'properties are documented as consumer configuration',
+      'required `properties`, no predefined property table',
+      'README must state that `properties` is required and must not list predefined properties',
+    ),
+    verdict(
       readme.includes('vue-uno-style/no-multiple-v-style'),
       'the shipped ESLint rule is documented',
       'vue-uno-style/no-multiple-v-style',
@@ -137,7 +109,7 @@ const buildChecks = (): Finding[] => {
   )]
 }
 
-const findings = [...propertyChecks(), ...packageChecks(), ...buildChecks()]
+const findings = [...packageChecks(), ...buildChecks()]
 const symbol: Record<Level, string> = { pass: 'PASS ', error: 'FAIL ', unverifiable: '?????' }
 
 console.log('\nREADME claims, checked against the package')

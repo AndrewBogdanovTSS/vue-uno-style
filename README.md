@@ -1,29 +1,18 @@
 # vue-uno-style
 
-Responsive runtime styles for Vue, backed by UnoCSS custom properties.
+Responsive runtime styles for Vue, backed by UnoCSS.
 
-`vue-uno-style` turns API- or CMS-provided responsive values into CSS variables and
-UnoCSS classes. The package includes the Vue directive, the UnoCSS preset that
-makes its generated classes work, an ESLint rule, and a Nuxt module that wires
-the pieces together.
+`vue-uno-style` turns API- or CMS-provided responsive values into CSS variables
+and UnoCSS classes. It ships a Vue directive, a UnoCSS preset, an ESLint rule
+and a Nuxt module that wires them together.
 
-## Breakpoints: choose the base explicitly
+```vue
+<h1 v-uno-style:c="{ sm: '#111827', md: '#4f46e5' }">Responsive heading</h1>
+```
 
-The directive needs one breakpoint to mean “unprefixed” (the value used before
-any media query):
-
-- A breakpoint valued `0`, `"0"`, `"0px"`, or `""` is selected automatically.
-- If none has a zero value, `baseBreakpoint` is required.
-- An explicit `baseBreakpoint` always wins.
-
-This matters with the stock UnoCSS theme, where `sm` is `640px`, not a base
-breakpoint. In that case configure `baseBreakpoint: 'sm'` deliberately, or add a
-zero-valued breakpoint. The package throws instead of guessing.
-
-> [!IMPORTANT]
-> The directive creates class names at runtime, so source scanning cannot find
-> them. Always install `presetVUnoStyle()` as well. It supplies the safelist,
-> `o:` variant, variable rules, and override layer used by the directive.
+renders `class="o:c-$c o:md:c-$c-md"` with `--c: #111827; --c-md: #4f46e5`.
+UnoCSS turns those classes into `color: var(--c)`, the second one inside the
+`md` media query.
 
 ## Install
 
@@ -32,106 +21,103 @@ npm install vue-uno-style unocss vue
 ```
 
 Requires Node 24 or newer, Vue 3.4 or newer, and UnoCSS 66 or newer. The Nuxt
-integration additionally requires Nuxt 3.17 or newer and `@unocss/nuxt` 66 or
-newer. The ESLint integration requires ESLint 9 or newer and
-`vue-eslint-parser`.
+module also needs Nuxt 3.17 and `@unocss/nuxt` 66 or newer; the ESLint rule
+needs ESLint 9 and `vue-eslint-parser`.
 
-## Nuxt module
+## Properties
 
-The Nuxt module is the shortest setup. Register UnoCSS first, then
-`vue-uno-style/nuxt`:
+The package predefines no properties: you list the ones your app uses.
+`properties` is required, and the build fails without it.
+
+```ts
+// vue-uno-style.properties.js (plain JS, so eslint.config.js can import it too)
+export default ['c', 'bg', 'p', 'gap', { name: 'bgi', format: 'url' }]
+```
+
+Each entry is a UnoCSS utility prefix whose rule accepts a `<prefix>-$<variable>`
+value. `presetWind3` already does for most utilities (`c`, `bg`, `p`, `m`, `w`,
+`h`, `gap`, ...). For anything else, add the rule yourself:
+
+```ts
+// uno.config.ts
+rules: [
+  [/^bgi-\$(.+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })],
+]
+```
+
+`format: 'url'` wraps each value as `url(<value>)`, for properties fed plain
+image URLs.
+
+> [!IMPORTANT]
+> The directive creates class names at runtime, so source scanning cannot find
+> them. Always install `presetVUnoStyle()` as well: it safelists the classes for
+> every configured property and adds the `o:` variant and override layer.
+
+## Breakpoints
+
+One breakpoint is the unprefixed base, used before any media query:
+
+- A breakpoint valued `0`, `"0"`, `"0px"`, or `""` is selected automatically.
+- If none has a zero value, `baseBreakpoint` is required.
+- An explicit `baseBreakpoint` always wins.
+
+The stock UnoCSS theme has `sm: 640px`, so it needs `baseBreakpoint: 'sm'` or a
+zero-valued breakpoint. The package throws instead of guessing.
+
+## Nuxt
 
 ```ts
 // nuxt.config.ts
+import properties from './vue-uno-style.properties.js'
+
 export default defineNuxtConfig({
   modules: ['@unocss/nuxt', 'vue-uno-style/nuxt'],
   vUnoStyle: {
+    properties,
     baseBreakpoint: 'sm',
+    // directiveName: 'style', // register as v-style instead of v-uno-style
   },
 })
 ```
 
-The module reads the resolved UnoCSS theme, adds the preset, and registers the
-directive as `v-uno-style`. To keep an existing `v-style` API:
+The module adds the preset, reads breakpoints from the resolved UnoCSS theme
+(or `breakpoints`, when given) and registers the directive.
+
+## Vue and UnoCSS without Nuxt
+
+Give the preset and the directive the same properties and breakpoints:
 
 ```ts
-export default defineNuxtConfig({
-  modules: ['@unocss/nuxt', 'vue-uno-style/nuxt'],
-  vUnoStyle: {
-    directiveName: 'style',
-    baseBreakpoint: 'sm',
-  },
+// uno.config.ts
+import { defineConfig, presetWind3 } from 'unocss'
+import { presetVUnoStyle } from 'vue-uno-style/preset'
+import properties from './vue-uno-style.properties.js'
+
+const breakpoints = { sm: 0, md: '768px', lg: '1024px' }
+
+export default defineConfig({
+  presets: [presetWind3(), presetVUnoStyle({ properties, breakpoints })],
+  theme: { breakpoints },
 })
 ```
-
-The same options can provide `breakpoints` directly when they should not come
-from the UnoCSS theme.
-
-## WebStorm completion
-
-The package ships a [web-types](https://github.com/JetBrains/web-types) file,
-declared in its `package.json`, so WebStorm completes `v-uno-style` and every
-supported property as its argument. No setup is needed.
-
-When the Nuxt module registers another `directiveName`, it rewrites that file
-inside the installed package on every `nuxt prepare`, dev and build run, so
-completion follows the registered name. Nothing is written to your project, and
-a `web-types.json` of your own keeps working next to it. WebStorm may need the
-file reloaded or a restart after the first rewrite.
-
-The rewrite replaces the file rather than editing it, so pnpm's shared store is
-not modified. If `node_modules` is read-only or absent (Yarn PnP), the module
-logs a warning and completion keeps the previous name. Two Nuxt apps in one
-workspace that share an installed copy and use different names will overwrite
-each other's file. Set `webTypes: false` to keep the shipped file:
-
-```ts
-export default defineNuxtConfig({
-  modules: ['@unocss/nuxt', 'vue-uno-style/nuxt'],
-  vUnoStyle: {
-    directiveName: 'style',
-    webTypes: false,
-  },
-})
-```
-
-Without Nuxt, `createWebTypes({ directiveName, version })` and
-`serializeWebTypes()` from `vue-uno-style` build the same file for a project's
-own `web-types` entry.
-
-## Vue directive
-
-For plain Vue, create the directive with the same breakpoints used by UnoCSS:
 
 ```ts
 // main.ts
-import { createApp } from 'vue'
 import { createVUnoStyle } from 'vue-uno-style'
-import App from './App.vue'
-
-const app = createApp(App)
+import properties from './vue-uno-style.properties.js'
 
 app.directive('uno-style', createVUnoStyle({
+  properties,
   breakpoints: { sm: 0, md: '768px', lg: '1024px' },
 }))
-
-app.mount('#app')
 ```
 
-The package also exports `vUnoStyle`, preconfigured with the Canvas-compatible
-`{ sm: 0, md: 768, lg: 1024 }` breakpoints.
+Passing `properties` to the directive applies their formats and warns in
+development about a property the preset does not safelist.
 
-Use an argument for one property:
+## Usage
 
-```vue
-<template>
-  <h1 v-uno-style:c="{ sm: '#111827', md: '#4f46e5' }">
-    Responsive heading
-  </h1>
-</template>
-```
-
-Use the object form for several properties on one element:
+Use an argument for one property, or an object for several:
 
 ```vue
 <template>
@@ -139,164 +125,65 @@ Use the object form for several properties on one element:
     v-uno-style="{
       c: { sm: '#111827', md: '#ffffff' },
       bg: { sm: '#ffffff', md: '#4f46e5' },
-      p: { sm: '1rem', md: '2rem' },
     }"
   >
-    Responsive card
+    <p v-uno-style:p="'1rem'">Body</p>
   </article>
 </template>
 ```
 
-Values may also be scalar. A scalar is assigned to the resolved base
-breakpoint: `v-uno-style:p="'1rem'"`.
+A scalar applies to the base breakpoint. Adjacent breakpoints with the same
+value collapse into one class.
 
-## UnoCSS preset
+A single-root component may carry the directive on its root while its usage
+site applies another. Both apply, and the usage site wins a shared property.
 
-The preset and directive must use the same breakpoints:
+## ESLint
 
-```ts
-// uno.config.ts
-import { defineConfig, presetWind3 } from 'unocss'
-import { presetVUnoStyle } from 'vue-uno-style/preset'
-
-const breakpoints = { sm: 0, md: '768px', lg: '1024px' }
-
-export default defineConfig({
-  presets: [
-    presetWind3(),
-    presetVUnoStyle({ breakpoints }),
-  ],
-  theme: { breakpoints },
-})
-```
-
-If the theme already contains the breakpoints, omit `breakpoints` from the
-preset. For a stock non-zero theme, pass `baseBreakpoint`:
-
-```ts
-presetVUnoStyle({ baseBreakpoint: 'sm' })
-```
-
-The preset declares the `override` layer after UnoCSS’s default layer, so
-runtime values win over ordinary utilities on the same element.
-
-## ESLint plugin
-
-The directive merges its output into one class and style binding. Write one
-directive per element: multiple instances in one template tag are rejected by
-`vue-uno-style/no-multiple-v-style`, which can autofix adjacent directives into
-the object form. It also reports unsupported argument names.
-
-A single-root component may still carry its own directive on its root element
-while its usage site applies another. Vue merges both bindings onto that root,
-and the directive composes them: classes and variables from both apply, and the
-usage site wins when both set the same property.
+`vue-uno-style/no-multiple-v-style` reports more than one directive on a tag
+and autofixes adjacent ones into the object form. Given `properties`, it also
+reports arguments outside them.
 
 ```js
 // eslint.config.js
 import vUnoStyle from 'vue-uno-style/eslint'
 import vueParser from 'vue-eslint-parser'
+import properties from './vue-uno-style.properties.js'
 
 export default [
   ...vUnoStyle.configs.recommended,
   {
     files: ['**/*.vue'],
     languageOptions: { parser: vueParser },
+    rules: {
+      'vue-uno-style/no-multiple-v-style': ['error', { properties }],
+    },
   },
 ]
 ```
 
-When the directive is registered under another name, configure the rule with
-the same name:
+Pass `directiveName` as well when the directive is registered under another
+name.
 
-```js
-export default [{
-  files: ['**/*.vue'],
-  languageOptions: { parser: vueParser },
-  plugins: { 'vue-uno-style': vUnoStyle },
-  rules: {
-    'vue-uno-style/no-multiple-v-style': ['error', { directiveName: 'style' }],
-  },
-}]
-```
+## WebStorm completion
 
-## Supported properties
+The package ships a [web-types](https://github.com/JetBrains/web-types) file,
+so WebStorm completes `v-uno-style`. The Nuxt module rewrites it inside the
+installed package with your `directiveName` and `properties`, so completion
+offers exactly your properties. Nothing is written to your project.
 
-Property names follow UnoCSS utility prefixes. Each responsive value becomes a
-CSS custom property consumed by that utility.
+The file is replaced rather than edited, so pnpm's shared store stays intact.
+A read-only or missing `node_modules` (Yarn PnP) only logs a warning. Two apps
+sharing one installed copy overwrite each other's file. `webTypes: false`
+turns the rewrite off; `createWebTypes()` builds the file for setups without
+Nuxt.
 
-| Property | CSS intent |
-| --- | --- |
-| `aspect-ratio` | Aspect ratio |
-| `b` | Border colour |
-| `bg` | Background colour |
-| `bgi` | Background image; values are wrapped in `url(...)` |
-| `bgv` | Raw `background` value, including gradients |
-| `c` | Text colour |
-| `display` | Display mode |
-| `gap` | Grid or flex gap |
-| `gap-x` | Column gap |
-| `gap-y` | Row gap |
-| `grid-area` | Grid area |
-| `grid-col` | Grid column |
-| `cols` | Grid template columns |
-| `grid-row` | Grid row |
-| `rows` | Grid template rows |
-| `h` | Height |
-| `inset` | Inset offsets |
-| `lh` | Line height |
-| `max-h` | Maximum height |
-| `max-w` | Maximum width |
-| `min-h` | Minimum height |
-| `min-w` | Minimum width |
-| `m` | Margin |
-| `mb` | Bottom margin |
-| `mt` | Top margin |
-| `ml` | Left margin |
-| `mr` | Right margin |
-| `mx` | Horizontal margins |
-| `my` | Vertical margins |
-| `object-position` | Replaced-element object position |
-| `p` | Padding |
-| `pb` | Bottom padding |
-| `pr` | Right padding |
-| `pt` | Top padding |
-| `px` | Horizontal padding |
-| `py` | Vertical padding |
-| `row-start` | Grid row start |
-| `text-size` | Font size |
-| `top` | Top offset |
-| `w` | Width |
+## API
 
-Adjacent breakpoints with the same value are collapsed. Missing breakpoint
-values are omitted. A property not listed above is reported by the ESLint rule
-and warned about by development builds of the runtime.
-
-## Direct API
-
-The root entry also exports the pure helpers and their types:
-
-```ts
-import {
-  getStyle,
-  getStyleProps,
-  getVarsClasses,
-  resolveBreakpoints,
-  styleProps,
-} from 'vue-uno-style'
-```
-
-## Demo
-
-`demo/` is a minimal Nuxt app exercising the module, preset, directive, ESLint
-plugin, argument and object syntaxes, `bgi`, `bgv`, and server-rendered output:
-
-```bash
-pnpm build
-pnpm demo:install
-pnpm demo:verify
-pnpm demo:dev
-```
+The root entry exports the directive and the pure helpers behind it:
+`createVUnoStyle`, `vUnoStyle` (sm/md/lg breakpoints, no properties),
+`getStyle`, `getStyleProps`, `getVarsClasses`, `resolveBreakpoints`,
+`resolveProperties`, `createWebTypes` and their types.
 
 ## Development
 
@@ -308,13 +195,12 @@ pnpm test:unit
 pnpm build
 pnpm smoke
 pnpm check:docs
+pnpm demo:install && pnpm demo:verify
 ```
 
-## Releasing
-
-`pnpm release` validates the repository, bumps and tags the version, and pushes
-the tag. The tag starts the GitHub Actions release workflow; publishing stays in
-CI so npm can attach provenance.
+`demo/` is a Nuxt app using every entry, including custom `bgi` and `bgv`
+properties. `pnpm release` bumps, tags and pushes; the tag starts the release
+workflow, which publishes with provenance.
 
 ## Licence
 

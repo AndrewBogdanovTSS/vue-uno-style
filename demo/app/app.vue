@@ -64,8 +64,8 @@ const toggle = () => {
         <h1 class="m-0 text-4xl font-bold">Runtime values, generated CSS</h1>
         <p class="m-0 max-w-2xl text-lg">
           This page is server-rendered with the Nuxt module. The card uses the
-          object syntax, while its texture uses the argument syntax and the
-          package's background-image rule.
+          object syntax, while its texture uses the argument syntax and a
+          background-image rule the demo defines itself.
         </p>
 
         <div class="flex items-center gap-3">
