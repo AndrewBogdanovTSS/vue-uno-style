@@ -3,15 +3,48 @@ import type { PresetVUnoStyleOptions } from './preset'
 import type { UnocssNuxtOptions } from '@unocss/nuxt'
 import type { UserConfig } from 'unocss'
 import { resolve } from 'node:path'
-import { addPluginTemplate, defineNuxtModule, hasNuxtModule } from '@nuxt/kit'
+import { addPluginTemplate, defineNuxtModule, hasNuxtModule, useLogger } from '@nuxt/kit'
 import { loadConfig } from '@unocss/config'
 import { createGenerator } from 'unocss'
 import { resolveBreakpoints } from './core/breakpoints'
+import { createWebTypes, serializeWebTypes } from './core/webTypes'
 import { presetVUnoStyle } from './preset'
+import { packageWebTypesPath, writeWebTypes } from './webTypes'
+
+declare const __PACKAGE_VERSION__: string
 
 export interface VUnoStyleNuxtModuleOptions extends PresetVUnoStyleOptions {
   /** Directive registration name without the `v-` prefix. */
   directiveName?: string
+  /**
+   * Rewrite the package's own `web-types.json` with `directiveName`, so WebStorm completes the
+   * directive under the name the app registers. Nothing is written to the project. Set `false`
+   * to keep the shipped file, which describes the default `uno-style` name.
+   */
+  webTypes?: boolean
+}
+
+/**
+ * Points the package's WebStorm completion at the registered directive name. A failure only costs
+ * completion, so it is logged rather than thrown - `node_modules` can be read-only (Docker, Nix)
+ * or absent (Yarn PnP).
+ */
+const syncWebTypes = (directiveName: string) => {
+  const file = packageWebTypesPath()
+  const contents = serializeWebTypes(createWebTypes({
+    directiveName,
+    version: typeof __PACKAGE_VERSION__ === 'string' ? __PACKAGE_VERSION__ : '0.0.0-dev',
+  }))
+
+  try {
+    writeWebTypes(file, contents)
+  }
+  catch (error) {
+    useLogger('vue-uno-style').warn(
+      `Could not update ${file}, so WebStorm may not complete v-${directiveName}. `
+      + `${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
 }
 
 const isVUnoStylePreset = (preset: unknown): boolean => {
@@ -100,8 +133,11 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
   },
   defaults: {
     directiveName: 'uno-style',
+    webTypes: true,
   },
   setup(options, nuxt) {
+    if (options.webTypes !== false) syncWebTypes(options.directiveName ?? 'uno-style')
+
     const preset = presetVUnoStyle({
       breakpoints: options.breakpoints,
       baseBreakpoint: options.baseBreakpoint,

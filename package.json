@@ -29,6 +29,7 @@
   "sideEffects": false,
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
+  "web-types": "./dist/web-types.json",
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
@@ -54,7 +55,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsdown",
+    "build": "tsdown && tsx scripts/build-web-types.ts",
     "lint": "tsx ./node_modules/eslint/bin/eslint.js src test scripts eslint.config.js tsdown.config.ts vitest.config.ts",
     "test": "pnpm run build && vitest run",
     "test:unit": "vitest run",

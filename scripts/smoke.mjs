@@ -75,6 +75,17 @@ check('the built ESLint plugin reports its version and fixes real Vue input', as
   )
 })
 
+check('the package points WebStorm at a built web-types file for every property', async () => {
+  const { styleProps } = await import(built('index.mjs'))
+  const webTypes = JSON.parse(readFileSync(join(root, pkg['web-types']), 'utf8'))
+  const [directive] = webTypes.contributions.html['vue-directives']
+
+  assert.equal(webTypes.version, pkg.version)
+  assert.equal(directive.name, 'uno-style')
+  assert.deepEqual(directive.argument.pattern.or, styleProps)
+  assert.ok(pkg.files.includes('dist'), 'web-types must ship inside a published folder')
+})
+
 check('the Nuxt module entry imports from the built package', async () => {
   const api = await import(built('nuxt.mjs'))
   assert.ok(api.default)

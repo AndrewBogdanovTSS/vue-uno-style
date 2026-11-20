@@ -67,6 +67,38 @@ export default defineNuxtConfig({
 The same options can provide `breakpoints` directly when they should not come
 from the UnoCSS theme.
 
+## WebStorm completion
+
+The package ships a [web-types](https://github.com/JetBrains/web-types) file,
+declared in its `package.json`, so WebStorm completes `v-uno-style` and every
+supported property as its argument. No setup is needed.
+
+When the Nuxt module registers another `directiveName`, it rewrites that file
+inside the installed package on every `nuxt prepare`, dev and build run, so
+completion follows the registered name. Nothing is written to your project, and
+a `web-types.json` of your own keeps working next to it. WebStorm may need the
+file reloaded or a restart after the first rewrite.
+
+The rewrite replaces the file rather than editing it, so pnpm's shared store is
+not modified. If `node_modules` is read-only or absent (Yarn PnP), the module
+logs a warning and completion keeps the previous name. Two Nuxt apps in one
+workspace that share an installed copy and use different names will overwrite
+each other's file. Set `webTypes: false` to keep the shipped file:
+
+```ts
+export default defineNuxtConfig({
+  modules: ['@unocss/nuxt', 'vue-uno-style/nuxt'],
+  vUnoStyle: {
+    directiveName: 'style',
+    webTypes: false,
+  },
+})
+```
+
+Without Nuxt, `createWebTypes({ directiveName, version })` and
+`serializeWebTypes()` from `vue-uno-style` build the same file for a project's
+own `web-types` entry.
+
 ## Vue directive
 
 For plain Vue, create the directive with the same breakpoints used by UnoCSS:
