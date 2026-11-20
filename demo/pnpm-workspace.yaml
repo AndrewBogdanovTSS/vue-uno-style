@@ -1,3 +1,0 @@
-# Keep the demo isolated so the package install and test matrix stay small.
-allowBuilds:
-  esbuild: false

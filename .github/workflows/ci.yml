@@ -63,5 +63,5 @@ jobs:
           path: dist/
       - run: pnpm smoke
       - run: pnpm check:docs
-      - run: pnpm demo:install
-      - run: pnpm demo:verify
+      - run: pnpm playground:install
+      - run: pnpm playground:verify

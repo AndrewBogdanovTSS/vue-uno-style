@@ -1,0 +1,3 @@
+# Keep the playground isolated so the package install and test matrix stay small.
+allowBuilds:
+  esbuild: false

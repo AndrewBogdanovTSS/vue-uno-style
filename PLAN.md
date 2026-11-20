@@ -128,7 +128,7 @@ vue-uno-style/
     webTypes.ts          node-only writer for the installed web-types file
     index.ts             directive + types + core re-exports
   test/                  ported suites + preset generation tests
-  demo/                  Nuxt app proving all four entries together
+  playground/            Nuxt app proving all four entries together, deployed to GitHub Pages
   scripts/               build-web-types.ts, check-docs.ts, release.ts, smoke.mjs
   .github/workflows/     ci.yml, release.yml
   .githooks/pre-push
@@ -226,7 +226,7 @@ Copied from the reference package, adjusted:
 - `release.yml` - tag-triggered, `id-token: write` for provenance, NPM_TOKEN presence check, tag/version match check, publish, then GitHub Release
 - `.githooks/pre-push` - `typecheck` + `check:docs`
 - `check-docs.ts` - adapted so README examples are checked against the real exports. Its highest-value assertion here: every prop in the README's prop table exists in `styleProps`, and every entry in `styleProps` is documented. The Canvas README currently punts with "Check the directive's source code for all available CSS property prefixes" - a published package cannot.
-- `demo/` - a Nuxt app using the module, exercising responsive values, the arg form, the object form, `bgi`/`bgv`, and SSR output
+- `demo/` (now `playground/`, deployed to GitHub Pages) - a Nuxt app using the module, exercising responsive values, the arg form, the object form, `bgi`/`bgv`, and SSR output
 
 ---
 
