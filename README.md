@@ -1,18 +1,86 @@
 # vue-uno-style
 
-Responsive runtime styles for Vue, backed by UnoCSS.
-
-`vue-uno-style` turns API- or CMS-provided responsive values into CSS variables
-and UnoCSS classes. It ships a Vue directive, a UnoCSS preset, an ESLint rule
-and a Nuxt module that wires them together.
+Let data from your CMS or API style an element differently on phones, tablets
+and desktops, with plain CSS that UnoCSS generates at build time.
 
 ```vue
 <h1 v-uno-style:c="{ sm: '#111827', md: '#4f46e5' }">Responsive heading</h1>
 ```
 
-renders `class="o:c-$c o:md:c-$c-md"` with `--c: #111827; --c-md: #4f46e5`.
-UnoCSS turns those classes into `color: var(--c)`, the second one inside the
-`md` media query.
+This heading is dark grey on phones and indigo from 768px up. The two colours
+can come from anywhere: a CMS field, an API response, a user's settings.
+
+## Why this exists
+
+Utility CSS such as UnoCSS works when you know the values while you write the
+code. You write `md:c-indigo-600`, the build finds that class in your files, and
+it generates the CSS for it.
+
+That stops working when a value only arrives once the page runs. Say a CMS
+editor picks a heading colour per screen size:
+
+- **A utility class for the value**, such as `md:c-[#4f46e5]`, appears nowhere
+  in your source, so the build never generated CSS for it.
+- **An inline style** (`style="color: #4f46e5"`) works, but inline styles have no
+  media queries. You get one value for every screen.
+- **Runtime CSS-in-JS** works, but ships a styling engine to the browser and
+  writes new CSS rules while the page runs.
+
+## How it works
+
+The value goes into a CSS variable. A small, fixed set of classes, generated at
+build time, decides which variable applies at which screen width:
+
+```html
+<!-- what the directive renders -->
+<h1 class="o:c-$c o:md:c-$c-md" style="--c: #111827; --c-md: #4f46e5">Responsive heading</h1>
+```
+
+```css
+/* what the preset generated at build time */
+.o\:c-\$c { color: var(--c); }
+@media (min-width: 768px) {
+  .o\:md\:c-\$c-md { color: var(--c-md); }
+}
+```
+
+The classes depend only on the properties and breakpoints you configure, never
+on the values. Three properties and three breakpoints give nine classes, whatever
+the CMS sends. When a value changes, only a CSS variable changes: nothing is
+generated in the browser.
+
+What that buys you:
+
+- **Any value from data, per breakpoint.**
+- **Static CSS.** There is no styling engine in the browser. The directive only
+  sets classes and CSS variables, and it works with server rendering.
+- **Defaults stay in the template.** A value from data overrides the element's
+  own utility classes. When the data has no value, the template's class applies:
+
+  ```vue
+  <h1 class="c-gray-900" v-uno-style:c="cms.headingColor">Responsive heading</h1>
+  ```
+
+## When to use it
+
+| Your values are | Use |
+|-----------------|-----|
+| known while you write the code | plain utility classes |
+| from data, and the same on every screen | a plain `:style` binding |
+| from data, and different per screen size | `vue-uno-style` |
+
+## What's in the package
+
+- **A Vue directive**, `v-uno-style`, that writes the classes and variables.
+- **A UnoCSS preset** that generates their CSS at build time. You always need it:
+  see [Properties](#properties).
+- **An ESLint rule** that catches a second directive on the same element and,
+  given your properties, a property you have not configured.
+- **A Nuxt module** that wires them together.
+
+Next on the [roadmap](https://github.com/AndrewBogdanovTSS/vue-uno-style/blob/main/ROADMAP.md):
+`presetWind4`, values taken from your design system (`c: 'red-300'`), and a
+Tailwind CSS 4 version.
 
 See every behaviour live in the [playground](https://andrewbogdanovtss.github.io/vue-uno-style/).
 
@@ -26,6 +94,20 @@ Requires Node 24 or newer, Vue 3.4 or newer, and UnoCSS 66 or newer. The Nuxt
 module also needs Nuxt 3.17 and `@unocss/nuxt` 66 or newer; the ESLint rule
 needs ESLint 9 and `vue-eslint-parser`.
 
+### Base presets
+
+Any of the three UnoCSS presets with breakpoints works as the base:
+
+| Preset | Breakpoints live in | Default `sm` | Rules you add |
+|--------|---------------------|--------------|---------------|
+| `presetMini` | `theme.breakpoints` | `640px` | `object`, `blur`, `columns`, `col-span`, if you use them |
+| `presetWind3` | `theme.breakpoints` | `640px` | `col-span`, if you use it |
+| `presetWind4` | `theme.breakpoint` | `40rem` | none |
+
+The missing rules are listed under [Custom rules](#custom-rules). None of the
+three defaults has a zero-valued `sm`, so each needs `baseBreakpoint: 'sm'` or
+breakpoints of your own: see [Breakpoints](#breakpoints).
+
 ## Properties
 
 The package predefines no properties: you list the ones your app uses.
@@ -37,18 +119,9 @@ export default ['c', 'bg', 'p', 'gap', { name: 'bgi', format: 'url' }]
 ```
 
 Each entry is a UnoCSS utility prefix whose rule accepts a `<prefix>-$<variable>`
-value. `presetWind3` already does for most utilities (`c`, `bg`, `p`, `m`, `w`,
-`h`, `gap`, ...). For anything else, add the rule yourself:
-
-```ts
-// uno.config.ts
-rules: [
-  [/^bgi-\$([\w-]+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })],
-]
-```
-
-Match the variable name with `[\w-]+` rather than `.+`: UnoCSS scans every file, and
-text such as `bgi-$*` would otherwise produce `var(--*)`, which fails CSS minification.
+value. `presetMini`, `presetWind3` and `presetWind4` already do for most
+utilities (`c`, `bg`, `p`, `m`, `w`, `h`, `gap`, ...). For anything else, add the
+rule yourself: see [Custom rules](#custom-rules).
 
 `format: 'url'` wraps each value as `url(<value>)`, for properties fed plain
 image URLs.
@@ -58,6 +131,70 @@ image URLs.
 > them. Always install `presetVUnoStyle()` as well: it safelists the classes for
 > every configured property and adds the `o:` variant and override layer.
 
+### Custom rules
+
+A property needs a UnoCSS rule that turns `<prefix>-$<variable>` into CSS.
+Without one, its classes get no CSS, and nothing reports it: neither UnoCSS nor
+the preset warns. When you add a property, check its CSS once.
+
+Every rule has the same shape. The preset's variants remove `o:` and the
+breakpoint before the rule runs, so the rule only ever sees
+`<prefix>-$<variable>`, and `name` is the variable without its `--`:
+
+```ts
+[/^<prefix>-\$([\w-]+)$/, ([, name]) => ({ '<css-property>': `var(--${name})` })]
+```
+
+Match the variable name with `[\w-]+` rather than `.+`: UnoCSS scans every file, and
+text such as `bgi-$*` would otherwise produce `var(--*)`, which fails CSS minification.
+
+For a property fed plain image URLs, give its entry `format: 'url'`. The
+directive then writes `url(<value>)` into the variable, so the rule stays a plain
+`var()`:
+
+```ts
+// vue-uno-style.properties.js
+export default [{ name: 'bgi', format: 'url' }]
+```
+
+```ts
+// uno.config.ts
+rules: [
+  [/^bgi-\$([\w-]+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })],
+]
+```
+
+#### Prefixes your preset lacks
+
+`presetWind3` builds on `presetMini` and adds rules of its own; `presetWind4`
+ships all four below. Among the common utilities, these prefixes need a rule
+from you:
+
+| Prefix | `presetMini` | `presetWind3` | `presetWind4` |
+|--------|--------------|---------------|---------------|
+| `object` | add the rule | built in | built in |
+| `blur` | add the rule | built in | built in |
+| `columns` | add the rule | built in | built in |
+| `col-span` | add the rule | add the rule | built in |
+
+```ts
+// uno.config.ts - add only the rules your preset lacks
+rules: [
+  [/^object-\$([\w-]+)$/, ([, name]) => ({ 'object-fit': `var(--${name})` })],
+  // The value can sit inside a CSS function...
+  [/^blur-\$([\w-]+)$/, ([, name]) => ({ filter: `blur(var(--${name}))` })],
+  [/^columns-\$([\w-]+)$/, ([, name]) => ({ columns: `var(--${name})` })],
+  // ...or appear more than once.
+  [/^col-span-\$([\w-]+)$/, ([, name]) => ({ 'grid-column': `span var(--${name}) / span var(--${name})` })],
+]
+```
+
+> [!WARNING]
+> A rule in your config replaces your preset's own rule for the same class, so
+> add only the rules your preset lacks. Under `presetWind3`, for example, a custom
+> `blur` rule sets `filter` on its own, which drops any other filter utility on
+> the element.
+
 ## Breakpoints
 
 One breakpoint is the unprefixed base, used before any media query:
@@ -66,8 +203,23 @@ One breakpoint is the unprefixed base, used before any media query:
 - If none has a zero value, `baseBreakpoint` is required.
 - An explicit `baseBreakpoint` always wins.
 
-The stock UnoCSS theme has `sm: 640px`, so it needs `baseBreakpoint: 'sm'` or a
-zero-valued breakpoint. The package throws instead of guessing.
+The presets' own defaults start at `sm: 640px` (`presetMini`, `presetWind3`) or
+`sm: 40rem` (`presetWind4`), so they need `baseBreakpoint: 'sm'` or a zero-valued
+breakpoint. The package throws instead of guessing.
+
+The package reads breakpoints where the base preset keeps them, the way
+UnoCSS's own variants do:
+
+- **The theme key** is `theme.breakpoint` under `presetWind4` and
+  `theme.breakpoints` under the others.
+- **Your theme value replaces the preset's defaults.** It is not merged with
+  them: set `sm`, `md` and `lg`, and the defaults' `xl` and `2xl` are gone.
+- **The `breakpoints` option replaces that theme key**, so the base preset's own
+  variants use the same values. Set breakpoints in one place. If your theme sets
+  them too, UnoCSS's variants follow the theme while the package follows the
+  option, and the two must not disagree.
+- **Theme values must be strings** (`'0px'`, not `0`): UnoCSS's own variants fail
+  on numbers. The `breakpoints` option accepts numbers and converts them.
 
 ## Nuxt
 
@@ -85,8 +237,8 @@ export default defineNuxtConfig({
 })
 ```
 
-The module adds the preset, reads breakpoints from the resolved UnoCSS theme
-(or `breakpoints`, when given) and registers the directive.
+The module adds the preset, reads breakpoints from the UnoCSS theme (or
+`breakpoints`, when given) and registers the directive.
 
 ### Nuxt DevTools
 
@@ -125,11 +277,13 @@ import { defineConfig, presetWind3 } from 'unocss'
 import { presetVUnoStyle } from 'vue-uno-style/preset'
 import properties from './vue-uno-style.properties.js'
 
-const breakpoints = { sm: 0, md: '768px', lg: '1024px' }
-
 export default defineConfig({
-  presets: [presetWind3(), presetVUnoStyle({ properties, breakpoints })],
-  theme: { breakpoints },
+  // The same with presetMini() or presetWind4(): the option writes the
+  // breakpoints into the theme key the base preset reads.
+  presets: [
+    presetWind3(),
+    presetVUnoStyle({ properties, breakpoints: { sm: 0, md: '768px', lg: '1024px' } }),
+  ],
 })
 ```
 
@@ -244,14 +398,14 @@ registered, and fails the build without it.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `properties` | `PropertyConfig[]` | required | The properties the directive may set. See [Property entries](#property-entries). |
-| `breakpoints` | `Record<string, number \| string>` | the UnoCSS theme's | Breakpoints for the preset and the directive. They replace `theme.breakpoints`. |
+| `breakpoints` | `Record<string, number \| string>` | the UnoCSS theme's | Breakpoints for the preset and the directive. They replace the theme's breakpoints, so the base preset's own variants use them too. |
 | `baseBreakpoint` | `string` | the zero-valued breakpoint | The unprefixed breakpoint. See [Breakpoints](#breakpoints). |
 | `directiveName` | `string` | `'uno-style'` | Registration name without `v-`. `'style'` registers `v-style`. |
 | `webTypes` | `boolean` | `true` | Rewrites the installed package's `web-types.json` with `directiveName` and `properties`. `false` keeps the shipped file. |
 | `devtools` | `boolean` | `true` | Adds the [Nuxt DevTools](#nuxt-devtools) tab during `nuxt dev`. It has no effect in production or when Nuxt DevTools is off. |
 
-Without `breakpoints`, the module reads `theme.breakpoints` from the same
-UnoCSS config that `@unocss/nuxt` loads: `uno.config.*`, the file named in
+Without `breakpoints`, the module reads `theme.breakpoints` (`theme.breakpoint`
+under `presetWind4`) from the same UnoCSS config that `@unocss/nuxt` loads: `uno.config.*`, the file named in
 `unocss.configFile`, and the inline `unocss` options.
 
 ### UnoCSS preset
@@ -261,10 +415,10 @@ UnoCSS config that `@unocss/nuxt` loads: `uno.config.*`, the file named in
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `properties` | `PropertyConfig[]` | required | Safelists every class the directive can write for these properties. |
-| `breakpoints` | `Record<string, number \| string>` | `theme.breakpoints` | Breakpoints for the media queries and the safelist. They replace `theme.breakpoints`. |
+| `breakpoints` | `Record<string, number \| string>` | `theme.breakpoints`, or `theme.breakpoint` under `presetWind4` | Breakpoints for the media queries and the safelist. They replace that theme key, so the base preset's own variants use them too. |
 | `baseBreakpoint` | `string` | the zero-valued breakpoint | The unprefixed breakpoint. |
 
-The preset throws when it finds neither `breakpoints` nor `theme.breakpoints`.
+The preset throws when it finds neither `breakpoints` nor breakpoints in the theme.
 
 ### Directive
 
@@ -331,7 +485,8 @@ pnpm playground:install && pnpm playground:verify
 
 `playground/` is a Nuxt app using every entry, including custom `bgi` and `bgv`
 properties, and is deployed to GitHub Pages from `main`. `pnpm release` bumps, tags and pushes; the tag starts the release
-workflow, which publishes with provenance.
+workflow, which publishes through npm trusted publishing (OIDC, no token) with
+provenance.
 
 ## Licence
 

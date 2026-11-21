@@ -2,7 +2,7 @@
   "name": "vue-uno-style",
   "version": "0.1.0",
   "type": "module",
-  "description": "Responsive runtime styles for Vue powered by UnoCSS.",
+  "description": "Per-breakpoint styles from CMS or API data for Vue, as CSS variables and static UnoCSS classes.",
   "keywords": [
     "vue",
     "directive",

@@ -223,7 +223,7 @@ Copied from the reference package, adjusted:
 
 - `tsdown.config.ts` - four named entries, `format: ['esm']`, `dts: true`, `hash: false`, `.mjs`/`.d.mts`, `publint: true`, `attw: true`. `platform` is `neutral` here, not `node`: the directive and preset run in a browser. Only `eslint` and `nuxt` entries are node-only.
 - `ci.yml` - build once, fan out to a Node matrix on `test:unit`, plus a `verify` job running `smoke` and `check:docs`
-- `release.yml` - tag-triggered, `id-token: write` for provenance, NPM_TOKEN presence check, tag/version match check, publish, then GitHub Release
+- `release.yml` - tag-triggered, `id-token: write` for npm trusted publishing (OIDC, no NPM_TOKEN) and provenance, tag/version match check, publish, then GitHub Release
 - `.githooks/pre-push` - `typecheck` + `check:docs`
 - `check-docs.ts` - adapted so README examples are checked against the real exports. Its highest-value assertion here: every prop in the README's prop table exists in `styleProps`, and every entry in `styleProps` is documented. The Canvas README currently punts with "Check the directive's source code for all available CSS property prefixes" - a published package cannot.
 - `demo/` (now `playground/`, deployed to GitHub Pages) - a Nuxt app using the module, exercising responsive values, the arg form, the object form, `bgi`/`bgv`, and SSR output

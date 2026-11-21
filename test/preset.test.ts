@@ -1,21 +1,31 @@
-import { createGenerator, presetWind3 } from 'unocss'
+import type { BreakpointConfig } from '../src/core/breakpoints'
+import { createGenerator } from 'unocss'
 import { describe, expect, it } from 'vitest'
 import { resolveBreakpoints } from '../src/core/breakpoints'
 import { getVarsClasses } from '../src/core/varsClasses'
 import { presetVUnoStyle } from '../src/preset'
+import { basePresets, mediaOrder } from './fixtures/presets'
 
 const canvasBreakpoints = { sm: '0px', md: '768px', lg: '1024px' }
+const customBreakpoints = { mobile: '0px', tablet: '768px', desktop: '1200px' }
 const properties = ['c', 'bg', 'p']
 
-const createUno = async (
-  options: Partial<Parameters<typeof presetVUnoStyle>[0]> = {},
-  themeBreakpoints: Record<string, string> = canvasBreakpoints,
-) => createGenerator({
-  presets: [presetWind3(), presetVUnoStyle({ properties, ...options })],
-  theme: { breakpoints: themeBreakpoints },
-})
+/** Every class the directive can write for `props` under these breakpoints. */
+const safelisted = (breakpoints: BreakpointConfig, baseBreakpoint?: string, props = properties) => {
+  const resolved = resolveBreakpoints({ breakpoints, baseBreakpoint })
+  return props.flatMap((prop) => getVarsClasses(prop, resolved).split(' ')).sort()
+}
 
-describe('presetVUnoStyle', () => {
+describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, defaults }) => {
+  /** `themeBreakpoints: null` leaves the theme alone, so the base preset's defaults apply. */
+  const createUno = async (
+    options: Partial<Parameters<typeof presetVUnoStyle>[0]> = {},
+    themeBreakpoints: Record<string, string> | null = canvasBreakpoints,
+  ) => createGenerator({
+    presets: [preset(), presetVUnoStyle({ properties, ...options })],
+    theme: themeBreakpoints ? { [themeKey]: themeBreakpoints } : {},
+  })
+
   it('generates color utilities for base and responsive runtime variables', async () => {
     const uno = await createUno()
     const tokens = ['o:c-$c', 'o:md:c-$c-md']
@@ -32,9 +42,9 @@ describe('presetVUnoStyle', () => {
 
   it('ships no rules of its own, so a consumer rule serves a custom property', async () => {
     const uno = await createGenerator({
-      presets: [presetWind3(), presetVUnoStyle({ properties: [{ name: 'bgi', format: 'url' }] })],
+      presets: [preset(), presetVUnoStyle({ properties: [{ name: 'bgi', format: 'url' }] })],
       rules: [[/^bgi-\$(.+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })]],
-      theme: { breakpoints: canvasBreakpoints },
+      theme: { [themeKey]: canvasBreakpoints },
     })
     const { css, matched } = await uno.generate('', { preflights: false })
 
@@ -45,23 +55,55 @@ describe('presetVUnoStyle', () => {
 
   it('safelists every runtime class for exactly the configured properties', async () => {
     const uno = await createUno({ breakpoints: canvasBreakpoints })
-    const resolved = resolveBreakpoints({ breakpoints: canvasBreakpoints })
-    const expected = properties.flatMap((prop) => getVarsClasses(prop, resolved).split(' '))
     const { matched } = await uno.generate('', { preflights: false })
 
-    expect([...matched].sort()).toEqual(expected.sort())
+    expect([...matched].sort()).toEqual(safelisted(canvasBreakpoints))
   })
 
-  it('derives the safelist from the resolved UnoCSS theme breakpoints', async () => {
+  /**
+   * UnoCSS's own breakpoint variants read the user's theme value and ignore the preset's
+   * defaults (`resolveBreakpoints` in `@unocss/rule-utils`). The merged theme still holds the
+   * defaults' `xl` and `2xl`, and reading it used to safelist them too - classes whose media blocks
+   * then landed before `md` and `lg`, so an `xl` value never won.
+   */
+  it('takes the user\'s theme breakpoints, which replace the preset\'s defaults', async () => {
     const uno = await createUno()
-    const breakpoints = (uno.config.theme as { breakpoints: Record<string, string> }).breakpoints
-    const resolved = resolveBreakpoints({ breakpoints })
-    const expected = properties.flatMap((prop) => getVarsClasses(prop, resolved).split(' '))
     const { matched } = await uno.generate('', { preflights: false })
 
-    expect([...matched].sort()).toEqual(expected.sort())
-    expect(matched).toContain('o:xl:c-$c-xl')
-    expect(matched).toContain('o:2xl:c-$c-2xl')
+    expect([...matched].sort()).toEqual(safelisted(canvasBreakpoints))
+    expect(matched).not.toContain('o:xl:c-$c-xl')
+    expect(matched).not.toContain('o:2xl:c-$c-2xl')
+  })
+
+  it('falls back to the preset\'s own breakpoints when the app sets none', async () => {
+    const uno = await createUno({ baseBreakpoint: 'sm' }, null)
+    const { css, matched } = await uno.generate('', { preflights: false })
+
+    expect([...matched].sort()).toEqual(safelisted(defaults, 'sm'))
+    expect(css).toContain(`@media (min-width: ${defaults.md})`)
+  })
+
+  it('hands configured breakpoints to the preset\'s own variants, under its theme key', async () => {
+    const uno = await createUno({ breakpoints: { sm: 0, md: '900px', lg: '1200px' } }, null)
+    const { css } = await uno.generate('', { preflights: false })
+
+    expect((uno.config.theme as Record<string, unknown>)[themeKey])
+      .toEqual({ sm: '0px', md: '900px', lg: '1200px' })
+    expect(mediaOrder(css)).toEqual(['900px', '1200px'])
+    expect(css).not.toContain(`@media (min-width: ${defaults.md})`)
+  })
+
+  it.each([
+    ['default names from the theme', null, canvasBreakpoints],
+    ['default names from the option', canvasBreakpoints, null],
+    ['custom names from the theme', null, customBreakpoints],
+    ['custom names from the option', customBreakpoints, null],
+  ])('emits media blocks in breakpoint order: %s', async (_label, option, theme) => {
+    const breakpoints = option ?? theme!
+    const uno = await createUno(option ? { breakpoints: option } : {}, theme)
+    const { css } = await uno.generate('', { preflights: false })
+
+    expect(mediaOrder(css)).toEqual(Object.values(breakpoints).slice(1))
   })
 
   it('emits the override layer after the default layer', async () => {
@@ -117,6 +159,29 @@ describe('presetVUnoStyle', () => {
     expect(css).toContain('@media (min-width: 64rem)')
   })
 
+  it('throws when no base breakpoint can be resolved', async () => {
+    const uno = await createUno({}, { sm: '640px', md: '768px' })
+
+    await expect(uno.generate('', { preflights: false }))
+      .rejects.toThrow('Unable to resolve a base breakpoint')
+  })
+})
+
+describe('presetVUnoStyle without a base preset', () => {
+  /**
+   * With presetMini, presetWind3 or presetWind4 their own breakpoint variant matches first, so
+   * only a setup without one exercises the package's variant on its own - and its ordering.
+   */
+  it('orders its own media blocks by breakpoint, not as strings', async () => {
+    const uno = await createGenerator({
+      presets: [presetVUnoStyle({ properties: ['c'], breakpoints: customBreakpoints })],
+      rules: [[/^c-\$([\w-]+)$/, ([, name]) => ({ color: `var(--${name})` })]],
+    })
+    const { css } = await uno.generate('', { preflights: false })
+
+    expect(mediaOrder(css)).toEqual(['768px', '1200px'])
+  })
+
   it('throws when neither the theme nor options provide breakpoints', async () => {
     const uno = await createGenerator({
       presets: [presetVUnoStyle({ properties })],
@@ -132,12 +197,5 @@ describe('presetVUnoStyle', () => {
   ])('throws at configuration time when properties are %s', (_label, configured) => {
     expect(() => presetVUnoStyle({ properties: configured as never }))
       .toThrow('No properties configured')
-  })
-
-  it('throws when no base breakpoint can be resolved', async () => {
-    const uno = await createUno({}, { sm: '640px', md: '768px' })
-
-    await expect(uno.generate('', { preflights: false }))
-      .rejects.toThrow('Unable to resolve a base breakpoint')
   })
 })

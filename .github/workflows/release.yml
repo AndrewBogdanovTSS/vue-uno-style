@@ -20,16 +20,6 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: pnpm
 
-      - name: The NPM_TOKEN secret exists
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -z "$NPM_TOKEN" ]; then
-            echo "NPM_TOKEN is not set on this repository."
-            echo "Add an npm Automation token in repository Actions secrets."
-            exit 1
-          fi
-
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
@@ -49,10 +39,11 @@ jobs:
             exit 1
           fi
 
-      - run: pnpm publish --no-git-checks --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # Trusted publishing: npm exchanges the job's OIDC token for a
+      # short-lived publish token, so no NPM_TOKEN secret exists.
+      # It needs npm >= 11.5.1, newer than the npm bundled with Node 24.
+      - run: npm install -g npm@latest
+      - run: npm publish --access public
 
       - name: GitHub Release
         env:

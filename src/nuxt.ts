@@ -12,6 +12,7 @@ import { resolveProperties } from './core/properties'
 import { createWebTypes, serializeWebTypes } from './core/webTypes'
 import { createDevtoolsData, createDevtoolsMiddleware, DEVTOOLS_ROUTE, generateSample } from './devtools/server'
 import { presetVUnoStyle } from './preset'
+import { resolveThemeBreakpoints } from './themeBreakpoints'
 import { packageWebTypesPath, writeWebTypes } from './webTypes'
 
 declare const __PACKAGE_VERSION__: string
@@ -86,6 +87,8 @@ const hasResolvedPreset = (config: UserConfig) => config.variants?.some(
     && variant.name === 'vue-uno-style-override',
 ) ?? false
 
+const toArray = <T>(value: T | T[]): T[] => Array.isArray(value) ? value : [value]
+
 const addResolvedPreset = (
   config: UserConfig,
   preset: ReturnType<typeof presetVUnoStyle>,
@@ -97,18 +100,20 @@ const addResolvedPreset = (
   config.rules = [...(config.rules ?? []), ...(preset.rules ?? [])]
   config.safelist = [...(config.safelist ?? []), ...(preset.safelist ?? [])]
 
-  if (typeof preset.extendTheme === 'function') {
-    const theme = config.theme ?? {}
-    config.theme = preset.extendTheme(theme, config as never) ?? theme
+  // Queued rather than applied here: `config.theme` is only the user's theme, while the preset
+  // needs the merged one to tell presetWind4's `breakpoint` key from the others' `breakpoints`.
+  if (preset.extendTheme) {
+    config.extendTheme = [...toArray(config.extendTheme ?? []), ...toArray(preset.extendTheme)]
   }
 }
 
-const getThemeBreakpoints = (theme: unknown): BreakpointConfig => {
+const getThemeBreakpoints = (generator: Awaited<ReturnType<typeof createGenerator>>): BreakpointConfig => {
+  const { theme } = generator.config
   if (!theme || typeof theme !== 'object') {
     throw new Error('[vue-uno-style] The resolved UnoCSS theme has no breakpoints.')
   }
 
-  const breakpoints = (theme as { breakpoints?: unknown }).breakpoints
+  const breakpoints: unknown = resolveThemeBreakpoints({ theme, generator })
   if (
     !breakpoints
     || typeof breakpoints !== 'object'
@@ -118,7 +123,10 @@ const getThemeBreakpoints = (theme: unknown): BreakpointConfig => {
       (value) => typeof value !== 'string' && typeof value !== 'number',
     )
   ) {
-    throw new Error('[vue-uno-style] The resolved UnoCSS theme has no valid breakpoints.')
+    throw new Error(
+      '[vue-uno-style] The resolved UnoCSS theme has no valid breakpoints. '
+      + 'Configure theme.breakpoints (theme.breakpoint with presetWind4) or pass breakpoints.',
+    )
   }
 
   return breakpoints as BreakpointConfig
@@ -275,7 +283,7 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
       addPreset(config, preset)
 
       const generator = await createGenerator(config)
-      const breakpoints = options.breakpoints ?? getThemeBreakpoints(generator.config.theme)
+      const breakpoints = options.breakpoints ?? getThemeBreakpoints(generator)
       const resolved = resolveBreakpoints({
         breakpoints,
         baseBreakpoint: options.baseBreakpoint,
