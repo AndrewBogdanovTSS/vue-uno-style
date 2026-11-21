@@ -1,15 +1,21 @@
 # Roadmap
 
-Where `vue-uno-style` goes after 0.1.0: first UnoCSS `presetMini` and `presetWind4` next to
-`presetWind3`, then Tailwind CSS 4 through a separate package, `vue-tw-style`, built from this
-repository on a shared directive core. UnoCSS with `presetWind3` keeps working unchanged
-throughout.
+Where `vue-uno-style` goes after 0.1.0, in three phases:
+
+1. UnoCSS `presetMini` and `presetWind4` next to `presetWind3`.
+2. Design-system values: a property takes a theme key such as `red-300`, as well as an
+   arbitrary value.
+3. Tailwind CSS 4, through a separate package, `vue-tw-style`, built from this repository on a
+   shared directive core.
+
+UnoCSS with `presetWind3` keeps working unchanged throughout.
 
 | Phase | Scope | Release |
 | --- | --- | --- |
 | 1 | UnoCSS `presetMini` and `presetWind4`, plus the breakpoint fixes they need (which also fix `presetWind3`) | `vue-uno-style` 0.2.0 |
-| 2a | Split the repository into a private core, `vue-uno-style` and `vue-tw-style`, with no API change | `vue-uno-style` 0.2.x |
-| 2b | Tailwind CSS 4.1+ support in the new package | `vue-tw-style` 0.1.0 |
+| 2 | Design-system values: theme keys resolve to the theme's CSS variables, arbitrary values pass through | `vue-uno-style` 0.3.0 |
+| 3a | Split the repository into a private core, `vue-uno-style` and `vue-tw-style`, with no API change | `vue-uno-style` 0.3.x |
+| 3b | Tailwind CSS 4.1+ support in the new package | `vue-tw-style` 0.1.0 |
 
 Every finding below was measured on 2026-11-21 against `unocss` 66.13.0 (`presetMini`,
 `presetWind3`, `presetWind4`) and `tailwindcss` 4.3.5, generating real CSS. Cascade claims were
@@ -175,7 +181,142 @@ breakpoint list.
 
 ---
 
-## Phase 2: `vue-tw-style` for Tailwind CSS 4
+## Phase 2: design-system values
+
+**Goal:** a property can take a key from the design system instead of an arbitrary value.
+`v-uno-style:c="{ sm: 'red-300', md: 'blue-200' }"` renders the theme's colours, while
+`'#fca5a5'` keeps working as it does today. One option, `designSystem`, turns it on for the
+preset, the directive and the Nuxt module. With it off, output is unchanged.
+
+### How it works
+
+A token becomes a reference to the theme's CSS variable. The classes stay the same:
+
+```
+v-uno-style:c="{ sm: 'red-300', md: 'blue-200' }"
+-> class="o:c-$c o:md:c-$c-md"   style="--c: var(--colors-red-300); --c-md: var(--colors-blue-200)"
+```
+
+- **Neither the classes nor the safelist change.**
+- **The value stays tied to the design system.** Changing the theme, or redefining `--colors-*`
+  for a brand or for `.dark`, restyles CMS content too.
+- **SSR and the client agree.** Resolving a value is a set lookup plus a string template; no
+  theme values reach the browser.
+
+### Verified facts (`unocss` 66.13.0, Chromium)
+
+- **The mechanism works.** Under `presetWind4` with the theme keys safelisted, `--c` and
+  `--c-md` set to the two references render red-300 below `md` and blue-200 above it, and
+  `--rounded: var(--radius-lg)` renders `8px`.
+- **`presetWind4` emits theme variables on demand only.** `--colors-red-300` is absent unless
+  something uses it. It can safelist theme keys natively, though: the safelist entry
+  `colors:red-300` emits `--colors-red-300`.
+- **`presetMini` and `presetWind3` keep the theme in JS only** (`colors.red.300` is `#fca5a5`)
+  and emit no theme variables at all.
+- **CSS cost.** All 310 `presetWind4` colours as variables take 17.8 KB, 5.0 KB gzipped. The
+  alternative was real utility classes per token (`o:md:c-blue-200`). For three colour
+  properties and three breakpoints that is 2790 classes: 634.7 KB, 35.4 KB gzipped. Rejected.
+- **Tokens overlap across theme sections.**
+  - `lg`, `sm` and `xl` exist in spacing, radius, shadow, blur and container;
+  - `none` in radius, shadow and leading;
+  - `normal` in leading, tracking and fontWeight.
+
+  So the section has to come from the property, not from the value.
+- **Spacing is a formula, not a list of keys.** `p-4` is `calc(var(--spacing) * 4)`. The
+  spacing section itself only holds `DEFAULT` and named sizes.
+- **The runtime token list is small.** Every `presetWind4` section together takes 4.8 KB, 1.1 KB
+  gzipped. Colours stored as hue -> shades take 0.2 KB gzipped.
+- **The order of checks does not matter for speed.** Per value, `Set.has` takes 7.9 ns, a
+  raw-value regex 23.8 ns, and today's `getStyle` for one property over three breakpoints
+  1245 ns. A regex fast path in front of the lookup would make it slower, not faster.
+- **A blind mapping fails silently.** `var(--colors-nope-999)` falls back to the inherited
+  colour. Hence a membership check, not a string transform alone.
+- **Some words are both a CSS colour and a token.** `red`, `black` and `white` are CSS colour
+  names and `presetWind4` tokens. `transparent`, `current` and `inherit` are not tokens.
+
+### Design
+
+1. **`designSystem` option.** The preset, the directive and the Nuxt module all read it, as they
+   do `properties`.
+   - `true`: covers every configured property whose prefix maps to a theme section.
+   - An array narrows it, to sections (`['colors', 'radius']`) or token patterns
+     (`['colors:brand-*']`).
+
+   The same setting decides three things: which variables the preset emits (the CSS cost), what
+   goes into the directive's runtime token set, and what the checks in item 6 accept. It is off
+   by default.
+2. **A prefix -> section table shipped by the package**, so `designSystem: true` needs no
+   per-property setup. Examples:
+   - `c`, `bg`, `b` -> colors;
+   - `p*`, `m*`, `gap*` -> spacing;
+   - `rounded` -> radius;
+   - `text` -> colors and font sizes, which do not overlap;
+   - `font` -> families and weights.
+
+   A custom property declares its section (`{ name: 'bgv', theme: 'colors' }`) or opts out with
+   `theme: false`. An entry with `format: 'url'` never has one.
+3. **Resolving one value**, in this order:
+   1. Found in the property's token set: the theme variable's reference. Font sizes map to
+      `--text-<token>-fontSize`, and a bare hue such as `red` to its `DEFAULT` shade, the way
+      `c-red` does.
+   2. A spacing section and a unitless number: `calc(var(--spacing) * <n>)`, while `4px` stays
+      raw.
+   3. Anything else: written as is, exactly like today.
+4. **The preset makes the variables exist.**
+   - Under `presetWind4` it adds the enabled theme keys to the safelist (`colors:red-300`).
+   - Under `presetMini` and `presetWind3` it adds a preflight that writes
+     `:root { --colors-red-300: #fca5a5; ... }` from the resolved theme, under `presetWind4`'s
+     names. That way the directive's mapping does not depend on the preset.
+
+   This builds on phase 1 item 1, which resolves the theme key per preset.
+5. **The runtime token set.** The Nuxt module inlines it from the resolved theme into the plugin
+   template, as hue -> shades for colours. Without Nuxt, a helper builds it from the UnoCSS
+   config, and the app passes it to `createVUnoStyle`.
+6. **Diagnostics, in two layers.**
+   - **ESLint.** A new rule reads the same `designSystem` setting. It flags literal values in
+     templates that are neither a token nor a raw value (`red-301`). Optionally it also flags a
+     CSS colour name used as a raw value, in favour of `#hex`. `eslint.config.js` can `await`
+     the token helper at the top level. This only covers values written in the template.
+   - **Runtime, in development.** Values from an API or CMS, the package's main case, never
+     reach ESLint. So the directive also warns during development about a value shaped like a
+     token (`word-123`) that is not one. The warning is stripped from production builds, like
+     today's unknown-property warning.
+7. **Docs.** A "Design-system values" README section covering:
+   - how a value resolves;
+   - the prefix table;
+   - a table row for `designSystem` (`check:docs` requires one).
+
+   It must state the precedence plainly. **A value found in the theme is always a token.**
+   `c: 'red'` is the design system's red, not CSS `red`, so write arbitrary colours as `#hex`
+   (or a colour function such as `oklch(...)`) and they can never collide with a token.
+8. **Tests.**
+   - Per preset (`presetMini`, `presetWind3`, `presetWind4`): every enabled token's variable is
+     present in the generated CSS.
+   - Resolution unit tests: a token, a spacing number, a raw passthrough, a CSS-word collision,
+     an overlapping token under two properties.
+   - A Chromium check: the computed colour equals the theme's colour.
+   - A size budget for the runtime token set.
+   - Tests for the ESLint rule.
+   - With `designSystem` off, generated output matches the previous release.
+
+**Done when:**
+- `red-300` and `#fca5a5` render the same colour under all three presets.
+- Unknown tokens are reported by ESLint for template literals and during development for
+  runtime values.
+- Turning `designSystem` off changes nothing.
+
+### Open decisions
+
+- **What `designSystem: true` emits by default:** every colour (about 5 KB gzipped of CSS), or
+  only an explicit list.
+- **Opacity:** whether `red-300/50` (as `color-mix(in oklab, var(--colors-red-300) 50%, transparent)`)
+  ships in 0.3.0 or later.
+- **The ESLint check:** a new rule or an extension of `no-multiple-v-style`, and whether it
+  flags CSS colour names used as raw values by default.
+
+---
+
+## Phase 3: `vue-tw-style` for Tailwind CSS 4
 
 **Goal:** a separate package, `vue-tw-style`, gives Tailwind CSS 4.1+ apps the same directive,
 ESLint rule and web-types. Both packages are built from this repository on a shared directive
@@ -240,22 +381,31 @@ stays with its package.
   directive with the property `text` and the breakpoint `lg` writes an inline `--text-lg`, which
   breaks `text-lg` (`font-size: var(--text-lg)`) on every descendant. Tailwind also owns every
   `--tw-*` variable, so `tw` cannot be the prefix.
+- **Theme variables appear only when used, as under `presetWind4`.**
+  - `@import "tailwindcss";` emits no `--color-red-300` until something uses it.
+  - `@import "tailwindcss" theme(static);` emits every theme variable.
+  - A safelisted utility (`@source inline("text-red-300")`) emits its own.
 
-### Step 2a: split the repository (`vue-uno-style` patch release, no API change)
+  The names differ from `presetWind4`'s: `--color-*` (singular) and `--text-lg` for a font size.
+  `--radius-lg` and `--spacing` match. Phase 2's token references therefore need a per-engine
+  mapping.
+
+### Step 3a: split the repository (`vue-uno-style` patch release, no API change)
 
 1. **Workspace.** Move to `packages/core`, `packages/vue-uno-style` and `packages/vue-tw-style` (an
    empty shell at this point) in the pnpm workspace. The directive, breakpoint, properties and
    ESLint suites move with the core.
-2. **A class-format adapter in the core.** The adapter is `formatClass({ prop, breakpoint, variable, type })`
-   plus `variableName(prop, breakpoint)`, and both the directive and the safelist go through it.
+2. **A class-format adapter in the core.** The adapter is `formatClass({ prop, breakpoint, variable, type })`,
+   plus `variableName(prop, breakpoint)` and `themeVariable(section, token)` for phase 2's token
+   references. Both the directive and the safelist go through it.
    Runtime/safelist parity then holds by construction. `test/parity.test.ts` becomes a contract
    test every adapter runs. The UnoCSS adapter reproduces today's `o:<bp>:<prop>-$<prop>-<bp>`
-   byte for byte.
+   and phase 2's `--colors-*` references byte for byte.
 3. **Proof of no change.** `vue-uno-style`'s `npm pack` file list, its exports (publint and attw
    already run on build) and `pnpm smoke` must match the last release. The playground keeps
    passing `playground:verify`.
 4. **Release tooling.**
-   - `scripts/release.ts` takes a package name and tags per package (`vue-uno-style@0.2.1`,
+   - `scripts/release.ts` takes a package name and tags per package (`vue-uno-style@0.3.1`,
      `vue-tw-style@0.1.0`) instead of `v*`.
    - `release.yml` publishes the tagged package from its directory.
    - Trusted publishing is configured per package in its npm settings. If npm still requires a
@@ -263,7 +413,7 @@ stays with its package.
      is a one-off manual publish.
 5. **CI.** Lint, typecheck, unit tests, smoke and `check:docs` run per package.
 
-### Step 2b: `vue-tw-style` 0.1.0
+### Step 3b: `vue-tw-style` 0.1.0
 
 1. **A variable namespace.** A core `variablePrefix` option, so that `vts` gives
    `--vts-text-lg`. `vue-tw-style` defaults to a non-empty prefix that is not `tw`.
@@ -275,22 +425,30 @@ stays with its package.
 3. **The stylesheet fragment.** `vue-tw-style` turns the configured properties and breakpoints
    into what Tailwind needs: `@custom-variant o (&&);` plus the `@source inline(...)` safelist.
    It also ships a small writer for setups that keep the fragment in a file.
-4. **The Nuxt module** (`vue-tw-style/nuxt`, config key `vTwStyle`). It registers the directive
+4. **Design-system values.**
+   - The Tailwind adapter maps tokens to `--color-red-300`, `--radius-lg`, `--text-lg` and
+     `calc(var(--spacing) * <n>)`.
+   - The fragment makes the enabled variables exist, either through `theme(static)` or by
+     listing one utility per token in `@source inline(...)`. The spike measures which is
+     lighter.
+   - The ESLint rule and the development warning from phase 2 work unchanged.
+5. **The Nuxt module** (`vue-tw-style/nuxt`, config key `vTwStyle`). It registers the directive
    and writes the fragment to `#build`, and the app imports it from its Tailwind stylesheet.
    **Spike first:**
    - Which Tailwind integration to support: `@tailwindcss/vite` directly, `@nuxtjs/tailwindcss`,
      or both.
    - Whether the module can inject the fragment into the stylesheet Tailwind compiles, without
      a user-side import.
-5. **Tests.** Contract tests against the real compiler (`@tailwindcss/node` `compile().build()`)
+6. **Tests.** Contract tests against the real compiler (`@tailwindcss/node` `compile().build()`)
    that mirror `vue-uno-style`'s preset tests:
    - every safelisted class generates CSS;
+   - every enabled token's variable exists;
    - `o:` beats a static utility;
    - media blocks follow breakpoint order;
    - no generated variable matches a default theme variable.
 
    Plus one Chromium cascade check.
-6. **Playground, docs and package metadata.**
+7. **Playground, docs and package metadata.**
    - A Tailwind playground with its own `verify` run in CI.
    - Its own README and `check:docs`.
    - `tailwindcss >=4.1` as a peer dependency.
@@ -300,7 +458,7 @@ stays with its package.
 - A Tailwind 4 app on `vue-tw-style` and a UnoCSS app on `vue-uno-style` render the same
   responsive values from the same directive bindings.
 - Both contract suites are green.
-- `vue-uno-style`'s published output is unchanged by step 2a.
+- `vue-uno-style`'s published output is unchanged by step 3a.
 
 ### Open decisions
 
