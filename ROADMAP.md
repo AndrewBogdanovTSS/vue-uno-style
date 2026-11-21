@@ -134,12 +134,15 @@ The list is not exhaustive. The docs therefore teach the recipe, not just these 
    - Add a cascade-order test: the media blocks of the `override` layer follow breakpoint order,
      for default and custom names.
    - Add a regression test for #5: a user's `theme.breakpoints` replaces the defaults, so no
-     `xl`/`2xl` classes are safelisted.
+     `xl`/`2xl` classes are safelisted. This reverses the existing test "derives the safelist
+     from the resolved UnoCSS theme breakpoints" in `test/preset.test.ts`, which currently
+     asserts that `o:xl:c-$c-xl` and `o:2xl:c-$c-2xl` *are* safelisted.
    - Add a per-prefix generation test for each preset. It covers the 49 checked prefixes and
      records which ones each preset lacks, so a UnoCSS upgrade that adds or drops a rule fails
      the test and the docs table gets updated with it.
-   - Run the documented gap rules from a shared fixture: every class they serve generates its
-     declaration under the presets that need it.
+   - Extend `test/customRules.test.ts` and its fixture `test/fixtures/customRules.ts` with
+     `presetWind4`. Both already exist for `presetMini` and `presetWind3`: the test proves the
+     README's table and runs every documented rule under the presets that need it.
 6. **Playground.** Let `uno.config.ts` pick the preset from an environment variable and run
    `playground:verify` for all three presets in CI. The playground's properties need no extra
    rules under `presetMini`: `bgi` and `bgv` are already its own rules. The Pages deployment
@@ -149,19 +152,15 @@ The list is not exhaustive. The docs therefore teach the recipe, not just these 
    - **Breakpoints:** the `breakpoint` theme key and the `40rem` default under `presetWind4`.
    - **Options tables:** "the UnoCSS theme's" becomes `theme.breakpoint` or
      `theme.breakpoints`.
-   - **A "Custom rules" section** under Properties. The current single `bgi` example becomes a
-     recipe:
-     - The general form: `` [/^<prefix>-\$([\w-]+)$/, ([, name]) => ({ '<css-property>': `var(--${name})` })] ``.
-     - Why the variable name is matched with `[\w-]+` (the existing note).
-     - A rule that wraps the value (`blur`) and one that uses the variable twice (`col-span`).
-     - How a rule pairs with `format: 'url'` (`bgi`).
-     - The table and the four rules from
-       [Prefixes a preset does not ship](#prefixes-a-preset-does-not-ship).
-     - The warning that an app rule replaces the preset's own rule for the same class.
+   - **Custom rules:** add a `presetWind4` column to the table under "Prefixes your preset
+     lacks". `presetWind4` ships all four prefixes, `col-span` included. The section itself
+     already exists: it landed together with this roadmap and covers the general form, the
+     `[\w-]+` match, a wrapped value (`blur`), a value used twice (`col-span`), the pairing with
+     `format: 'url'`, the gap table, and the warning that an app rule replaces the preset's own.
 
-   Extend `scripts/check-docs.ts` to cover the new claims. It also checks that the README's
-   rules match the test fixture from item 5, so the documented rules are always the tested
-   ones.
+   Extend `scripts/check-docs.ts` to cover the new claims. It already checks that the README
+   quotes the fixture's rules verbatim and that its table matches the tested one; the
+   `presetWind4` column joins that check.
 
 **Behaviour change to note in the release:** with item 1, a `presetMini` or `presetWind3` app
 that sets its own `theme.breakpoints` stops registering the base preset's `xl` and `2xl`. That
