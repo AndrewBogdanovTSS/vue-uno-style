@@ -1,13 +1,13 @@
-import type { GapPrefix } from './fixtures/customRules'
+import type { GapPrefix, SupportedPreset } from './fixtures/customRules'
 import type { Preset, Rule } from 'unocss'
-import { createGenerator, presetMini, presetWind3 } from 'unocss'
+import { createGenerator, presetMini, presetWind3, presetWind4 } from 'unocss'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resolveBreakpoints } from '../src/core/breakpoints'
 import { getStyle } from '../src/core/getStyle'
 import { resolveProperties } from '../src/core/properties'
 import { getVarsClasses } from '../src/core/varsClasses'
 import { presetVUnoStyle } from '../src/preset'
-import { builtIn, gapDeclarations, gapRules, urlRule } from './fixtures/customRules'
+import { builtIn, checkedPrefixes, gapDeclarations, gapRules, urlRule } from './fixtures/customRules'
 
 /**
  * Proves what the README's "Custom rules" section claims: which prefixes each preset lacks, that
@@ -18,7 +18,7 @@ import { builtIn, gapDeclarations, gapRules, urlRule } from './fixtures/customRu
 
 const breakpoints = { sm: 0, md: '768px' }
 const resolved = resolveBreakpoints({ breakpoints })
-const presets = { presetMini, presetWind3 } as const satisfies Record<string, () => Preset>
+const presets = { presetMini, presetWind3, presetWind4 } as const satisfies Record<SupportedPreset, () => Preset>
 const prefixes = Object.keys(gapRules) as GapPrefix[]
 
 const generate = async (preset: () => Preset, tokens: string, rules: Rule[] = []) => {
@@ -35,10 +35,19 @@ describe('custom rules', () => {
     it.each(prefixes)('ships a rule for "%s" exactly when the README says so', async (prefix) => {
       const css = await generate(preset, `${prefix}-$${prefix}`)
 
-      expect(css !== '').toBe(builtIn[prefix][presetName as keyof typeof presets])
+      expect(css !== '').toBe(builtIn[prefix][presetName as SupportedPreset])
     })
 
-    const missing = prefixes.filter((prefix) => !builtIn[prefix][presetName as keyof typeof presets])
+    it('ships a rule for every other checked prefix', async () => {
+      const unserved: string[] = []
+      for (const prefix of checkedPrefixes.filter((checked) => !(checked in builtIn))) {
+        if (await generate(preset, `${prefix}-$${prefix}`) === '') unserved.push(prefix)
+      }
+
+      expect(unserved).toEqual([])
+    })
+
+    const missing = prefixes.filter((prefix) => !builtIn[prefix][presetName as SupportedPreset])
 
     it.each(missing)('serves every class the directive writes for "%s" with the documented rule', async (prefix) => {
       const uno = await createGenerator({

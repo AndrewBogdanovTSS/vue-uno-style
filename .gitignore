@@ -3,6 +3,8 @@ dist/
 coverage/
 .nuxt/
 .output/
+# `nuxt generate` links playground/dist to .output/public; `dist/` only matches directories
+playground/dist
 *.tgz
 
 # Editors

@@ -94,6 +94,20 @@ Requires Node 24 or newer, Vue 3.4 or newer, and UnoCSS 66 or newer. The Nuxt
 module also needs Nuxt 3.17 and `@unocss/nuxt` 66 or newer; the ESLint rule
 needs ESLint 9 and `vue-eslint-parser`.
 
+### Base presets
+
+Any of the three UnoCSS presets with breakpoints works as the base:
+
+| Preset | Breakpoints live in | Default `sm` | Rules you add |
+|--------|---------------------|--------------|---------------|
+| `presetMini` | `theme.breakpoints` | `640px` | `object`, `blur`, `columns`, `col-span`, if you use them |
+| `presetWind3` | `theme.breakpoints` | `640px` | `col-span`, if you use it |
+| `presetWind4` | `theme.breakpoint` | `40rem` | none |
+
+The missing rules are listed under [Custom rules](#custom-rules). None of the
+three defaults has a zero-valued `sm`, so each needs `baseBreakpoint: 'sm'` or
+breakpoints of your own: see [Breakpoints](#breakpoints).
+
 ## Properties
 
 The package predefines no properties: you list the ones your app uses.
@@ -105,9 +119,9 @@ export default ['c', 'bg', 'p', 'gap', { name: 'bgi', format: 'url' }]
 ```
 
 Each entry is a UnoCSS utility prefix whose rule accepts a `<prefix>-$<variable>`
-value. `presetMini` and `presetWind3` already do for most utilities (`c`, `bg`,
-`p`, `m`, `w`, `h`, `gap`, ...). For anything else, add the rule yourself: see
-[Custom rules](#custom-rules).
+value. `presetMini`, `presetWind3` and `presetWind4` already do for most
+utilities (`c`, `bg`, `p`, `m`, `w`, `h`, `gap`, ...). For anything else, add the
+rule yourself: see [Custom rules](#custom-rules).
 
 `format: 'url'` wraps each value as `url(<value>)`, for properties fed plain
 image URLs.
@@ -152,15 +166,16 @@ rules: [
 
 #### Prefixes your preset lacks
 
-`presetWind3` builds on `presetMini` and adds rules of its own. Among the common
-utilities, these prefixes need a rule from you:
+`presetWind3` builds on `presetMini` and adds rules of its own; `presetWind4`
+ships all four below. Among the common utilities, these prefixes need a rule
+from you:
 
-| Prefix | `presetMini` | `presetWind3` |
-|--------|--------------|---------------|
-| `object` | add the rule | built in |
-| `blur` | add the rule | built in |
-| `columns` | add the rule | built in |
-| `col-span` | add the rule | add the rule |
+| Prefix | `presetMini` | `presetWind3` | `presetWind4` |
+|--------|--------------|---------------|---------------|
+| `object` | add the rule | built in | built in |
+| `blur` | add the rule | built in | built in |
+| `columns` | add the rule | built in | built in |
+| `col-span` | add the rule | add the rule | built in |
 
 ```ts
 // uno.config.ts - add only the rules your preset lacks
@@ -188,8 +203,23 @@ One breakpoint is the unprefixed base, used before any media query:
 - If none has a zero value, `baseBreakpoint` is required.
 - An explicit `baseBreakpoint` always wins.
 
-The stock UnoCSS theme has `sm: 640px`, so it needs `baseBreakpoint: 'sm'` or a
-zero-valued breakpoint. The package throws instead of guessing.
+The presets' own defaults start at `sm: 640px` (`presetMini`, `presetWind3`) or
+`sm: 40rem` (`presetWind4`), so they need `baseBreakpoint: 'sm'` or a zero-valued
+breakpoint. The package throws instead of guessing.
+
+The package reads breakpoints where the base preset keeps them, the way
+UnoCSS's own variants do:
+
+- **The theme key** is `theme.breakpoint` under `presetWind4` and
+  `theme.breakpoints` under the others.
+- **Your theme value replaces the preset's defaults.** It is not merged with
+  them: set `sm`, `md` and `lg`, and the defaults' `xl` and `2xl` are gone.
+- **The `breakpoints` option replaces that theme key**, so the base preset's own
+  variants use the same values. Set breakpoints in one place. If your theme sets
+  them too, UnoCSS's variants follow the theme while the package follows the
+  option, and the two must not disagree.
+- **Theme values must be strings** (`'0px'`, not `0`): UnoCSS's own variants fail
+  on numbers. The `breakpoints` option accepts numbers and converts them.
 
 ## Nuxt
 
@@ -207,8 +237,8 @@ export default defineNuxtConfig({
 })
 ```
 
-The module adds the preset, reads breakpoints from the resolved UnoCSS theme
-(or `breakpoints`, when given) and registers the directive.
+The module adds the preset, reads breakpoints from the UnoCSS theme (or
+`breakpoints`, when given) and registers the directive.
 
 ## Vue and UnoCSS without Nuxt
 
@@ -220,11 +250,13 @@ import { defineConfig, presetWind3 } from 'unocss'
 import { presetVUnoStyle } from 'vue-uno-style/preset'
 import properties from './vue-uno-style.properties.js'
 
-const breakpoints = { sm: 0, md: '768px', lg: '1024px' }
-
 export default defineConfig({
-  presets: [presetWind3(), presetVUnoStyle({ properties, breakpoints })],
-  theme: { breakpoints },
+  // The same with presetMini() or presetWind4(): the option writes the
+  // breakpoints into the theme key the base preset reads.
+  presets: [
+    presetWind3(),
+    presetVUnoStyle({ properties, breakpoints: { sm: 0, md: '768px', lg: '1024px' } }),
+  ],
 })
 ```
 
@@ -339,13 +371,13 @@ registered, and fails the build without it.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `properties` | `PropertyConfig[]` | required | The properties the directive may set. See [Property entries](#property-entries). |
-| `breakpoints` | `Record<string, number \| string>` | the UnoCSS theme's | Breakpoints for the preset and the directive. They replace `theme.breakpoints`. |
+| `breakpoints` | `Record<string, number \| string>` | the UnoCSS theme's | Breakpoints for the preset and the directive. They replace the theme's breakpoints, so the base preset's own variants use them too. |
 | `baseBreakpoint` | `string` | the zero-valued breakpoint | The unprefixed breakpoint. See [Breakpoints](#breakpoints). |
 | `directiveName` | `string` | `'uno-style'` | Registration name without `v-`. `'style'` registers `v-style`. |
 | `webTypes` | `boolean` | `true` | Rewrites the installed package's `web-types.json` with `directiveName` and `properties`. `false` keeps the shipped file. |
 
-Without `breakpoints`, the module reads `theme.breakpoints` from the same
-UnoCSS config that `@unocss/nuxt` loads: `uno.config.*`, the file named in
+Without `breakpoints`, the module reads `theme.breakpoints` (`theme.breakpoint`
+under `presetWind4`) from the same UnoCSS config that `@unocss/nuxt` loads: `uno.config.*`, the file named in
 `unocss.configFile`, and the inline `unocss` options.
 
 ### UnoCSS preset
@@ -355,10 +387,10 @@ UnoCSS config that `@unocss/nuxt` loads: `uno.config.*`, the file named in
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `properties` | `PropertyConfig[]` | required | Safelists every class the directive can write for these properties. |
-| `breakpoints` | `Record<string, number \| string>` | `theme.breakpoints` | Breakpoints for the media queries and the safelist. They replace `theme.breakpoints`. |
+| `breakpoints` | `Record<string, number \| string>` | `theme.breakpoints`, or `theme.breakpoint` under `presetWind4` | Breakpoints for the media queries and the safelist. They replace that theme key, so the base preset's own variants use them too. |
 | `baseBreakpoint` | `string` | the zero-valued breakpoint | The unprefixed breakpoint. |
 
-The preset throws when it finds neither `breakpoints` nor `theme.breakpoints`.
+The preset throws when it finds neither `breakpoints` nor breakpoints in the theme.
 
 ### Directive
 
