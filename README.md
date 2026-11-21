@@ -1,18 +1,86 @@
 # vue-uno-style
 
-Responsive runtime styles for Vue, backed by UnoCSS.
-
-`vue-uno-style` turns API- or CMS-provided responsive values into CSS variables
-and UnoCSS classes. It ships a Vue directive, a UnoCSS preset, an ESLint rule
-and a Nuxt module that wires them together.
+Let data from your CMS or API style an element differently on phones, tablets
+and desktops, with plain CSS that UnoCSS generates at build time.
 
 ```vue
 <h1 v-uno-style:c="{ sm: '#111827', md: '#4f46e5' }">Responsive heading</h1>
 ```
 
-renders `class="o:c-$c o:md:c-$c-md"` with `--c: #111827; --c-md: #4f46e5`.
-UnoCSS turns those classes into `color: var(--c)`, the second one inside the
-`md` media query.
+This heading is dark grey on phones and indigo from 768px up. The two colours
+can come from anywhere: a CMS field, an API response, a user's settings.
+
+## Why this exists
+
+Utility CSS such as UnoCSS works when you know the values while you write the
+code. You write `md:c-indigo-600`, the build finds that class in your files, and
+it generates the CSS for it.
+
+That stops working when a value only arrives once the page runs. Say a CMS
+editor picks a heading colour per screen size:
+
+- **A utility class for the value**, such as `md:c-[#4f46e5]`, appears nowhere
+  in your source, so the build never generated CSS for it.
+- **An inline style** (`style="color: #4f46e5"`) works, but inline styles have no
+  media queries. You get one value for every screen.
+- **Runtime CSS-in-JS** works, but ships a styling engine to the browser and
+  writes new CSS rules while the page runs.
+
+## How it works
+
+The value goes into a CSS variable. A small, fixed set of classes, generated at
+build time, decides which variable applies at which screen width:
+
+```html
+<!-- what the directive renders -->
+<h1 class="o:c-$c o:md:c-$c-md" style="--c: #111827; --c-md: #4f46e5">Responsive heading</h1>
+```
+
+```css
+/* what the preset generated at build time */
+.o\:c-\$c { color: var(--c); }
+@media (min-width: 768px) {
+  .o\:md\:c-\$c-md { color: var(--c-md); }
+}
+```
+
+The classes depend only on the properties and breakpoints you configure, never
+on the values. Three properties and three breakpoints give nine classes, whatever
+the CMS sends. When a value changes, only a CSS variable changes: nothing is
+generated in the browser.
+
+What that buys you:
+
+- **Any value from data, per breakpoint.**
+- **Static CSS.** There is no styling engine in the browser. The directive only
+  sets classes and CSS variables, and it works with server rendering.
+- **Defaults stay in the template.** A value from data overrides the element's
+  own utility classes. When the data has no value, the template's class applies:
+
+  ```vue
+  <h1 class="c-gray-900" v-uno-style:c="cms.headingColor">Responsive heading</h1>
+  ```
+
+## When to use it
+
+| Your values are | Use |
+|-----------------|-----|
+| known while you write the code | plain utility classes |
+| from data, and the same on every screen | a plain `:style` binding |
+| from data, and different per screen size | `vue-uno-style` |
+
+## What's in the package
+
+- **A Vue directive**, `v-uno-style`, that writes the classes and variables.
+- **A UnoCSS preset** that generates their CSS at build time. You always need it:
+  see [Properties](#properties).
+- **An ESLint rule** that catches a second directive on the same element and,
+  given your properties, a property you have not configured.
+- **A Nuxt module** that wires them together.
+
+Next on the [roadmap](https://github.com/AndrewBogdanovTSS/vue-uno-style/blob/main/ROADMAP.md):
+`presetWind4`, values taken from your design system (`c: 'red-300'`), and a
+Tailwind CSS 4 version.
 
 See every behaviour live in the [playground](https://andrewbogdanovtss.github.io/vue-uno-style/).
 
