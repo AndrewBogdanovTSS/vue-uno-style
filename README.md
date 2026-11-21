@@ -37,18 +37,9 @@ export default ['c', 'bg', 'p', 'gap', { name: 'bgi', format: 'url' }]
 ```
 
 Each entry is a UnoCSS utility prefix whose rule accepts a `<prefix>-$<variable>`
-value. `presetWind3` already does for most utilities (`c`, `bg`, `p`, `m`, `w`,
-`h`, `gap`, ...). For anything else, add the rule yourself:
-
-```ts
-// uno.config.ts
-rules: [
-  [/^bgi-\$([\w-]+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })],
-]
-```
-
-Match the variable name with `[\w-]+` rather than `.+`: UnoCSS scans every file, and
-text such as `bgi-$*` would otherwise produce `var(--*)`, which fails CSS minification.
+value. `presetMini` and `presetWind3` already do for most utilities (`c`, `bg`,
+`p`, `m`, `w`, `h`, `gap`, ...). For anything else, add the rule yourself: see
+[Custom rules](#custom-rules).
 
 `format: 'url'` wraps each value as `url(<value>)`, for properties fed plain
 image URLs.
@@ -57,6 +48,69 @@ image URLs.
 > The directive creates class names at runtime, so source scanning cannot find
 > them. Always install `presetVUnoStyle()` as well: it safelists the classes for
 > every configured property and adds the `o:` variant and override layer.
+
+### Custom rules
+
+A property needs a UnoCSS rule that turns `<prefix>-$<variable>` into CSS.
+Without one, its classes get no CSS, and nothing reports it: neither UnoCSS nor
+the preset warns. When you add a property, check its CSS once.
+
+Every rule has the same shape. The preset's variants remove `o:` and the
+breakpoint before the rule runs, so the rule only ever sees
+`<prefix>-$<variable>`, and `name` is the variable without its `--`:
+
+```ts
+[/^<prefix>-\$([\w-]+)$/, ([, name]) => ({ '<css-property>': `var(--${name})` })]
+```
+
+Match the variable name with `[\w-]+` rather than `.+`: UnoCSS scans every file, and
+text such as `bgi-$*` would otherwise produce `var(--*)`, which fails CSS minification.
+
+For a property fed plain image URLs, give its entry `format: 'url'`. The
+directive then writes `url(<value>)` into the variable, so the rule stays a plain
+`var()`:
+
+```ts
+// vue-uno-style.properties.js
+export default [{ name: 'bgi', format: 'url' }]
+```
+
+```ts
+// uno.config.ts
+rules: [
+  [/^bgi-\$([\w-]+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })],
+]
+```
+
+#### Prefixes your preset lacks
+
+`presetWind3` builds on `presetMini` and adds rules of its own. Among the common
+utilities, these prefixes need a rule from you:
+
+| Prefix | `presetMini` | `presetWind3` |
+|--------|--------------|---------------|
+| `object` | add the rule | built in |
+| `blur` | add the rule | built in |
+| `columns` | add the rule | built in |
+| `col-span` | add the rule | add the rule |
+
+```ts
+// uno.config.ts - add only the rules your preset lacks
+rules: [
+  [/^object-\$([\w-]+)$/, ([, name]) => ({ 'object-fit': `var(--${name})` })],
+  // The value can sit inside a CSS function...
+  [/^blur-\$([\w-]+)$/, ([, name]) => ({ filter: `blur(var(--${name}))` })],
+  [/^columns-\$([\w-]+)$/, ([, name]) => ({ columns: `var(--${name})` })],
+  // ...or appear more than once.
+  [/^col-span-\$([\w-]+)$/, ([, name]) => ({ 'grid-column': `span var(--${name}) / span var(--${name})` })],
+]
+```
+
+> [!WARNING]
+> A rule in your config replaces your preset's own rule for the same class, so
+> add only the rules your preset lacks. Under `presetWind3`, for example, a custom
+> `blur` rule sets `filter` on its own, which drops any other filter utility on
+> the element.
 
 ## Breakpoints
 
