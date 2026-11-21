@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import { builtIn } from '../test/fixtures/customRules'
 
 type Level = 'pass' | 'error' | 'unverifiable'
 
@@ -118,6 +119,40 @@ const optionChecks = (): Finding[] => optionInterfaces.map(([file, name]) => {
   )
 })
 
+/**
+ * The README's custom rules must be the ones `test/customRules.test.ts` runs, and its table of
+ * which preset lacks which prefix must be the one that test proves. The rules are compared as
+ * text, because the README shows their source.
+ */
+const customRuleChecks = (): Finding[] => {
+  const fixture = readFileSync(join(root, 'test/fixtures/customRules.ts'), 'utf8')
+  const rules = [...fixture.matchAll(/\[\/\^.*?\}\)\]/g)].map((match) => match[0])
+  const expectedRules = Object.keys(builtIn).length + 1
+  const unquoted = rules.filter((rule) => !readme.includes(rule))
+
+  const cell = (shipped: boolean) => shipped ? 'built in' : 'add the rule'
+  const rows = Object.entries(builtIn).map(([prefix, presets]) =>
+    `| \`${prefix}\` | ${cell(presets.presetMini)} | ${cell(presets.presetWind3)} |`)
+  const missingRows = rows.filter((row) => !readme.includes(row))
+
+  return [
+    verdict(
+      rules.length === expectedRules && unquoted.length === 0,
+      'the README quotes the tested custom rules verbatim',
+      `${rules.length} rules from test/fixtures/customRules.ts`,
+      rules.length === expectedRules
+        ? `not in the README: ${unquoted.join(' ')}`
+        : `found ${rules.length} rules in the fixture, expected ${expectedRules}`,
+    ),
+    verdict(
+      missingRows.length === 0,
+      'the README\'s preset table matches the tested one',
+      `${rows.length} rows`,
+      `missing or different: ${missingRows.join(' ')}`,
+    ),
+  ]
+}
+
 const buildChecks = (): Finding[] => {
   const files = Object.values(pkg.exports ?? {})
     .flatMap((entry) => typeof entry === 'string'
@@ -142,7 +177,7 @@ const buildChecks = (): Finding[] => {
   )]
 }
 
-const findings = [...packageChecks(), ...optionChecks(), ...buildChecks()]
+const findings = [...packageChecks(), ...optionChecks(), ...customRuleChecks(), ...buildChecks()]
 const symbol: Record<Level, string> = { pass: 'PASS ', error: 'FAIL ', unverifiable: '?????' }
 
 console.log('\nREADME claims, checked against the package')
