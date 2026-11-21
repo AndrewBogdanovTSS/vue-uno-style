@@ -225,10 +225,34 @@ unit tests.
 - **One tsdown config.** The client is a normal entry that imports only `clientUtils.ts`, so it
   builds to one file without imports; `pnpm smoke` checks that it stays that way.
 
-### Found while testing
+### Found while testing, fixed by phase 1
 
-The playground sets `theme.breakpoints` to `sm`/`md`/`lg`, but the resolved UnoCSS theme also
-has `presetWind3`'s `xl` and `2xl`, because UnoCSS merges theme objects. The directive therefore
-gets five breakpoints and the safelist has five classes per property. The playground header,
-which reads its own config file, shows `lg` while the tab shows `xl` at 1400px wide. This is
-existing behaviour, not caused by this change.
+The playground sets `theme.breakpoints` to `sm`/`md`/`lg`, but the package used to read the
+merged UnoCSS theme, which also holds `presetWind3`'s `xl` and `2xl`. The directive therefore got
+five breakpoints and the safelist five classes per property, and the playground header (which
+reads its own config file) showed `lg` while the tab showed `xl` at 1400px wide.
+
+Phase 1 of `ROADMAP.md` fixed this. The package now reads breakpoints the way UnoCSS's own
+variants do: the user's theme value replaces the preset's defaults. The tab and the header agree
+on `sm`/`md`/`lg`.
+
+The fix changes what an app sees when it sets its own `theme.breakpoints` and still passes
+`xl` values: those values are now dropped. The **Warnings** tab is where that shows. It reports
+each one as `unknown-breakpoint`, because `inspectValue` checks keys against the directive's own
+breakpoints.
+
+### Updated after phase 1
+
+Once phase 1 had made `presetMini` and `presetWind4` supported base presets, the tab changed in
+three ways:
+
+- **The suggested rule is the tested one where one exists.** The four rules from the README's
+  "Prefixes your preset lacks" table now live in `src/knownRules.ts` as data. One entry yields
+  the rule the tests run and the source text the README quotes. For one of those prefixes, the
+  tab suggests that text. For any other prefix it suggests the general shape, as before. A test
+  evaluates the text to prove it works as pasted.
+- **The Overview names the theme key and the base preset.** The breakpoints line says whether
+  they came from the option or the theme, and under which key (`theme.breakpoint` under
+  presetWind4, `theme.breakpoints` otherwise). A new "UnoCSS presets" line lists the other
+  presets in the resolved config.
+- **The server and module tests run under all three presets.**
