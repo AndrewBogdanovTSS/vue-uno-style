@@ -3,6 +3,8 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import type { KnownRulePrefix } from '../src/knownRules'
+import { knownRuleSource, knownRules } from '../src/knownRules'
 import { builtIn } from '../test/fixtures/customRules'
 import { basePresets } from '../test/fixtures/presets'
 
@@ -127,8 +129,13 @@ const optionChecks = (): Finding[] => optionInterfaces.map(([file, name]) => {
  * text, because the README shows their source.
  */
 const customRuleChecks = (): Finding[] => {
+  // The `bgi` example is written out in the fixture; the gap rules come from the package, in the
+  // text the DevTools tab suggests.
   const fixture = readFileSync(join(root, 'test/fixtures/customRules.ts'), 'utf8')
-  const rules = [...fixture.matchAll(/\[\/\^.*?\}\)\]/g)].map((match) => match[0])
+  const rules = [
+    ...[...fixture.matchAll(/\[\/\^.*?\}\)\]/g)].map((match) => match[0]),
+    ...(Object.keys(knownRules) as KnownRulePrefix[]).map(knownRuleSource),
+  ]
   const expectedRules = Object.keys(builtIn).length + 1
   const unquoted = rules.filter((rule) => !readme.includes(rule))
 
@@ -154,7 +161,7 @@ const customRuleChecks = (): Finding[] => {
     verdict(
       rules.length === expectedRules && unquoted.length === 0,
       'the README quotes the tested custom rules verbatim',
-      `${rules.length} rules from test/fixtures/customRules.ts`,
+      `${rules.length} rules from test/fixtures/customRules.ts and src/knownRules.ts`,
       rules.length === expectedRules
         ? `not in the README: ${unquoted.join(' ')}`
         : `found ${rules.length} rules in the fixture, expected ${expectedRules}`,

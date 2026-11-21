@@ -1,6 +1,7 @@
 import type { DevtoolsContext, SampleInput } from '../src/devtools/server'
+import type { BasePreset } from './fixtures/presets'
 import { EventEmitter } from 'node:events'
-import { createGenerator, presetWind3 } from 'unocss'
+import { createGenerator } from 'unocss'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { resolveBreakpoints } from '../src/core/breakpoints'
 import { resolveProperties } from '../src/core/properties'
@@ -9,34 +10,67 @@ import {
   createDevtoolsMiddleware,
   DEVTOOLS_ROUTE,
   generateSample,
+  suggestRule,
 } from '../src/devtools/server'
+import { knownRuleSource } from '../src/knownRules'
 import { presetVUnoStyle } from '../src/preset'
+import { breakpointThemeKey } from '../src/themeBreakpoints'
+import { builtIn } from './fixtures/customRules'
+import { basePresets } from './fixtures/presets'
 
 const breakpoints = { sm: 0, md: '768px', lg: '1024px' }
-const configured = ['c', 'bg', 'nope', { name: 'bgi', format: 'url' as const }]
+const gaps = Object.keys(builtIn) as Array<keyof typeof builtIn>
+const configured = ['c', 'bg', 'nope', { name: 'bgi', format: 'url' as const }, ...gaps]
 
-let context: DevtoolsContext
-
-beforeAll(async () => {
+/** The context the Nuxt module builds, for an app on `base`. */
+const createContext = async ({ preset }: Pick<BasePreset, 'preset'>): Promise<DevtoolsContext> => {
   const generator = await createGenerator({
-    presets: [presetWind3(), presetVUnoStyle({ properties: configured, breakpoints })],
+    presets: [preset(), presetVUnoStyle({ properties: configured, breakpoints })],
     rules: [[/^bgi-\$([\w-]+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })]],
   })
-  context = {
+
+  return {
     version: '1.2.3',
     directiveName: 'uno-style',
     properties: resolveProperties(configured),
     breakpoints,
     breakpointSource: 'option',
+    breakpointThemeKey: breakpointThemeKey(generator.config.theme),
     resolved: resolveBreakpoints({ breakpoints }),
     preset: 'module',
+    unoPresets: generator.config.presets.map(({ name }) => name).filter((name) => name !== 'vue-uno-style'),
     configSources: ['/app/uno.config.ts'],
     webTypes: { status: 'unchanged', file: '/pkg/dist/web-types.json' },
     generator,
   }
+}
+
+/** presetWind3, for the middleware tests, which do not depend on the base preset. */
+let context: DevtoolsContext
+
+beforeAll(async () => {
+  context = await createContext(basePresets.find(({ name }) => name === 'presetWind3')!)
 })
 
-describe('createDevtoolsData', () => {
+describe('suggestRule', () => {
+  it.each(gaps)('suggests the README\'s tested rule for "%s"', (prefix) => {
+    expect(suggestRule(prefix)).toBe(knownRuleSource(prefix))
+  })
+
+  it('falls back to the README\'s general shape for any other prefix', () => {
+    expect(suggestRule('nope')).toBe(
+      '[/^nope-\\$([\\w-]+)$/, ([, name]) => ({ \'<css-property>\': `var(--${name})` })]',
+    )
+  })
+})
+
+describe.each(basePresets)('createDevtoolsData with $name', (base) => {
+  let context: DevtoolsContext
+
+  beforeAll(async () => {
+    context = await createContext(base)
+  })
+
   it('describes the resolved configuration', async () => {
     const data = await createDevtoolsData(context)
 
@@ -44,16 +78,31 @@ describe('createDevtoolsData', () => {
       version: '1.2.3',
       directiveName: 'uno-style',
       preset: 'module',
+      unoPresets: [base.packageName],
       configSources: ['/app/uno.config.ts'],
       webTypes: { status: 'unchanged', file: '/pkg/dist/web-types.json' },
       breakpoints: {
         source: 'option',
+        themeKey: base.themeKey,
         values: { sm: '0px', md: '768px', lg: '1024px' },
         base: 'sm',
         prefixed: ['md', 'lg'],
       },
     }))
-    expect(data.properties).toEqual([{ name: 'c' }, { name: 'bg' }, { name: 'nope' }, { name: 'bgi', format: 'url' }])
+    expect(data.properties).toEqual([
+      { name: 'c' },
+      { name: 'bg' },
+      { name: 'nope' },
+      { name: 'bgi', format: 'url' },
+      ...gaps.map((name) => ({ name })),
+    ])
+  })
+
+  it.each(gaps)('suggests the tested rule for "%s" exactly when the preset lacks one', async (prefix) => {
+    const { coverage } = await createDevtoolsData(context)
+    const item = coverage.find(({ property }) => property === prefix)!
+
+    expect(item.suggestion).toBe(builtIn[prefix][base.name] ? undefined : knownRuleSource(prefix))
   })
 
   it('checks every safelisted token against the generator', async () => {
@@ -84,12 +133,19 @@ describe('createDevtoolsData', () => {
   it('totals the safelist', async () => {
     const { coverage, safelist } = await createDevtoolsData(context)
 
-    expect(safelist.classes).toBe(12)
+    // Three classes per property: the base and the `md` and `lg` breakpoints
+    expect(safelist.classes).toBe(configured.length * 3)
     expect(safelist.bytes).toBe(coverage.reduce((total, item) => total + item.bytes, 0))
   })
 })
 
-describe('generateSample', () => {
+describe.each(basePresets)('generateSample with $name', (base) => {
+  let context: DevtoolsContext
+
+  beforeAll(async () => {
+    context = await createContext(base)
+  })
+
   it('returns the classes, variables and CSS for a responsive value', async () => {
     const result = await generateSample(context, { property: 'c', value: { sm: 'red', md: 'blue' } })
     if ('error' in result) throw new Error(result.error)

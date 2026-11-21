@@ -12,7 +12,7 @@ import { resolveProperties } from './core/properties'
 import { createWebTypes, serializeWebTypes } from './core/webTypes'
 import { createDevtoolsData, createDevtoolsMiddleware, DEVTOOLS_ROUTE, generateSample } from './devtools/server'
 import { presetVUnoStyle } from './preset'
-import { resolveThemeBreakpoints } from './themeBreakpoints'
+import { breakpointThemeKey, resolveThemeBreakpoints } from './themeBreakpoints'
 import { packageWebTypesPath, writeWebTypes } from './webTypes'
 
 declare const __PACKAGE_VERSION__: string
@@ -306,8 +306,12 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
           properties: resolvedProperties,
           breakpoints,
           breakpointSource: options.breakpoints ? 'option' : 'theme',
+          breakpointThemeKey: breakpointThemeKey(generator.config.theme),
           resolved,
           preset: presetSource,
+          unoPresets: generator.config.presets
+            .map(({ name }) => name)
+            .filter((name) => name !== 'vue-uno-style'),
           configSources: sources,
           webTypes,
           generator,

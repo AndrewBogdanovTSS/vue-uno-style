@@ -20,6 +20,7 @@ vi.mock('../src/webTypes', () => ({
 import module from '../src/nuxt'
 import { presetVUnoStyle } from '../src/preset'
 import { writeWebTypes } from '../src/webTypes'
+import { basePresets } from './fixtures/presets'
 
 type Hook = (...args: unknown[]) => unknown
 type Options = {
@@ -133,35 +134,48 @@ describe('vue-uno-style Nuxt DevTools', () => {
     expect(contents).toContain('nuxtApp.vueApp.directive("style", directive)')
   })
 
-  it('serves the build data once the UnoCSS config is loaded', async () => {
-    const hooks = await setupModule({ directiveName: 'style' }, { presets: [presetWind3()] }, { dev: true })
-    const middleware = capturedMiddleware()
-    const pending = getData(middleware)
-    await hooks.get('modules:done')?.()
-    const data = await pending
+  describe.each(basePresets)('with $name', ({ preset, packageName, themeKey }) => {
+    it('serves the build data once the UnoCSS config is loaded', async () => {
+      const hooks = await setupModule({ directiveName: 'style' }, { presets: [preset()] }, { dev: true })
+      const middleware = capturedMiddleware()
+      const pending = getData(middleware)
+      await hooks.get('modules:done')?.()
+      const data = await pending
 
-    expect(data).toEqual(expect.objectContaining({
-      directiveName: 'style',
-      preset: 'module',
-      webTypes: { status: 'written', file: '/pkg/dist/web-types.json' },
-      breakpoints: { source: 'option', values: { sm: '0px', md: '768px' }, base: 'sm', prefixed: ['md'] },
-    }))
-    expect(data.properties).toEqual([{ name: 'c' }, { name: 'bg' }, { name: 'bgi', format: 'url' }])
-    // presetWind3 has rules for c and bg; bgi needs one the app adds itself
-    expect(data.coverage.map((item: { property: string, suggestion?: string }) =>
-      [item.property, Boolean(item.suggestion)])).toEqual([['c', false], ['bg', false], ['bgi', true]])
-  })
+      expect(data).toEqual(expect.objectContaining({
+        directiveName: 'style',
+        preset: 'module',
+        unoPresets: [packageName],
+        webTypes: { status: 'written', file: '/pkg/dist/web-types.json' },
+        breakpoints: { source: 'option', themeKey, values: { sm: '0px', md: '768px' }, base: 'sm', prefixed: ['md'] },
+      }))
+      expect(data.properties).toEqual([{ name: 'c' }, { name: 'bg' }, { name: 'bgi', format: 'url' }])
+      // Every base preset has rules for c and bg; bgi needs one the app adds itself
+      expect(data.coverage.map((item: { property: string, suggestion?: string }) =>
+        [item.property, Boolean(item.suggestion)])).toEqual([['c', false], ['bg', false], ['bgi', true]])
+    })
 
-  it('reads breakpoints from the theme and records where they came from', async () => {
-    const hooks = await setupModule(
-      { breakpoints: undefined },
-      { presets: [presetWind3()], theme: { breakpoints: { sm: '0px', md: '768px' } } },
-      { dev: true },
-    )
-    const middleware = capturedMiddleware()
-    await hooks.get('modules:done')?.()
+    /**
+     * The user's theme value replaces the preset's defaults, so the tab lists exactly the
+     * breakpoints the app set. It used to show the defaults' `xl` and `2xl` as well.
+     */
+    it('reads breakpoints from the theme, and only the ones the app set', async () => {
+      const hooks = await setupModule(
+        { breakpoints: undefined },
+        { presets: [preset()], theme: { [themeKey]: { sm: '0px', md: '768px' } } },
+        { dev: true },
+      )
+      const middleware = capturedMiddleware()
+      await hooks.get('modules:done')?.()
 
-    expect((await getData(middleware)).breakpoints.source).toBe('theme')
+      expect((await getData(middleware)).breakpoints).toEqual({
+        source: 'theme',
+        themeKey,
+        values: { sm: '0px', md: '768px' },
+        base: 'sm',
+        prefixed: ['md'],
+      })
+    })
   })
 
   it('records a failed or disabled web-types rewrite', async () => {

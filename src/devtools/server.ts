@@ -1,6 +1,7 @@
 import type { BreakpointConfig, ResolvedBreakpoints } from '../core/breakpoints'
 import type { StyleValue } from '../core/getStyle'
 import type { PropertyFormat, ResolvedProperties } from '../core/properties'
+import type { BreakpointThemeKey } from '../themeBreakpoints'
 import type { ValueWarning } from './inspect'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { UnoGenerator } from 'unocss'
@@ -9,6 +10,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getStyle } from '../core/getStyle'
 import { getVarsClasses } from '../core/varsClasses'
+import { isKnownRulePrefix, knownRuleSource } from '../knownRules'
 import { inspectValue } from './inspect'
 import { renderDevtoolsPage } from './page'
 
@@ -36,12 +38,16 @@ export interface DevtoolsData {
   properties: Array<{ name: string, format?: PropertyFormat }>
   breakpoints: {
     source: 'option' | 'theme'
+    /** The theme key the base preset reads them from, and the option writes them to. */
+    themeKey: BreakpointThemeKey
     values: Record<string, string>
     base: string
     prefixed: string[]
   }
   /** `config` when the UnoCSS config already had the preset, `module` when the module added it. */
   preset: 'config' | 'module'
+  /** The other UnoCSS presets in the resolved config, such as `@unocss/preset-wind4`. */
+  unoPresets: string[]
   configSources: string[]
   webTypes: WebTypesStatus
   coverage: PropertyCoverage[]
@@ -54,8 +60,10 @@ export interface DevtoolsContext {
   properties: ResolvedProperties
   breakpoints: BreakpointConfig
   breakpointSource: 'option' | 'theme'
+  breakpointThemeKey: BreakpointThemeKey
   resolved: ResolvedBreakpoints
   preset: 'config' | 'module'
+  unoPresets: string[]
   configSources: string[]
   webTypes: WebTypesStatus
   generator: Pick<UnoGenerator, 'generate'>
@@ -75,6 +83,15 @@ const byteLength = (text: string) => new TextEncoder().encode(text).length
 const toCssSize = (value: number | string) => typeof value === 'number' ? `${value}px` : value
 
 const escapeRegExp = (text: string) => text.replace(/[$()*+.?[\\\]^{|}-]/g, '\\$&')
+
+/**
+ * The `rules` entry to add for a property no rule serves: the tested rule from the README's
+ * "Prefixes your preset lacks" table when the prefix is one of those, otherwise the README's
+ * general shape with the CSS property left for the app to fill in.
+ */
+export const suggestRule = (property: string): string => isKnownRulePrefix(property)
+  ? knownRuleSource(property)
+  : `[/^${escapeRegExp(property)}-\\$([\\w-]+)$/, ([, name]) => ({ '<css-property>': \`var(--\${name})\` })]`
 
 const generateCss = async (generator: DevtoolsContext['generator'], tokens: string[]) => {
   if (!tokens.length) return { css: '', matched: new Set<string>() }
@@ -101,11 +118,7 @@ export const createCoverage = async (context: DevtoolsContext): Promise<Property
       ...(format ? { format } : {}),
       tokens: tokens.map((token) => ({ token, matched: matched.has(token) })),
       bytes: byteLength(css),
-      ...(anyMatched
-        ? {}
-        : {
-            suggestion: `[/^${escapeRegExp(property)}-\\$([\\w-]+)$/, ([, name]) => ({ '<css-property>': \`var(--\${name})\` })]`,
-          }),
+      ...(anyMatched ? {} : { suggestion: suggestRule(property) }),
     }
   }))
 
@@ -122,12 +135,14 @@ export const createDevtoolsData = async (context: DevtoolsContext): Promise<Devt
     }),
     breakpoints: {
       source: context.breakpointSource,
+      themeKey: context.breakpointThemeKey,
       values: Object.fromEntries(Object.entries(context.breakpoints)
         .map(([name, value]) => [name, toCssSize(value)])),
       base: context.resolved.base,
       prefixed: context.resolved.prefixed,
     },
     preset: context.preset,
+    unoPresets: context.unoPresets,
     configSources: context.configSources,
     webTypes: context.webTypes,
     coverage,

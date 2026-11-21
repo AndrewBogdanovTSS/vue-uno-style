@@ -114,6 +114,9 @@ const renderOverview = () => {
       <dt>Package</dt><dd><code>vue-uno-style@${esc(data.version)}</code></dd>
       <dt>Directive</dt><dd><code>v-${esc(data.directiveName)}</code></dd>
       <dt>Preset</dt><dd>${data.preset === 'config' ? 'from the UnoCSS config' : 'added by the module'}</dd>
+      <dt>UnoCSS presets</dt><dd>${data.unoPresets.length
+        ? data.unoPresets.map((name) => `<code>${esc(name)}</code>`).join(' ')
+        : '<span class="muted">none: the package serves breakpoints itself</span>'}</dd>
       <dt>UnoCSS config</dt><dd>${data.configSources.length
         ? data.configSources.map((source) => `<code>${esc(source)}</code>`).join('<br>')
         : '<span class="muted">inline options only</span>'}</dd>
@@ -134,9 +137,10 @@ const renderOverview = () => {
 
   <section>
     <h2>Breakpoints</h2>
-    <p class="muted">From ${data.breakpoints.source === 'option'
-      ? 'the <code>breakpoints</code> option'
-      : 'the UnoCSS theme'}. Base: <code>${esc(data.breakpoints.base)}</code>.</p>
+    <p class="muted">${data.breakpoints.source === 'option'
+      ? `From the <code>breakpoints</code> option, written to <code>theme.${esc(data.breakpoints.themeKey)}</code>`
+      : `From <code>theme.${esc(data.breakpoints.themeKey)}</code> in the UnoCSS theme`}.
+      Base: <code>${esc(data.breakpoints.base)}</code>.</p>
     <table><thead><tr><th>Name</th><th>Min width</th><th>Role</th><th>Class prefix</th><th></th></tr></thead><tbody>
     ${order.map((name) => `<tr>
       <td><code>${esc(name)}</code></td>

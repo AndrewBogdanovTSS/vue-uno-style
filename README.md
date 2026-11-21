@@ -245,10 +245,16 @@ The module adds the preset, reads breakpoints from the UnoCSS theme (or
 During `nuxt dev`, the module adds a **vue-uno-style** tab to Nuxt DevTools:
 
 - **Overview**: the resolved directive name, properties, formats and
-  breakpoints, and where the breakpoints and the preset came from. It checks
-  every safelisted class against your UnoCSS config, flags a property with no
-  matching rule and suggests the rule to add. It also shows the safelist size,
-  the web-types status, and which properties no page has used yet this session.
+  breakpoints, and where the breakpoints and the preset came from: the option or
+  the theme key (`theme.breakpoint` or `theme.breakpoints`), and your other
+  UnoCSS presets.
+  - **Rule coverage.** It checks every safelisted class against your UnoCSS
+    config, flags a property with no matching rule and suggests the rule to add.
+    For a prefix from [Prefixes your preset lacks](#prefixes-your-preset-lacks),
+    that is the tested rule from the table. For any other prefix, it is the
+    general shape with the CSS property left for you to fill in.
+  - **Status.** It also shows the safelist size, the web-types status, and which
+    properties no page has used yet this session.
 - **Elements**: every element on the current page that carries the directive.
   For each one it shows the owning component, the value per breakpoint with the
   active breakpoint marked, each binding's classes and variables, and what one
