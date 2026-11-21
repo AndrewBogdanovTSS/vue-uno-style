@@ -1,19 +1,20 @@
 # Roadmap
 
-Where `vue-uno-style` goes after 0.1.0: first UnoCSS `presetWind4`, then Tailwind CSS 4 through a
-separate package, `vue-tw-style`, built from this repository on a shared directive core. UnoCSS
-with `presetWind3` keeps working unchanged throughout.
+Where `vue-uno-style` goes after 0.1.0: first UnoCSS `presetMini` and `presetWind4` next to
+`presetWind3`, then Tailwind CSS 4 through a separate package, `vue-tw-style`, built from this
+repository on a shared directive core. UnoCSS with `presetWind3` keeps working unchanged
+throughout.
 
 | Phase | Scope | Release |
 | --- | --- | --- |
-| 1 | UnoCSS `presetWind4`, plus the breakpoint fixes it depends on (they fix `presetWind3` too) | `vue-uno-style` 0.2.0 |
+| 1 | UnoCSS `presetMini` and `presetWind4`, plus the breakpoint fixes they need (which also fix `presetWind3`) | `vue-uno-style` 0.2.0 |
 | 2a | Split the repository into a private core, `vue-uno-style` and `vue-tw-style`, with no API change | `vue-uno-style` 0.2.x |
 | 2b | Tailwind CSS 4.1+ support in the new package | `vue-tw-style` 0.1.0 |
 
-Every finding below was measured on 2026-11-21 against `unocss` 66.13.0 (`presetWind3`,
-`presetWind4`) and `tailwindcss` 4.3.5, generating real CSS. Cascade claims were checked in
-Chromium. The throwaway scripts are not committed. Each finding names its inputs, so it can be
-turned into a regression test as part of the phase that fixes it.
+Every finding below was measured on 2026-11-21 against `unocss` 66.13.0 (`presetMini`,
+`presetWind3`, `presetWind4`) and `tailwindcss` 4.3.5, generating real CSS. Cascade claims were
+checked in Chromium. The throwaway scripts are not committed. Each finding names its inputs, so it
+can be turned into a regression test as part of the phase that fixes it.
 
 ---
 
@@ -32,16 +33,31 @@ The directive itself is engine-agnostic: it writes whatever class strings and CS
 
 ---
 
-## Phase 1: UnoCSS `presetWind4`
+## Phase 1: UnoCSS `presetMini` and `presetWind4`
 
-**Goal:** `presetWind4()` is a drop-in replacement for `presetWind3()` next to the preset, the
-directive and the Nuxt module, with no configuration beyond what `presetWind3` already needs.
+**Goal:** `presetMini()`, `presetWind3()` and `presetWind4()` all work with the preset, the
+directive and the Nuxt module.
+- `presetWind4` is a drop-in replacement for `presetWind3`, with no configuration beyond what
+  `presetWind3` already needs.
+- `presetMini` needs only rules for the prefixes it does not ship, and the README shows how to
+  write them.
 
 ### What already works
 
-- **The `$` utilities.** Every prefix checked gives the same declaration under both presets:
-  `c bg p m w h gap text rounded shadow opacity font leading b top`. Only the helper variables
-  differ: `shadow` adds the inset-shadow variables, and `leading` also sets `--un-leading`.
+**`presetMini`** behaves like `presetWind3` today. It uses the same theme key (`breakpoints`) and
+the same defaults (`sm: 640px` up to `2xl: 1536px`). The preset, explicit `breakpoints`, custom
+breakpoint names, the `o:` variant and the `override` layer all work. Only #5 below applies to it.
+
+Of 49 prefixes checked, 45 give exactly the same CSS as under `presetWind3`. The checked set
+covers the README's, the playground's and the layout, typography, transform and colour utilities
+a CMS-driven page typically sets. The remaining four are listed under
+[Prefixes a preset does not ship](#prefixes-a-preset-does-not-ship).
+
+**`presetWind4`:**
+- **The `$` utilities.** Every prefix checked gives the same declaration as under
+  `presetWind3`: `c bg p m w h gap text rounded shadow opacity font leading b top`. Only the
+  helper variables differ: `shadow` adds the inset-shadow variables, and `leading` also sets
+  `--un-leading`.
 - **The `o:` variant and the `override` layer.** `presetWind4` adds the layers `properties` (-200),
   `theme` (-150) and `base` (-100). `override: 10` still sorts after `default`, so directive
   classes keep beating static utilities.
@@ -52,6 +68,40 @@ directive and the Nuxt module, with no configuration beyond what `presetWind3` a
 - **The base breakpoint.** `presetWind4`'s default `sm` is `40rem`, so it needs
   `baseBreakpoint: 'sm'` or a zero-valued breakpoint, exactly like `presetWind3`'s `640px`.
 
+### Prefixes a preset does not ship
+
+The directive only writes `<prefix>-$<variable>` classes. The CSS has to come from a rule in the
+base preset or in the app's own config. Among the 49 prefixes checked, these four are missing
+from at least one preset:
+
+| Prefix | `presetMini` | `presetWind3` | `presetWind4` | Built-in declaration where it exists |
+| --- | --- | --- | --- | --- |
+| `object` | missing | yes | yes | `object-fit: var(--x)` |
+| `blur` | missing | yes | yes | `filter`, composed with the other `--un-*` filter variables |
+| `columns` | missing | yes | yes | `columns: var(--x)` |
+| `col-span` | missing | missing | yes | `grid-column: span var(--x)/span var(--x)` |
+
+These rules fill the gaps. All four generate the expected CSS for every safelisted class under
+all three presets, including inside the media queries. Text such as `blur-$*` in prose generates
+nothing.
+
+```ts
+// uno.config.ts - only the rules your preset lacks (see the table)
+rules: [
+  [/^object-\$([\w-]+)$/, ([, name]) => ({ 'object-fit': `var(--${name})` })],
+  [/^blur-\$([\w-]+)$/, ([, name]) => ({ filter: `blur(var(--${name}))` })],
+  [/^columns-\$([\w-]+)$/, ([, name]) => ({ columns: `var(--${name})` })],
+  [/^col-span-\$([\w-]+)$/, ([, name]) => ({ 'grid-column': `span var(--${name}) / span var(--${name})` })],
+],
+```
+
+**A rule in the app's config replaces the preset's built-in rule for the same class.** This was
+checked: under `presetWind3`, the app's `object` rule generated its own declaration instead of
+the built-in one. So add only the rules the base preset lacks. A custom `blur` rule under
+`presetWind3` would, for example, stop `blur` composing with the other filter utilities.
+
+The list is not exhaustive. The docs therefore teach the recipe, not just these four rules.
+
 ### What breaks
 
 | # | Severity | Finding | Evidence |
@@ -60,7 +110,7 @@ directive and the Nuxt module, with no configuration beyond what `presetWind3` a
 | 2 | high | **The Nuxt module fails the build unless `breakpoints` is passed.** `getThemeBreakpoints` reads `theme.breakpoints` (`src/nuxt.ts:95`). | Same root cause as #1. |
 | 3 | high | **Configured `breakpoints` are silently ignored for names `presetWind4` already knows.** `extendTheme` writes `theme.breakpoints` (`src/preset.ts:78`), which `presetWind4` never reads, and its own `md:` variant matches first with its default value. | `breakpoints: { sm: 0, md: '900px' }` generates `@media (min-width: 48rem)` for `o:md:c-$c-md`. |
 | 4 | high | **Custom breakpoint names cascade in the wrong order.** The package's own variant returns `parent` without a `parentOrder` (`src/preset.ts:56`), so its media blocks sort as strings and `1200px` lands before `768px`. UnoCSS's own variant sets `parentOrder: 3000 + index + 1`. | Chromium at 1300px, `breakpoints: { mobile: '0px', tablet: '768px', desktop: '1200px' }`: the `tablet` value wins over `desktop`. |
-| 5 | high, **also affects `presetWind3` today** | **Breakpoints are read from the merged theme, not the way UnoCSS reads them.** UnoCSS resolves `userConfig.theme[key] \|\| theme[key]` (`@unocss/rule-utils` `resolveBreakpoints`), so a user's breakpoints *replace* the defaults. The package reads the merged theme, which still contains the base preset's `xl: 1280px` and `2xl: 1536px`. The safelist and the Nuxt-registered directive therefore include them, UnoCSS's own variant does not know them, and the package's unordered variant (#4) emits them before `md` and `lg`. | The playground's own config (`presetWind3`, `theme.breakpoints` with `sm`/`md`/`lg`) through the Nuxt module's code path, Chromium at 1300px: `{ sm, lg, xl }` renders the `lg` value, never `xl`. |
+| 5 | high, **also affects `presetWind3` and `presetMini` today** | **Breakpoints are read from the merged theme, not the way UnoCSS reads them.** UnoCSS resolves `userConfig.theme[key] \|\| theme[key]` (`@unocss/rule-utils` `resolveBreakpoints`), so a user's breakpoints *replace* the defaults. The package reads the merged theme, which still contains the base preset's `xl: 1280px` and `2xl: 1536px`. The safelist and the Nuxt-registered directive therefore include them, UnoCSS's own variant does not know them, and the package's unordered variant (#4) emits them before `md` and `lg`. | The playground's own config (`theme.breakpoints` with `sm`/`md`/`lg`) through the Nuxt module's code path, Chromium at 1300px: `{ sm, lg, xl }` renders the `lg` value, never `xl`. Reproduced under both `presetWind3` and `presetMini`. |
 
 ### Work items
 
@@ -69,37 +119,60 @@ directive and the Nuxt module, with no configuration beyond what `presetWind3` a
    `breakpoint` when the resolved theme has that key and `breakpoints` otherwise. Safelist and
    variant contexts both expose `generator`, so the user config is available. Fixes #1, #2, #5.
 2. **Write configured `breakpoints` under the key the base preset reads.** `extendTheme` sets
-   `theme.breakpoint` for `presetWind4` and `theme.breakpoints` otherwise, so the base preset's
-   own variant serves the configured values. Document that `breakpoints` and a hand-written
-   `theme.breakpoint(s)` must not disagree: UnoCSS's variant prefers the user's theme. Fixes #3.
+   `theme.breakpoint` for `presetWind4` and `theme.breakpoints` for `presetMini` and
+   `presetWind3`, so the base preset's own variant serves the configured values. Document that
+   `breakpoints` and a hand-written `theme.breakpoint(s)` must not disagree: UnoCSS's variant
+   prefers the user's theme. Fixes #3.
 3. **Order the package's own breakpoint variant.** Return `parentOrder` from the configured
    breakpoint order (smallest first, as the README already requires), matching
    `@unocss/rule-utils`. Fixes #4, and keeps media order correct for names no base preset knows.
 4. **Nuxt module.** `getThemeBreakpoints` switches to the helper from item 1, reading
    `generator.userConfig` and `generator.config.theme`. Its error message names both keys.
 5. **Tests.**
-   - Run `test/preset.test.ts` and `test/nuxt.test.ts` against both presets
-     (`describe.each([presetWind3, presetWind4])`).
+   - Run `test/preset.test.ts` and `test/nuxt.test.ts` against all three presets
+     (`describe.each([presetMini, presetWind3, presetWind4])`).
    - Add a cascade-order test: the media blocks of the `override` layer follow breakpoint order,
      for default and custom names.
    - Add a regression test for #5: a user's `theme.breakpoints` replaces the defaults, so no
      `xl`/`2xl` classes are safelisted.
-   - Add a per-prefix generation test for `presetWind4` covering the prefixes listed above.
+   - Add a per-prefix generation test for each preset. It covers the 49 checked prefixes and
+     records which ones each preset lacks, so a UnoCSS upgrade that adds or drops a rule fails
+     the test and the docs table gets updated with it.
+   - Run the documented gap rules from a shared fixture: every class they serve generates its
+     declaration under the presets that need it.
 6. **Playground.** Let `uno.config.ts` pick the preset from an environment variable and run
-   `playground:verify` for both presets in CI. The Pages deployment stays on one preset.
-7. **Docs.** Update these README sections:
-   - Properties: `presetWind4` ships the same `$` rules.
-   - Breakpoints: the `breakpoint` theme key and the `40rem` default.
-   - The options tables: "the UnoCSS theme's" becomes `theme.breakpoint` or `theme.breakpoints`.
+   `playground:verify` for all three presets in CI. The playground's properties need no extra
+   rules under `presetMini`: `bgi` and `bgv` are already its own rules. The Pages deployment
+   stays on one preset.
+7. **Docs.** Update the README:
+   - **Supported presets:** `presetMini`, `presetWind3` and `presetWind4`, and what each needs.
+   - **Breakpoints:** the `breakpoint` theme key and the `40rem` default under `presetWind4`.
+   - **Options tables:** "the UnoCSS theme's" becomes `theme.breakpoint` or
+     `theme.breakpoints`.
+   - **A "Custom rules" section** under Properties. The current single `bgi` example becomes a
+     recipe:
+     - The general form: `` [/^<prefix>-\$([\w-]+)$/, ([, name]) => ({ '<css-property>': `var(--${name})` })] ``.
+     - Why the variable name is matched with `[\w-]+` (the existing note).
+     - A rule that wraps the value (`blur`) and one that uses the variable twice (`col-span`).
+     - How a rule pairs with `format: 'url'` (`bgi`).
+     - The table and the four rules from
+       [Prefixes a preset does not ship](#prefixes-a-preset-does-not-ship).
+     - The warning that an app rule replaces the preset's own rule for the same class.
 
-   Extend `scripts/check-docs.ts` to cover the new claims.
+   Extend `scripts/check-docs.ts` to cover the new claims. It also checks that the README's
+   rules match the test fixture from item 5, so the documented rules are always the tested
+   ones.
 
-**Behaviour change to note in the release:** with item 1, a `presetWind3` app that sets its own
-`theme.breakpoints` stops registering the base preset's `xl` and `2xl`. That matches what UnoCSS
-itself does with those names. It is a fix, but it changes the directive's breakpoint list.
+**Behaviour change to note in the release:** with item 1, a `presetMini` or `presetWind3` app
+that sets its own `theme.breakpoints` stops registering the base preset's `xl` and `2xl`. That
+matches what UnoCSS itself does with those names. It is a fix, but it changes the directive's
+breakpoint list.
 
-**Done when:** all unit tests pass under both presets, `playground:verify` passes under both, and
-the Chromium checks for #4 and #5 pass.
+**Done when:**
+- All unit tests pass under the three presets.
+- `playground:verify` passes under each of them.
+- The Chromium checks for #4 and #5 pass.
+- The README's custom rules are the tested ones.
 
 ---
 
