@@ -5,6 +5,7 @@ import { definePreset } from 'unocss'
 import { resolveBreakpoints } from './core/breakpoints'
 import { resolveProperties } from './core/properties'
 import { getVarsClasses } from './core/varsClasses'
+import { breakpointThemeKey, resolveThemeBreakpoints } from './themeBreakpoints'
 
 export interface PresetVUnoStyleOptions {
   /**
@@ -13,7 +14,11 @@ export interface PresetVUnoStyleOptions {
    * runtime, so only the ones safelisted from this list get CSS.
    */
   properties: readonly PropertyConfig[]
-  /** Override breakpoints instead of reading them from the resolved UnoCSS theme. */
+  /**
+   * Override breakpoints instead of reading them from the UnoCSS theme (`theme.breakpoint` in
+   * presetWind4, `theme.breakpoints` otherwise). They replace that theme key, so the base preset's
+   * own breakpoint variants use them too.
+   */
   breakpoints?: BreakpointConfig
   /** Explicitly select the unprefixed base breakpoint. */
   baseBreakpoint?: string
@@ -37,23 +42,30 @@ const toUnoBreakpoints = (breakpoints: BreakpointConfig): Record<string, string>
     typeof value === 'number' ? `${value}px` : value,
   ]))
 
+/**
+ * Serves breakpoint prefixes no base preset handles, such as names used without presetMini,
+ * presetWind3 or presetWind4. With those presets their own variant usually matches first, since
+ * `extendTheme` hands them the configured breakpoints.
+ */
 const createBreakpointVariant = (configuredBreakpoints?: BreakpointConfig): Variant => ({
   name: 'vue-uno-style-breakpoints',
-  match(matcher, { theme }) {
-    const breakpoints = configuredBreakpoints
-      ?? (theme as { breakpoints?: BreakpointConfig }).breakpoints
+  match(matcher, context) {
+    const breakpoints = configuredBreakpoints ?? resolveThemeBreakpoints(context)
     if (!breakpoints) return
 
-    const match = Object.entries(breakpoints)
-      .find(([name]) => matcher.startsWith(`${name}:`))
-    if (!match) return
+    const entries = Object.entries(breakpoints)
+    const index = entries.findIndex(([name]) => matcher.startsWith(`${name}:`))
+    if (index === -1) return
 
-    const [name, value] = match
+    const [name, value] = entries[index]
     const size = typeof value === 'number' ? `${value}px` : value
 
     return {
       matcher: matcher.slice(name.length + 1),
-      parent: `@media (min-width: ${size})`,
+      // UnoCSS sorts media blocks by this order, and falls back to comparing them as strings,
+      // which puts `1200px` before `768px` and lets the narrower breakpoint win. The scale
+      // matches `@unocss/rule-utils`, so these blocks interleave with the base preset's own.
+      parent: [`@media (min-width: ${size})`, 3000 + index + 1],
     }
   },
 })
@@ -75,15 +87,17 @@ export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions>((options) =>
       override: 10,
     },
     variants: [overrideVariant, createBreakpointVariant(configuredBreakpoints)],
+    // Written under the key the base preset reads, so its own breakpoint variants serve the
+    // configured values instead of their defaults.
     extendTheme: configuredBreakpoints
-      ? (theme) => ({ ...theme, breakpoints: configuredBreakpoints })
+      ? (theme) => ({ ...theme, [breakpointThemeKey(theme)]: configuredBreakpoints })
       : undefined,
-    safelist: [({ theme }) => {
-      const available = configuredBreakpoints
-        ?? (theme as { breakpoints?: BreakpointConfig }).breakpoints
+    safelist: [(context) => {
+      const available = configuredBreakpoints ?? resolveThemeBreakpoints(context)
       if (!available) {
         throw new Error(
-          '[vue-uno-style] No breakpoints found. Configure theme.breakpoints or pass breakpoints to presetVUnoStyle().',
+          '[vue-uno-style] No breakpoints found. Configure theme.breakpoints '
+          + '(theme.breakpoint with presetWind4) or pass breakpoints to presetVUnoStyle().',
         )
       }
 

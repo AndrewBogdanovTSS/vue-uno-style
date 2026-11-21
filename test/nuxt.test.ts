@@ -1,7 +1,8 @@
 import type { UserConfig } from 'unocss'
 import { addPluginTemplate, hasNuxtModule } from '@nuxt/kit'
-import { presetWind3 } from 'unocss'
+import { createGenerator, presetWind3 } from 'unocss'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { basePresets } from './fixtures/presets'
 
 const warn = vi.fn()
 
@@ -43,6 +44,15 @@ type ModuleDefinition = {
 
 const moduleDefinition = module as unknown as ModuleDefinition
 const properties = ['c', 'bg', { name: 'bgi', format: 'url' as const }]
+
+/** The source of the runtime plugin the module registered last. */
+const pluginContents = async () => {
+  const template = vi.mocked(addPluginTemplate).mock.calls.at(-1)?.[0]
+  if (!template || typeof template === 'string') throw new Error('Expected a plugin template')
+  expect(template).toEqual(expect.objectContaining({ filename: 'vue-uno-style.mjs' }))
+
+  return template.getContents?.({} as never)
+}
 
 const createNuxt = (unocss: UserConfig & { configFile?: string | false } = {}) => {
   const hooks = new Map<string, Hook>()
@@ -169,30 +179,58 @@ describe('vue-uno-style Nuxt module', () => {
     )).toBe(true)
   })
 
-  it('generates a runtime plugin from resolved UnoCSS breakpoints', async () => {
-    const { hooks } = await setupModule(
-      { directiveName: 'style', baseBreakpoint: 'sm' },
-      {
-        presets: [presetWind3()],
-        theme: { breakpoints: { sm: '640px', md: '768px', lg: '1024px' } },
-      },
-    )
+  describe.each(basePresets)('with $name', ({ preset, themeKey, defaults }) => {
+    /**
+     * The user's theme value replaces the preset's defaults, as it does for UnoCSS's own
+     * breakpoint variants. Reading the merged theme used to register the defaults' `xl` and
+     * `2xl` as well, which the variants never served in order.
+     */
+    it('generates a runtime plugin from the user\'s theme breakpoints alone', async () => {
+      const { hooks } = await setupModule(
+        { directiveName: 'style', baseBreakpoint: 'sm' },
+        {
+          presets: [preset()],
+          theme: { [themeKey]: { sm: '640px', md: '768px', lg: '1024px' } },
+        },
+      )
 
-    await hooks.get('modules:done')?.()
+      await hooks.get('modules:done')?.()
 
-    expect(addPluginTemplate).toHaveBeenCalledTimes(1)
-    const template = vi.mocked(addPluginTemplate).mock.calls[0]?.[0]
-    if (!template || typeof template === 'string') throw new Error('Expected a plugin template')
-    const contents = await template.getContents?.({} as never)
+      expect(addPluginTemplate).toHaveBeenCalledTimes(1)
+      const contents = await pluginContents()
 
-    expect(template).toEqual(expect.objectContaining({ filename: 'vue-uno-style.mjs' }))
-    expect(contents).toContain('nuxtApp.vueApp.directive("style", directive)')
-    expect(contents).toContain('"sm":"640px"')
-    expect(contents).toContain('"md":"768px"')
-    expect(contents).toContain('"lg":"1024px"')
-    expect(contents).toContain('"xl":"1280px"')
-    expect(contents).toContain('"2xl":"1536px"')
-    expect(contents).toContain('"baseBreakpoint":"sm"')
+      expect(contents).toContain('nuxtApp.vueApp.directive("style", directive)')
+      expect(contents).toContain('"breakpoints":{"sm":"640px","md":"768px","lg":"1024px"}')
+      expect(contents).not.toContain('"xl"')
+      expect(contents).toContain('"baseBreakpoint":"sm"')
+    })
+
+    it('falls back to the preset\'s own breakpoints when the app sets none', async () => {
+      const { hooks } = await setupModule(
+        { directiveName: 'style', baseBreakpoint: 'sm' },
+        { presets: [preset()] },
+      )
+
+      await hooks.get('modules:done')?.()
+
+      expect(await pluginContents()).toContain(`"breakpoints":${JSON.stringify(defaults)}`)
+    })
+
+    /**
+     * The hook receives the user's config, whose `theme` lacks the preset's keys, so applying
+     * the preset's `extendTheme` there could not tell presetWind4's `breakpoint` from the others'
+     * `breakpoints`. Queued, UnoCSS runs it over the merged theme.
+     */
+    it('hands configured breakpoints to the preset\'s own variants through unocss:config', async () => {
+      const { hooks } = await setupModule({ breakpoints: { sm: 0, md: '900px' } })
+      const config: UserConfig = { presets: [preset()] }
+
+      await hooks.get('unocss:config')?.(config)
+      const uno = await createGenerator(config)
+
+      expect(config.theme).toBeUndefined()
+      expect((uno.config.theme as Record<string, unknown>)[themeKey]).toEqual({ sm: '0px', md: '900px' })
+    })
   })
 
   it('uses explicit breakpoints for both the preset and runtime directive', async () => {
