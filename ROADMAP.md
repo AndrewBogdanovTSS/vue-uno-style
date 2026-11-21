@@ -41,6 +41,18 @@ The directive itself is engine-agnostic: it writes whatever class strings and CS
 
 ## Phase 1: UnoCSS `presetMini` and `presetWind4`
 
+**Status: implemented, waiting for the 0.2.0 release.** Every item below is done, and each
+"Done when" condition holds:
+- 227 unit tests pass, run under all three presets.
+- `playground:verify` passes under each preset locally, and CI now runs it for all three.
+- The Chromium checks for #4 and #5 pass under all three presets.
+
+One more defect turned up along the way. The README's "Vue and UnoCSS without Nuxt" example put
+`sm: 0` straight into `theme.breakpoints`, which UnoCSS's own breakpoint variant cannot sort
+(`b[1].replace is not a function`). The example threw before this phase as well. It now passes
+breakpoints only through the preset's option, which converts numbers and writes them under the
+right theme key, and the README states that theme values must be strings.
+
 **Goal:** `presetMini()`, `presetWind3()` and `presetWind4()` all work with the preset, the
 directive and the Nuxt module.
 - `presetWind4` is a drop-in replacement for `presetWind3`, with no configuration beyond what
