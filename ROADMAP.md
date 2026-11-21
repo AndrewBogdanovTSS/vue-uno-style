@@ -1,13 +1,14 @@
 # Roadmap
 
-Where `vue-uno-style` goes after 0.1.0: first UnoCSS `presetWind4`, then Tailwind CSS 4 as a
-second engine. Each phase ships as its own minor release, and UnoCSS with `presetWind3` keeps
-working unchanged throughout.
+Where `vue-uno-style` goes after 0.1.0: first UnoCSS `presetWind4`, then Tailwind CSS 4 through a
+separate package, `vue-tw-style`, built from this repository on a shared directive core. UnoCSS
+with `presetWind3` keeps working unchanged throughout.
 
 | Phase | Scope | Release |
 | --- | --- | --- |
-| 1 | UnoCSS `presetWind4`, plus the breakpoint fixes it depends on (they fix `presetWind3` too) | 0.2.0 |
-| 2 | Tailwind CSS 4.1+ as an alternative engine | 0.3.0 |
+| 1 | UnoCSS `presetWind4`, plus the breakpoint fixes it depends on (they fix `presetWind3` too) | `vue-uno-style` 0.2.0 |
+| 2a | Split the repository into a private core, `vue-uno-style` and `vue-tw-style`, with no API change | `vue-uno-style` 0.2.x |
+| 2b | Tailwind CSS 4.1+ support in the new package | `vue-tw-style` 0.1.0 |
 
 Every finding below was measured on 2026-11-21 against `unocss` 66.13.0 (`presetWind3`,
 `presetWind4`) and `tailwindcss` 4.3.5, generating real CSS. Cascade claims were checked in
@@ -102,10 +103,46 @@ the Chromium checks for #4 and #5 pass.
 
 ---
 
-## Phase 2: Tailwind CSS 4
+## Phase 2: `vue-tw-style` for Tailwind CSS 4
 
-**Goal:** Tailwind CSS 4.1+ works as an engine for the same directive, ESLint rule and web-types.
-UnoCSS stays the default, and existing UnoCSS setups need no changes.
+**Goal:** a separate package, `vue-tw-style`, gives Tailwind CSS 4.1+ apps the same directive,
+ESLint rule and web-types. Both packages are built from this repository on a shared directive
+core. `vue-uno-style` gains no Tailwind code or dependencies, and its published API does not
+change.
+
+### Why a separate package
+
+- **The Nuxt modules share nothing.** `src/nuxt.ts` is UnoCSS from end to end: `loadConfig`,
+  `createGenerator` and the `unocss:config` hook. A Tailwind module would be a different module
+  behind an `if`.
+- **Peer dependencies stay honest.** `vue-uno-style` keeps `unocss` and `@unocss/*`, and
+  `vue-tw-style` lists only `tailwindcss`.
+- **Each package gets the right defaults without `engine` branches.** Tailwind needs a variable
+  prefix, explicit breakpoints, type hints and the `&&` override (see the facts below). UnoCSS
+  keeps its current behaviour.
+- **Releases are independent.** `vue-tw-style` can iterate through 0.x without releasing
+  `vue-uno-style`.
+- **Both names are accurate.** `vue-uno-style` is already published on npm and stays as it is.
+  `vue-tw-style` was free on 2026-11-21. Following the same pattern, its directive defaults to
+  `v-tw-style`, its ESLint rule is `vue-tw-style/no-multiple-v-style`, and its Nuxt config key is
+  `vTwStyle`.
+
+### Shape of the split
+
+| Package | Published | Contents |
+| --- | --- | --- |
+| `packages/core` | no, private | Directive factory, `getStyle`, breakpoints, properties, the ESLint rule factory, the web-types builder. It is engine-neutral through a class-format adapter. |
+| `packages/vue-uno-style` | yes | Core + UnoCSS adapter, `presetVUnoStyle`, the Nuxt module for `@unocss/nuxt`. |
+| `packages/vue-tw-style` | yes | Core + Tailwind adapter, the stylesheet fragment builder, its own Nuxt module. |
+
+The core is bundled into each published package at build time, so only two packages are public
+and a core version can never drift from its adapter. The cost: an app that installs both packages
+ships the directive twice, and no realistic app does that. Publish the core separately only if a
+third engine or an outside consumer appears. It would then need an engine-neutral name.
+
+The row boundary in [Where the engine coupling lives today](#where-the-engine-coupling-lives-today)
+is the split line. The rows marked "no" and "wording only" move to the core; everything else
+stays with its package.
 
 ### Verified facts (`tailwindcss` 4.3.5)
 
@@ -124,62 +161,88 @@ UnoCSS stays the default, and existing UnoCSS setups need no changes.
 - **The safelist comes from `@source inline("...")`.** It generates exactly the listed classes.
   Tailwind 4 has no JS-config safelist, and `@source inline` arrived in 4.1, so 4.1 is the floor.
 - **Breakpoints live in CSS** (`--breakpoint-*` in `@theme`), and no stable API reads them from
-  JS, so `breakpoints` must be explicit in Tailwind mode. A breakpoint name Tailwind does not know
+  JS, so `vue-tw-style` requires `breakpoints`. A breakpoint name Tailwind does not know
   generates nothing, and nothing reports it.
 - **CSS variables collide.** Tailwind's default theme defines `--text-sm|lg|xl|2xl`,
   `--shadow-*`, `--radius-*`, `--blur-*`, `--drop-shadow-*` and `--container-*` on `:root`. A
   directive with the property `text` and the breakpoint `lg` writes an inline `--text-lg`, which
-  breaks `text-lg` (`font-size: var(--text-lg)`) on every descendant.
+  breaks `text-lg` (`font-size: var(--text-lg)`) on every descendant. Tailwind also owns every
+  `--tw-*` variable, so `tw` cannot be the prefix.
 
-### Work items
+### Step 2a: split the repository (`vue-uno-style` patch release, no API change)
 
-1. **A class-format adapter in the core.** Add one `formatClass({ prop, breakpoint, variable, type })`
-   per engine, used by both `getStyleProps` and `getVarsClasses`. Runtime/safelist parity then
-   holds by construction instead of relying on `test/parity.test.ts`. The directive gains
-   `engine: 'unocss' | 'tailwind'`, defaulting to `'unocss'`.
-2. **A variable namespace.** Add a `variablePrefix` option, so that `vus` gives `--vus-text-lg`.
-   It stays empty for UnoCSS, so nothing breaks, and defaults to a non-empty prefix for Tailwind.
-   The directive, the safelist and the Nuxt module must share it.
-3. **Type hints on property entries.** Add an optional `type` (`color`, `length`, `image`, ...)
-   rendered as `text-(color:--...)` for Tailwind and ignored by UnoCSS. `resolveProperties`, the
-   ESLint rule's schema and web-types accept it.
-4. **A `vue-uno-style/tailwind` entry.** It turns the configured properties and breakpoints into
-   the stylesheet fragment Tailwind needs: `@custom-variant o (&&);` plus the
-   `@source inline(...)` safelist. It also gets a small writer for setups that keep that fragment
-   in a file.
-5. **Nuxt.** Add `engine: 'tailwind'` to the module. It drops the `@unocss/nuxt` requirement and
-   writes the fragment to `#build`, and the app imports it from its Tailwind stylesheet.
-   **Spike first:** can the module inject the fragment into the stylesheet that
-   `@tailwindcss/vite` compiles, without a user-side import?
-6. **Tests.** Contract tests against the real compiler (`@tailwindcss/node` `compile().build()`)
-   that mirror the preset tests:
+1. **Workspace.** Move to `packages/core`, `packages/vue-uno-style` and `packages/vue-tw-style` (an
+   empty shell at this point) in the pnpm workspace. The directive, breakpoint, properties and
+   ESLint suites move with the core.
+2. **A class-format adapter in the core.** The adapter is `formatClass({ prop, breakpoint, variable, type })`
+   plus `variableName(prop, breakpoint)`, and both the directive and the safelist go through it.
+   Runtime/safelist parity then holds by construction. `test/parity.test.ts` becomes a contract
+   test every adapter runs. The UnoCSS adapter reproduces today's `o:<bp>:<prop>-$<prop>-<bp>`
+   byte for byte.
+3. **Proof of no change.** `vue-uno-style`'s `npm pack` file list, its exports (publint and attw
+   already run on build) and `pnpm smoke` must match the last release. The playground keeps
+   passing `playground:verify`.
+4. **Release tooling.**
+   - `scripts/release.ts` takes a package name and tags per package (`vue-uno-style@0.2.1`,
+     `vue-tw-style@0.1.0`) instead of `v*`.
+   - `release.yml` publishes the tagged package from its directory.
+   - Trusted publishing is configured per package in its npm settings. If npm still requires a
+     package to exist before a trusted publisher can be added, the first `vue-tw-style` publish
+     is a one-off manual publish.
+5. **CI.** Lint, typecheck, unit tests, smoke and `check:docs` run per package.
+
+### Step 2b: `vue-tw-style` 0.1.0
+
+1. **A variable namespace.** A core `variablePrefix` option, so that `vts` gives
+   `--vts-text-lg`. `vue-tw-style` defaults to a non-empty prefix that is not `tw`.
+   `vue-uno-style` keeps an empty default, so its output does not change. The directive, the
+   fragment and the Nuxt module read the same value.
+2. **Type hints on property entries.** An optional `type` (`color`, `length`, `image`, ...),
+   which the Tailwind adapter renders as `text-(color:--...)` and the UnoCSS adapter ignores.
+   `resolveProperties`, the ESLint rule's schema and web-types accept it.
+3. **The stylesheet fragment.** `vue-tw-style` turns the configured properties and breakpoints
+   into what Tailwind needs: `@custom-variant o (&&);` plus the `@source inline(...)` safelist.
+   It also ships a small writer for setups that keep the fragment in a file.
+4. **The Nuxt module** (`vue-tw-style/nuxt`, config key `vTwStyle`). It registers the directive
+   and writes the fragment to `#build`, and the app imports it from its Tailwind stylesheet.
+   **Spike first:**
+   - Which Tailwind integration to support: `@tailwindcss/vite` directly, `@nuxtjs/tailwindcss`,
+     or both.
+   - Whether the module can inject the fragment into the stylesheet Tailwind compiles, without
+     a user-side import.
+5. **Tests.** Contract tests against the real compiler (`@tailwindcss/node` `compile().build()`)
+   that mirror `vue-uno-style`'s preset tests:
    - every safelisted class generates CSS;
    - `o:` beats a static utility;
    - media blocks follow breakpoint order;
    - no generated variable matches a default theme variable.
 
    Plus one Chromium cascade check.
-7. **Playground, docs and package metadata.**
-   - A Tailwind playground app with its own `verify` run in CI.
-   - A README section.
-   - `tailwindcss >=4.1` as an optional peer dependency.
-   - Keywords and description updated.
+6. **Playground, docs and package metadata.**
+   - A Tailwind playground with its own `verify` run in CI.
+   - Its own README and `check:docs`.
+   - `tailwindcss >=4.1` as a peer dependency.
+   - web-types for `v-tw-style`.
 
-**Done when:** a Tailwind 4 app and a UnoCSS app render the same responsive values from the same
-directive bindings, with both contract suites green.
+**Done when:**
+- A Tailwind 4 app on `vue-tw-style` and a UnoCSS app on `vue-uno-style` render the same
+  responsive values from the same directive bindings.
+- Both contract suites are green.
+- `vue-uno-style`'s published output is unchanged by step 2a.
 
 ### Open decisions
 
 - **Override strategy:** `&&` (recommended, same semantics as UnoCSS's layer for static
   utilities) or `!` (simpler, but it also beats inline styles).
-- **The default `variablePrefix` for Tailwind**, and whether UnoCSS should adopt one in a later
-  major version.
-- **The name.** `vue-uno-style` and `v-uno-style` read oddly with Tailwind. The directive name is
-  already configurable; settle the package name before 1.0.
+- **`vue-tw-style`'s default `variablePrefix`**, and whether `vue-uno-style` should adopt one in a
+  later major version.
+- **A public core:** only if a third engine or an outside consumer appears, and under an
+  engine-neutral name.
 
 ### Not planned
 
-- **Tailwind CSS 3.** Its `safelist` config and `[--var]` arbitrary values would fit the same
-  adapter. It can follow on request, but Tailwind 4 comes first.
+- **Tailwind CSS 3.** Its `safelist` config and `[--var]` arbitrary values would fit as a second
+  adapter inside `vue-tw-style`. It can follow on request, but Tailwind 4 comes first.
 - **Engine-free CSS generation** from a `{ name, css: 'color' }` map. It would work with any
-  stack, but it drops the "a property is an engine utility prefix" model the package is built on.
+  stack, but it drops the "a property is an engine utility prefix" model both packages are built
+  on.
