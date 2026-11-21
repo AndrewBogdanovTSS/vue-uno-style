@@ -19,12 +19,22 @@ After changing the package's source, run `pnpm build` again and restart the dev 
 
 `pnpm playground:verify` lints the app, lints a fixture that must fail, generates the static site into `playground/.output/public` and checks the generated HTML and CSS.
 
+## Base presets
+
+`PLAYGROUND_PRESET` picks the UnoCSS preset the playground runs on: `mini`, `wind3` (the default, and what Pages deploys) or `wind4`. CI runs `playground:verify` under all three.
+
+```bash
+PLAYGROUND_PRESET=wind4 pnpm playground:verify
+```
+
+The page needs no extra rules under `presetMini`: its properties are either in every preset or are the playground's own `bgi` and `bgv` rules.
+
 ## What it shows
 
 | Where | What |
 |-------|------|
 | `vue-uno-style.config.js` | The breakpoints and properties, in one plain-JS file that `nuxt.config.ts`, `uno.config.ts`, `eslint.config.js` and the page all import. |
-| `uno.config.ts` | The playground's own `bgi-$*` and `bgv-$*` rules, since the package predefines no properties. |
+| `uno.config.ts` | The base preset chosen by `PLAYGROUND_PRESET`, and the playground's own `bgi-$*` and `bgv-$*` rules, since the package predefines no properties. |
 | `app/app.vue` | The page, one section per behaviour: values per breakpoint, argument and object forms, scalars and collapsed repeats, value formats, updates, composition and the override layer. |
 | `app/components/GeneratedOutput.vue` | Shows the classes and variables for a value, from the same `getStyle()` call the directive makes. |
 | `app/components/StatusBadge.vue` | A component with its own directive on its root, for the composition demo. |

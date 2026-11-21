@@ -65,3 +65,29 @@ jobs:
       - run: pnpm check:docs
       - run: pnpm playground:install
       - run: pnpm playground:verify
+
+  # `verify` covers presetWind3, the playground's default and what Pages deploys. This runs the
+  # same playground under the other base presets the package supports.
+  playground-presets:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [mini, wind4]
+    env:
+      PLAYGROUND_PRESET: ${{ matrix.preset }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - run: pnpm playground:install
+      - run: pnpm playground:verify
