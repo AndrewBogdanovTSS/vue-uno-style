@@ -465,6 +465,12 @@ Without `breakpoints`, the module reads `theme.breakpoints` (`theme.breakpoint`
 under `presetWind4`) from the same UnoCSS config that `@unocss/nuxt` loads: `uno.config.*`, the file named in
 `unocss.configFile`, and the inline `unocss` options.
 
+It reads that config once its modules are set up, before Nuxt writes `.nuxt/`.
+A config that imports a generated file, such as `.nuxt/uno.config.mjs` under
+`@unocss/nuxt`'s `nuxtLayers`, cannot load then, and the build fails. Pass
+`breakpoints` in that case: the module then needs no config at that point, and
+the DevTools tab loads it on its first request.
+
 ### UnoCSS preset
 
 `presetVUnoStyle(options)` from `vue-uno-style/preset`.

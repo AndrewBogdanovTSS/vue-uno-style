@@ -1,6 +1,6 @@
 {
   "name": "vue-uno-style",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "Per-breakpoint styles from CMS or API data for Vue, as CSS variables and static UnoCSS classes.",
   "keywords": [

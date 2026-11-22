@@ -199,6 +199,23 @@ describe('vue-uno-style Nuxt DevTools', () => {
     expect((await getData(disabledMiddleware)).webTypes).toEqual({ status: 'disabled' })
   })
 
+  it('loads the UnoCSS config on the first request, not in modules:done', async () => {
+    const hooks = await setupModule(
+      {},
+      { configFile: 'test/fixtures/uno.generated-later.config.ts' } as UserConfig,
+      { dev: true }
+    )
+    const middleware = capturedMiddleware()
+
+    // The config cannot load yet, as on a fresh checkout before Nuxt writes `.nuxt/`
+    await expect(hooks.get('modules:done')?.()).resolves.toBeUndefined()
+    expect(await pluginContents()).toContain('vue-uno-style/devtools')
+
+    const res = { statusCode: 0, setHeader: vi.fn(), end: vi.fn() }
+    await middleware({ url: '/__vue-uno-style/api/data', method: 'GET' }, res, vi.fn())
+    expect(res.statusCode).toBe(500)
+  })
+
   it('reports a preset the UnoCSS config already has', async () => {
     const hooks = await setupModule(
       {},
