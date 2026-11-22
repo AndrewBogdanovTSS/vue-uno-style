@@ -21,6 +21,15 @@ export const formatBytes = (bytes: number): string => {
 
 const pad = (value: number, length = 2) => String(value).padStart(length, '0')
 
+/**
+ * A hook duration in milliseconds. Browsers round `performance.now()` to 0.1 ms or coarser
+ * outside cross-origin isolation, so anything shorter reads as `< 0.1 ms`.
+ */
+export const formatDuration = (milliseconds: number): string => {
+  if (milliseconds < 0.1) return '< 0.1 ms'
+  return `${milliseconds.toFixed(milliseconds < 10 ? 2 : 1)} ms`
+}
+
 /** `HH:MM:SS.mmm` in local time. */
 export const formatTime = (time: number): string => {
   const date = new Date(time)

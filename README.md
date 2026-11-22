@@ -260,12 +260,16 @@ During `nuxt dev`, the module adds a **vue-uno-style** tab to Nuxt DevTools:
   active breakpoint marked, each binding's classes and variables, and what one
   binding overrides in another. You also see the final `class` and `style` on
   the element and how often it updated. Hover a row to outline the element on
-  the page.
+  the page. Turn on **Highlight active** to keep the selected element outlined
+  while you work in the tab; the outline follows the element as the page
+  scrolls.
 - **Warnings**: values the directive ignores without a word. That covers a
   property you did not configure, a breakpoint key that does not exist, a
   numeric `0` (use `'0'`), and a value that is neither a string nor a number.
 - **Timeline**: the last 200 mounts, updates and unmounts, with the variables
-  each one changed.
+  each one changed and how long the directive took. The timing covers every
+  binding on the element and leaves out the tab's own bookkeeping. Browsers
+  round it to 0.1 ms, so most events read `< 0.1 ms`; 1 ms or more is marked.
 - **REPL**: runs a value through the directive and your UnoCSS generator and
   shows the classes, variables and CSS.
 

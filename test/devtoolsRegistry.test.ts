@@ -98,6 +98,26 @@ describe('createDevtoolsRegistry', () => {
     expect(registry.events().at(-1)).toEqual(expect.objectContaining({ type: 'update', changed: ['--c'] }))
   })
 
+  it('times the directive hooks of every binding on an element into one event', () => {
+    let clock = 0
+    const now = vi.spyOn(performance, 'now').mockImplementation(() => clock)
+    const { registry, instrument } = createDevtoolsRegistry(options)
+    const slow = (ms: number) => ({ mounted: () => { clock += ms } })
+    try {
+      const Badge = defineComponent({
+        render: () => withDirectives(h('span'), [[instrument(slow(2)), 'white', 'c']])
+      })
+      mount(defineComponent({
+        render: () => withDirectives(h(Badge), [[instrument(slow(3)), 'red', 'bg']])
+      }))
+    }
+    finally {
+      now.mockRestore()
+    }
+
+    expect(registry.events()).toEqual([expect.objectContaining({ type: 'mount', duration: 5 })])
+  })
+
   it('forgets an unmounted element', async () => {
     const { registry, instrumented } = setup()
     const shown = ref(true)
@@ -229,6 +249,28 @@ describe('createDevtoolsRegistry', () => {
     expect(document.getElementById('vue-uno-style-devtools-highlight')).not.toBeNull()
     registry.highlight(null)
     expect(document.getElementById('vue-uno-style-devtools-highlight')).toBeNull()
+  })
+
+  it('keeps the outline on its element and drops it when the element leaves the page', async () => {
+    const { registry, instrumented } = setup()
+    const wrapper = mount(defineComponent({
+      render: () => withDirectives(h('p'), [[instrumented, 'red', 'c']])
+    }), { attachTo: document.body })
+    const el = wrapper.element as HTMLElement
+    let top = 10
+    el.getBoundingClientRect = () => ({ top, left: 0, width: 100, height: 20 }) as DOMRect
+
+    registry.highlight(1)
+    const overlay = () => document.getElementById('vue-uno-style-devtools-highlight')
+    expect(overlay()?.style.top).toBe('10px')
+
+    top = 50
+    await flush()
+    expect(overlay()?.style.top).toBe('50px')
+
+    wrapper.unmount()
+    await flush()
+    expect(overlay()).toBeNull()
   })
 
   it('works when registered on an app like the Nuxt plugin does', () => {
