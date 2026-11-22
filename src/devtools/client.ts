@@ -17,7 +17,7 @@ import {
   formatValue,
   matchesFilter,
   parseReplValue,
-  valuesByBreakpoint,
+  valuesByBreakpoint
 } from './clientUtils'
 
 interface DevtoolsClient {
@@ -36,7 +36,7 @@ const TABS: Array<[Tab, string]> = [
   ['elements', 'Elements'],
   ['warnings', 'Warnings'],
   ['timeline', 'Timeline'],
-  ['repl', 'REPL'],
+  ['repl', 'REPL']
 ]
 
 const state: {
@@ -53,7 +53,7 @@ const state: {
   tab: 'overview',
   filter: '',
   replProperty: '',
-  replValue: '',
+  replValue: ''
 }
 
 /** Starts the REPL on the app's first property and its own breakpoint names. */
@@ -64,7 +64,7 @@ const seedRepl = (data: DevtoolsData) => {
   state.replProperty = first?.name ?? ''
   state.replValue = JSON.stringify({
     [data.breakpoints.base]: first?.format === 'url' ? '/image.png' : '1rem',
-    ...(second ? { [second]: first?.format === 'url' ? '/image-wide.png' : '2rem' } : {}),
+    ...(second ? { [second]: first?.format === 'url' ? '/image-wide.png' : '2rem' } : {})
   })
 }
 
@@ -182,7 +182,7 @@ const renderOverview = () => {
     <p>These properties are safelisted but no UnoCSS rule matches <code>&lt;prefix&gt;-$&lt;variable&gt;</code>,
     so every class the directive writes for them has no CSS. Add a rule to <code>uno.config.ts</code>, with the
     CSS property in place of <code>&lt;css-property&gt;</code>:</p>
-    ${missing.map((item) => `<p><code>${esc(item.property)}</code></p><pre>rules: [\n  ${esc(item.suggestion)},\n]</pre>`).join('')}
+    ${missing.map((item) => `<p><code>${esc(item.property)}</code></p><pre>rules: [\n  ${esc(item.suggestion)}\n]</pre>`).join('')}
   </section>` : ''}
 
   ${unused.length ? `<section>
@@ -201,7 +201,7 @@ const renderElementRow = (element: DevtoolsElement) => {
     element.warnings.length ? pill(`${element.warnings.length} warning${element.warnings.length > 1 ? 's' : ''}`, 'warn') : '',
     element.bindings.length > 1 ? pill(`${element.bindings.length} bindings`) : '',
     flags.churn ? pill(`${element.updates} updates`, 'error') : flags.unchanged ? pill('never updated') : pill(`${element.updates} updates`),
-    element.connected ? '' : pill('detached'),
+    element.connected ? '' : pill('detached')
   ].join(' ')
 
   return `<button type="button" data-action="select" data-id="${element.id}" aria-selected="${state.selected === element.id}">
@@ -430,7 +430,7 @@ const runRepl = async () => {
     const response = await fetch('./api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ property: state.replProperty, value: parseReplValue(state.replValue) }),
+      body: JSON.stringify({ property: state.replProperty, value: parseReplValue(state.replValue) })
     })
     state.replResult = await response.json() as SampleResult
   }

@@ -14,7 +14,7 @@ export default defineConfig({
     devtools: 'src/devtools.ts',
     // The DevTools tab script. The module serves it as a file, so it must stay one
     // self-contained module: it imports only from src/devtools/clientUtils.ts.
-    'devtools-client': 'src/devtools/client.ts',
+    'devtools-client': 'src/devtools/client.ts'
   },
   format: ['esm'],
   platform: 'neutral',
@@ -33,8 +33,8 @@ export default defineConfig({
       'node:process',
       'node:url',
       'unocss',
-      'vue',
-    ],
+      'vue'
+    ]
   },
   dts: true,
   clean: true,
@@ -42,5 +42,5 @@ export default defineConfig({
   outExtensions: () => ({ js: '.mjs', dts: '.d.mts' }),
   define: { __PACKAGE_VERSION__: JSON.stringify(pkg.version) },
   publint: true,
-  attw: true,
+  attw: true
 })

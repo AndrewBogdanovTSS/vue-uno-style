@@ -21,18 +21,18 @@ const properties = ['c', 'bg', 'p', 'gap-x', 'aspect-ratio', 'object-position']
 const canvasLike = resolveBreakpoints({ breakpoints: { sm: 0, md: 768, lg: 1024 } })
 const stockLike = resolveBreakpoints({
   breakpoints: { sm: '640px', md: '768px', lg: '1024px' },
-  baseBreakpoint: 'sm',
+  baseBreakpoint: 'sm'
 })
 
 describe('runtime and safelist class parity', () => {
   describe.each([
     ['zero-valued base', canvasLike],
-    ['explicit base', stockLike],
+    ['explicit base', stockLike]
   ])('%s', (_label, breakpoints) => {
     // A distinct value per breakpoint, so the adjacent-duplicate filter in
     // `getStyleProps` keeps every breakpoint and the two lists are comparable.
     const responsive = Object.fromEntries(
-      [breakpoints.base, ...breakpoints.prefixed].map((breakpoint) => [breakpoint, breakpoint]),
+      [breakpoints.base, ...breakpoints.prefixed].map((breakpoint) => [breakpoint, breakpoint])
     )
 
     it.each(properties)('matches for "%s"', (prop) => {

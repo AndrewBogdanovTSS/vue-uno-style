@@ -46,7 +46,7 @@ const syncWebTypes = (directiveName: string, properties: string[]): WebTypesStat
   const contents = serializeWebTypes(createWebTypes({
     directiveName,
     properties,
-    version: version(),
+    version: version()
   }))
 
   try {
@@ -55,7 +55,7 @@ const syncWebTypes = (directiveName: string, properties: string[]): WebTypesStat
   catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     useLogger('vue-uno-style').warn(
-      `Could not update ${file}, so WebStorm may not complete v-${directiveName}. ${message}`,
+      `Could not update ${file}, so WebStorm may not complete v-${directiveName}. ${message}`
     )
     return { status: 'failed', file, error: message }
   }
@@ -84,14 +84,14 @@ const hasResolvedPreset = (config: UserConfig) => config.variants?.some(
   (variant) => typeof variant === 'object'
     && variant !== null
     && 'name' in variant
-    && variant.name === 'vue-uno-style-override',
+    && variant.name === 'vue-uno-style-override'
 ) ?? false
 
 const toArray = <T>(value: T | T[]): T[] => Array.isArray(value) ? value : [value]
 
 const addResolvedPreset = (
   config: UserConfig,
-  preset: ReturnType<typeof presetVUnoStyle>,
+  preset: ReturnType<typeof presetVUnoStyle>
 ) => {
   if (hasResolvedPreset(config)) return
 
@@ -120,12 +120,12 @@ const getThemeBreakpoints = (generator: Awaited<ReturnType<typeof createGenerato
     || Array.isArray(breakpoints)
     || Object.keys(breakpoints).length === 0
     || Object.values(breakpoints).some(
-      (value) => typeof value !== 'string' && typeof value !== 'number',
+      (value) => typeof value !== 'string' && typeof value !== 'number'
     )
   ) {
     throw new Error(
       '[vue-uno-style] The resolved UnoCSS theme has no valid breakpoints. '
-      + 'Configure theme.breakpoints (theme.breakpoint with presetWind4) or pass breakpoints.',
+      + 'Configure theme.breakpoints (theme.breakpoint with presetWind4) or pass breakpoints.'
     )
   }
 
@@ -136,7 +136,7 @@ const renderRuntimePlugin = (
   directiveName: string,
   breakpoints: BreakpointConfig,
   baseBreakpoint: string,
-  properties: VUnoStyleNuxtModuleOptions['properties'],
+  properties: VUnoStyleNuxtModuleOptions['properties']
 ) => `import { defineNuxtPlugin } from '#app'
 import { createVUnoStyle } from 'vue-uno-style'
 
@@ -156,7 +156,7 @@ const renderDevtoolsRuntimePlugin = (
   directiveName: string,
   breakpoints: BreakpointConfig,
   baseBreakpoint: string,
-  properties: VUnoStyleNuxtModuleOptions['properties'],
+  properties: VUnoStyleNuxtModuleOptions['properties']
 ) => `import { defineNuxtPlugin } from '#app'
 import { createVUnoStyle } from 'vue-uno-style'
 import { createDevtoolsRegistry } from 'vue-uno-style/devtools'
@@ -183,13 +183,13 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
     name: 'vue-uno-style',
     configKey: 'vUnoStyle',
     compatibility: {
-      nuxt: '>=3.17.0',
-    },
+      nuxt: '>=3.17.0'
+    }
   },
   defaults: {
     directiveName: 'uno-style',
     webTypes: true,
-    devtools: true,
+    devtools: true
   },
   setup(options, nuxt) {
     // Fails the build here, naming the option, when no properties are configured
@@ -215,7 +215,7 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
       let data: ReturnType<typeof createDevtoolsData> | undefined
       const middleware = createDevtoolsMiddleware({
         getData: async () => (data ??= createDevtoolsData(await devtoolsContext)),
-        generate: async (input) => generateSample(await devtoolsContext, input),
+        generate: async (input) => generateSample(await devtoolsContext, input)
       })
 
       addVitePlugin({
@@ -223,7 +223,7 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
         apply: 'serve',
         configureServer(server: { middlewares: { use: (handler: typeof middleware) => void } }) {
           server.middlewares.use(middleware)
-        },
+        }
       } as never, { server: false })
 
       // The hook `@nuxt/devtools-kit`'s addCustomTab wraps; it only fires when DevTools runs
@@ -232,7 +232,7 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
           name: 'vue-uno-style',
           title: 'vue-uno-style',
           icon: 'carbon:color-palette',
-          view: { type: 'iframe', src: `${DEVTOOLS_ROUTE}/` },
+          view: { type: 'iframe', src: `${DEVTOOLS_ROUTE}/` }
         })
       }) as never)
     }
@@ -240,7 +240,7 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
     const preset = presetVUnoStyle({
       properties: options.properties,
       breakpoints: options.breakpoints,
-      baseBreakpoint: options.baseBreakpoint,
+      baseBreakpoint: options.baseBreakpoint
     })
 
     // @unocss/nuxt captures this options object during module setup and reads
@@ -258,7 +258,7 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
     nuxt.hook('modules:done', async () => {
       if (!hasNuxtModule('unocss', nuxt)) {
         throw new Error(
-          '[vue-uno-style] The Nuxt module requires @unocss/nuxt to be installed and registered.',
+          '[vue-uno-style] The Nuxt module requires @unocss/nuxt to be installed and registered.'
         )
       }
 
@@ -273,7 +273,7 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
         nuxt.options.rootDir,
         configSource,
         [],
-        defaults,
+        defaults
       )
       // The module's own preset object reaches this config through the defaults; any other
       // vue-uno-style preset is one the app configured itself
@@ -286,7 +286,7 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
       const breakpoints = options.breakpoints ?? getThemeBreakpoints(generator)
       const resolved = resolveBreakpoints({
         breakpoints,
-        baseBreakpoint: options.baseBreakpoint,
+        baseBreakpoint: options.baseBreakpoint
       })
 
       addPluginTemplate({
@@ -295,8 +295,8 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
           directiveName,
           breakpoints,
           resolved.base,
-          options.properties,
-        ),
+          options.properties
+        )
       })
 
       if (devtools) {
@@ -314,9 +314,9 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
             .filter((name) => name !== 'vue-uno-style'),
           configSources: sources,
           webTypes,
-          generator,
+          generator
         })
       }
     })
-  },
+  }
 })

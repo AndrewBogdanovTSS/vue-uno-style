@@ -8,13 +8,13 @@ vi.mock('@nuxt/kit', () => ({
   addVitePlugin: vi.fn(),
   defineNuxtModule: vi.fn((definition) => definition),
   hasNuxtModule: vi.fn(() => true),
-  useLogger: vi.fn(() => ({ warn: vi.fn() })),
+  useLogger: vi.fn(() => ({ warn: vi.fn() }))
 }))
 
 // The real writer targets the file next to the module, which is `src/` under test
 vi.mock('../src/webTypes', () => ({
   packageWebTypesPath: vi.fn(() => '/pkg/dist/web-types.json'),
-  writeWebTypes: vi.fn(() => 'written'),
+  writeWebTypes: vi.fn(() => 'written')
 }))
 
 import module from '../src/nuxt'
@@ -45,9 +45,9 @@ const setupModule = async (options: Options, unocss: UserConfig = {}, flags: Fla
     options: {
       ...flags,
       rootDir: process.cwd(),
-      unocss: { configFile: false, ...unocss },
+      unocss: { configFile: false, ...unocss }
     },
-    hook: vi.fn((name: string, callback: Hook) => hooks.set(name, callback)),
+    hook: vi.fn((name: string, callback: Hook) => hooks.set(name, callback))
   }
   await setup({ properties, breakpoints: { sm: 0, md: 768 }, ...options }, nuxt)
   return hooks
@@ -100,7 +100,7 @@ describe('vue-uno-style Nuxt DevTools', () => {
   it.each<[string, Options, Flags]>([
     ['the module option is false', { devtools: false }, { dev: true }],
     ['Nuxt DevTools is off', {}, { dev: true, devtools: false }],
-    ['Nuxt DevTools is disabled', {}, { dev: true, devtools: { enabled: false } }],
+    ['Nuxt DevTools is disabled', {}, { dev: true, devtools: { enabled: false } }]
   ])('adds nothing in development when %s', async (_label, options, flags) => {
     const hooks = await setupModule(options, {}, flags)
     await hooks.get('modules:done')?.()
@@ -116,14 +116,14 @@ describe('vue-uno-style Nuxt DevTools', () => {
 
     expect(addVitePlugin).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'vue-uno-style:devtools', apply: 'serve' }),
-      { server: false },
+      { server: false }
     )
 
     const tabs: unknown[] = []
     hooks.get('devtools:customTabs')?.(tabs)
     expect(tabs).toEqual([expect.objectContaining({
       name: 'vue-uno-style',
-      view: { type: 'iframe', src: '/__vue-uno-style/' },
+      view: { type: 'iframe', src: '/__vue-uno-style/' }
     })])
 
     const contents = await pluginContents()
@@ -147,7 +147,7 @@ describe('vue-uno-style Nuxt DevTools', () => {
         preset: 'module',
         unoPresets: [packageName],
         webTypes: { status: 'written', file: '/pkg/dist/web-types.json' },
-        breakpoints: { source: 'option', themeKey, values: { sm: '0px', md: '768px' }, base: 'sm', prefixed: ['md'] },
+        breakpoints: { source: 'option', themeKey, values: { sm: '0px', md: '768px' }, base: 'sm', prefixed: ['md'] }
       }))
       expect(data.properties).toEqual([{ name: 'c' }, { name: 'bg' }, { name: 'bgi', format: 'url' }])
       // Every base preset has rules for c and bg; bgi needs one the app adds itself
@@ -163,7 +163,7 @@ describe('vue-uno-style Nuxt DevTools', () => {
       const hooks = await setupModule(
         { breakpoints: undefined },
         { presets: [preset()], theme: { [themeKey]: { sm: '0px', md: '768px' } } },
-        { dev: true },
+        { dev: true }
       )
       const middleware = capturedMiddleware()
       await hooks.get('modules:done')?.()
@@ -173,7 +173,7 @@ describe('vue-uno-style Nuxt DevTools', () => {
         themeKey,
         values: { sm: '0px', md: '768px' },
         base: 'sm',
-        prefixed: ['md'],
+        prefixed: ['md']
       })
     })
   })
@@ -189,7 +189,7 @@ describe('vue-uno-style Nuxt DevTools', () => {
     expect((await getData(failedMiddleware)).webTypes).toEqual({
       status: 'failed',
       file: '/pkg/dist/web-types.json',
-      error: 'EROFS: read-only file system',
+      error: 'EROFS: read-only file system'
     })
 
     const disabled = await setupModule({ webTypes: false }, {}, { dev: true })
@@ -203,7 +203,7 @@ describe('vue-uno-style Nuxt DevTools', () => {
     const hooks = await setupModule(
       {},
       { presets: [presetWind3(), presetVUnoStyle({ properties: ['c'], breakpoints: { sm: 0 } })] },
-      { dev: true },
+      { dev: true }
     )
     const middleware = capturedMiddleware()
     await hooks.get('modules:done')?.()

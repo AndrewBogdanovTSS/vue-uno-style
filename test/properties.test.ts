@@ -5,13 +5,13 @@ describe('resolveProperties', () => {
   it('keeps the configured order and collects formats', () => {
     expect(resolveProperties(['c', { name: 'bgi', format: 'url' }, { name: 'p' }])).toEqual({
       names: ['c', 'bgi', 'p'],
-      formats: { bgi: 'url' },
+      formats: { bgi: 'url' }
     })
   })
 
   it.each([
     ['missing', undefined],
-    ['empty', []],
+    ['empty', []]
   ])('throws when the list is %s', (_label, properties) => {
     expect(() => resolveProperties(properties)).toThrow('No properties configured')
   })

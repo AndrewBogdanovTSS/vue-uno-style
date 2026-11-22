@@ -8,7 +8,7 @@ import {
   formatTime,
   matchesFilter,
   parseReplValue,
-  valuesByBreakpoint,
+  valuesByBreakpoint
 } from '../src/devtools/clientUtils'
 
 describe('DevTools client helpers', () => {
@@ -36,11 +36,11 @@ describe('DevTools client helpers', () => {
       ['c', 'bg', 'p'],
       { '--c': 'white', '--c-md': 'red', '--bg-lg': 'gray', '--bg-image': 'x' },
       'sm',
-      ['md', 'lg'],
+      ['md', 'lg']
     )).toEqual({
       c: { sm: 'white', md: 'red' },
       bg: { lg: 'gray' },
-      p: {},
+      p: {}
     })
   })
 

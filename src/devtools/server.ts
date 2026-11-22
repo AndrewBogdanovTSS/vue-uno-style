@@ -97,7 +97,7 @@ const generateCss = async (generator: DevtoolsContext['generator'], tokens: stri
   if (!tokens.length) return { css: '', matched: new Set<string>() }
   const { css, matched } = await generator.generate(new Set(tokens), {
     preflights: false,
-    safelist: false,
+    safelist: false
   })
   return { css, matched }
 }
@@ -118,7 +118,7 @@ export const createCoverage = async (context: DevtoolsContext): Promise<Property
       ...(format ? { format } : {}),
       tokens: tokens.map((token) => ({ token, matched: matched.has(token) })),
       bytes: byteLength(css),
-      ...(anyMatched ? {} : { suggestion: suggestRule(property) }),
+      ...(anyMatched ? {} : { suggestion: suggestRule(property) })
     }
   }))
 
@@ -139,7 +139,7 @@ export const createDevtoolsData = async (context: DevtoolsContext): Promise<Devt
       values: Object.fromEntries(Object.entries(context.breakpoints)
         .map(([name, value]) => [name, toCssSize(value)])),
       base: context.resolved.base,
-      prefixed: context.resolved.prefixed,
+      prefixed: context.resolved.prefixed
     },
     preset: context.preset,
     unoPresets: context.unoPresets,
@@ -148,15 +148,15 @@ export const createDevtoolsData = async (context: DevtoolsContext): Promise<Devt
     coverage,
     safelist: {
       classes: coverage.reduce((total, item) => total + item.tokens.length, 0),
-      bytes: coverage.reduce((total, item) => total + item.bytes, 0),
-    },
+      bytes: coverage.reduce((total, item) => total + item.bytes, 0)
+    }
   }
 }
 
 /** Runs a value through the directive's `getStyle()` and the app's generator, for the REPL. */
 export const generateSample = async (
   context: Pick<DevtoolsContext, 'generator' | 'resolved' | 'properties'>,
-  input: SampleInput,
+  input: SampleInput
 ): Promise<SampleResult> => {
   const property = typeof input.property === 'string' && input.property.trim()
     ? input.property.trim()
@@ -173,7 +173,7 @@ export const generateSample = async (
       value as Parameters<typeof getStyle>[0],
       context.resolved,
       property,
-      context.properties,
+      context.properties
     )
     const { css } = await generateCss(context.generator, classes ? classes.split(' ') : [])
     const warnings = inspectValue(value, property, context.resolved, context.properties)
@@ -234,7 +234,7 @@ const readBuiltClient = () => {
 export const createDevtoolsMiddleware = ({
   getData,
   generate,
-  readClient = readBuiltClient,
+  readClient = readBuiltClient
 }: DevtoolsMiddlewareOptions) =>
   async (req: IncomingMessage, res: ServerResponse, next: (error?: unknown) => void) => {
     const path = (req.url ?? '').split('?')[0] ?? ''

@@ -4,7 +4,7 @@ import { getStyle } from '../src/core/getStyle'
 import { resolveProperties } from '../src/core/properties'
 
 const breakpoints = resolveBreakpoints({
-  breakpoints: { sm: 0, md: 768, lg: 1024 },
+  breakpoints: { sm: 0, md: 768, lg: 1024 }
 })
 
 afterEach(() => {
@@ -15,22 +15,22 @@ describe('getStyle', () => {
   it('composes multiple responsive properties', () => {
     expect(getStyle({
       c: { sm: 'red', md: 'green' },
-      bg: { sm: 'white', lg: 'black' },
+      bg: { sm: 'white', lg: 'black' }
     }, breakpoints)).toEqual({
       classes: 'o:c-$c o:md:c-$c-md o:bg-$bg o:lg:bg-$bg-lg',
       style: {
         '--c': 'red',
         '--c-md': 'green',
         '--bg': 'white',
-        '--bg-lg': 'black',
-      },
+        '--bg-lg': 'black'
+      }
     })
   })
 
   it('supports the argument form', () => {
     expect(getStyle({ sm: 'red', md: 'green' }, breakpoints, 'c')).toEqual({
       classes: 'o:c-$c o:md:c-$c-md',
-      style: { '--c': 'red', '--c-md': 'green' },
+      style: { '--c': 'red', '--c-md': 'green' }
     })
   })
 
@@ -40,7 +40,7 @@ describe('getStyle', () => {
     getStyle({ sm: '1rem' }, breakpoints, 'paddign', resolveProperties(['p']))
 
     expect(warn).toHaveBeenCalledWith(
-      '[vue-uno-style] Property "paddign" is not configured, so its classes are not safelisted.',
+      '[vue-uno-style] Property "paddign" is not configured, so its classes are not safelisted.'
     )
   })
 

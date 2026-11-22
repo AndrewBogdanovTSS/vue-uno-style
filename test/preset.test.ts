@@ -20,10 +20,10 @@ describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, de
   /** `themeBreakpoints: null` leaves the theme alone, so the base preset's defaults apply. */
   const createUno = async (
     options: Partial<Parameters<typeof presetVUnoStyle>[0]> = {},
-    themeBreakpoints: Record<string, string> | null = canvasBreakpoints,
+    themeBreakpoints: Record<string, string> | null = canvasBreakpoints
   ) => createGenerator({
     presets: [preset(), presetVUnoStyle({ properties, ...options })],
-    theme: themeBreakpoints ? { [themeKey]: themeBreakpoints } : {},
+    theme: themeBreakpoints ? { [themeKey]: themeBreakpoints } : {}
   })
 
   it('generates color utilities for base and responsive runtime variables', async () => {
@@ -31,7 +31,7 @@ describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, de
     const tokens = ['o:c-$c', 'o:md:c-$c-md']
     const { css, matched } = await uno.generate(tokens, {
       preflights: false,
-      safelist: false,
+      safelist: false
     })
 
     expect([...matched]).toEqual(tokens)
@@ -44,7 +44,7 @@ describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, de
     const uno = await createGenerator({
       presets: [preset(), presetVUnoStyle({ properties: [{ name: 'bgi', format: 'url' }] })],
       rules: [[/^bgi-\$(.+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })]],
-      theme: { [themeKey]: canvasBreakpoints },
+      theme: { [themeKey]: canvasBreakpoints }
     })
     const { css, matched } = await uno.generate('', { preflights: false })
 
@@ -97,7 +97,7 @@ describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, de
     ['default names from the theme', null, canvasBreakpoints],
     ['default names from the option', canvasBreakpoints, null],
     ['custom names from the theme', null, customBreakpoints],
-    ['custom names from the option', customBreakpoints, null],
+    ['custom names from the option', customBreakpoints, null]
   ])('emits media blocks in breakpoint order: %s', async (_label, option, theme) => {
     const breakpoints = option ?? theme!
     const uno = await createUno(option ? { breakpoints: option } : {}, theme)
@@ -110,7 +110,7 @@ describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, de
     const uno = await createUno()
     const { css } = await uno.generate(['c-red', 'o:c-$c'], {
       preflights: false,
-      safelist: false,
+      safelist: false
     })
 
     expect(css.indexOf('/* layer: default */')).toBeGreaterThanOrEqual(0)
@@ -139,7 +139,7 @@ describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, de
   it('supports a stock theme when the base breakpoint is explicit', async () => {
     const uno = await createUno(
       { baseBreakpoint: 'sm' },
-      { sm: '640px', md: '768px', lg: '1024px' },
+      { sm: '640px', md: '768px', lg: '1024px' }
     )
     const { matched } = await uno.generate('', { preflights: false })
 
@@ -149,7 +149,7 @@ describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, de
 
   it('supports an explicit breakpoint override', async () => {
     const uno = await createUno({
-      breakpoints: { mobile: 0, desktop: '64rem' },
+      breakpoints: { mobile: 0, desktop: '64rem' }
     })
     const { css, matched } = await uno.generate('', { preflights: false })
 
@@ -175,7 +175,7 @@ describe('presetVUnoStyle without a base preset', () => {
   it('orders its own media blocks by breakpoint, not as strings', async () => {
     const uno = await createGenerator({
       presets: [presetVUnoStyle({ properties: ['c'], breakpoints: customBreakpoints })],
-      rules: [[/^c-\$([\w-]+)$/, ([, name]) => ({ color: `var(--${name})` })]],
+      rules: [[/^c-\$([\w-]+)$/, ([, name]) => ({ color: `var(--${name})` })]]
     })
     const { css } = await uno.generate('', { preflights: false })
 
@@ -184,7 +184,7 @@ describe('presetVUnoStyle without a base preset', () => {
 
   it('throws when neither the theme nor options provide breakpoints', async () => {
     const uno = await createGenerator({
-      presets: [presetVUnoStyle({ properties })],
+      presets: [presetVUnoStyle({ properties })]
     })
 
     await expect(uno.generate('', { preflights: false }))
@@ -193,7 +193,7 @@ describe('presetVUnoStyle without a base preset', () => {
 
   it.each([
     ['missing', undefined],
-    ['empty', []],
+    ['empty', []]
   ])('throws at configuration time when properties are %s', (_label, configured) => {
     expect(() => presetVUnoStyle({ properties: configured as never }))
       .toThrow('No properties configured')

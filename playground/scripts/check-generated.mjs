@@ -36,7 +36,7 @@ const expectations = {
   'data-playground-update': ['o:md:p-$p-md', '--bgv:linear-gradient(135deg, #e0e7ff, #f5f3ff)'],
   // Both the component's own binding (`p`) and the usage site's (`md` background) are present
   'data-playground-composed': ['o:md:p-$p-md', '--bg-md:#2563eb'],
-  'data-playground-override': ['c-slate-400', 'o:c-$c', '--c:#16a34a'],
+  'data-playground-override': ['c-slate-400', 'o:c-$c', '--c:#16a34a']
 }
 
 for (const [marker, values] of Object.entries(expectations)) {

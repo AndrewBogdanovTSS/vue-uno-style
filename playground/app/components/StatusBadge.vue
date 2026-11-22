@@ -9,7 +9,7 @@ defineProps<{ label: string }>()
     v-uno-style="{
       c: { sm: '#334155' },
       bg: { sm: '#e2e8f0' },
-      p: { sm: '0.25rem 0.75rem', md: '0.375rem 1rem' },
+      p: { sm: '0.25rem 0.75rem', md: '0.375rem 1rem' }
     }"
   >{{ label }}</span>
 </template>

@@ -160,7 +160,7 @@ export default [{ name: 'bgi', format: 'url' }]
 ```ts
 // uno.config.ts
 rules: [
-  [/^bgi-\$([\w-]+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })],
+  [/^bgi-\$([\w-]+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })]
 ]
 ```
 
@@ -185,7 +185,7 @@ rules: [
   [/^blur-\$([\w-]+)$/, ([, name]) => ({ filter: `blur(var(--${name}))` })],
   [/^columns-\$([\w-]+)$/, ([, name]) => ({ columns: `var(--${name})` })],
   // ...or appear more than once.
-  [/^col-span-\$([\w-]+)$/, ([, name]) => ({ 'grid-column': `span var(--${name}) / span var(--${name})` })],
+  [/^col-span-\$([\w-]+)$/, ([, name]) => ({ 'grid-column': `span var(--${name}) / span var(--${name})` })]
 ]
 ```
 
@@ -233,7 +233,7 @@ export default defineNuxtConfig({
     properties,
     baseBreakpoint: 'sm',
     // directiveName: 'style', // register as v-style instead of v-uno-style
-  },
+  }
 })
 ```
 
@@ -288,8 +288,8 @@ export default defineConfig({
   // breakpoints into the theme key the base preset reads.
   presets: [
     presetWind3(),
-    presetVUnoStyle({ properties, breakpoints: { sm: 0, md: '768px', lg: '1024px' } }),
-  ],
+    presetVUnoStyle({ properties, breakpoints: { sm: 0, md: '768px', lg: '1024px' } })
+  ]
 })
 ```
 
@@ -300,7 +300,7 @@ import properties from './vue-uno-style.properties.js'
 
 app.directive('uno-style', createVUnoStyle({
   properties,
-  breakpoints: { sm: 0, md: '768px', lg: '1024px' },
+  breakpoints: { sm: 0, md: '768px', lg: '1024px' }
 }))
 ```
 
@@ -316,7 +316,7 @@ Use an argument for one property, or an object for several:
   <article
     v-uno-style="{
       c: { sm: '#111827', md: '#ffffff' },
-      bg: { sm: '#ffffff', md: '#4f46e5' },
+      bg: { sm: '#ffffff', md: '#4f46e5' }
     }"
   >
     <p v-uno-style:p="'1rem'">Body</p>
@@ -348,9 +348,9 @@ export default [
     files: ['**/*.vue'],
     languageOptions: { parser: vueParser },
     rules: {
-      'vue-uno-style/no-multiple-v-style': ['error', { properties }],
-    },
-  },
+      'vue-uno-style/no-multiple-v-style': ['error', { properties }]
+    }
+  }
 ]
 ```
 

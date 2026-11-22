@@ -5,6 +5,6 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@unocss/nuxt', 'vue-uno-style/nuxt'],
   vUnoStyle: {
-    properties,
-  },
+    properties
+  }
 })

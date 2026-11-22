@@ -30,7 +30,7 @@ export const resolveProperties = (properties: readonly PropertyConfig[] | undefi
   if (!properties?.length) {
     throw new Error(
       '[vue-uno-style] No properties configured. Pass `properties`, e.g. [\'c\', \'bg\', \'p\'], '
-      + 'listing every UnoCSS utility prefix the directive may set.',
+      + 'listing every UnoCSS utility prefix the directive may set.'
     )
   }
 
@@ -43,7 +43,7 @@ export const resolveProperties = (properties: readonly PropertyConfig[] | undefi
     if (typeof name !== 'string' || !NAME.test(name)) {
       throw new Error(
         `[vue-uno-style] Invalid property name ${JSON.stringify(name)}. `
-        + 'Use a UnoCSS utility prefix made of letters, digits and dashes.',
+        + 'Use a UnoCSS utility prefix made of letters, digits and dashes.'
       )
     }
     if (names.includes(name)) {
@@ -52,7 +52,7 @@ export const resolveProperties = (properties: readonly PropertyConfig[] | undefi
     if (format !== undefined && !FORMATS.includes(format)) {
       throw new Error(
         `[vue-uno-style] Unknown format ${JSON.stringify(format)} for property "${name}". `
-        + `Supported: ${FORMATS.join(', ')}.`,
+        + `Supported: ${FORMATS.join(', ')}.`
       )
     }
 

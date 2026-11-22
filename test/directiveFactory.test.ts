@@ -11,7 +11,7 @@ const createVNode = (props: any = {}): VNode<any, HTMLElement> => (
 describe('createVUnoStyle', () => {
   it('creates a directive using consumer-provided breakpoints', () => {
     const directive = createVUnoStyle({
-      breakpoints: { mobile: 0, desktop: '64rem' },
+      breakpoints: { mobile: 0, desktop: '64rem' }
     })
     const element = document.createElement('div')
 
@@ -19,10 +19,10 @@ describe('createVUnoStyle', () => {
       element,
       {
         arg: 'c',
-        value: { mobile: 'red', desktop: 'blue' },
+        value: { mobile: 'red', desktop: 'blue' }
       } as never,
       null as never,
-      null,
+      null
     )
 
     expect(element.className).toBe('o:c-$c o:desktop:c-$c-desktop')
@@ -34,7 +34,7 @@ describe('createVUnoStyle', () => {
     '%s injects consumer breakpoints into the vnode props',
     (hook) => {
       const directive = createVUnoStyle({
-        breakpoints: { mobile: 0, desktop: '64rem' },
+        breakpoints: { mobile: 0, desktop: '64rem' }
       })
       const element = document.createElement('div')
       const node = createVNode({ class: 'existing' })
@@ -45,17 +45,17 @@ describe('createVUnoStyle', () => {
       expect(node.props!.class).toContain('o:c-$c')
       expect(node.props!.class).toContain('o:desktop:c-$c-desktop')
       expect(node.props!.style).toEqual({ '--c': 'red', '--c-desktop': 'blue' })
-    },
+    }
   )
 
   it('renders SSR props from consumer breakpoints', () => {
     const directive = createVUnoStyle({
-      breakpoints: { mobile: 0, desktop: '64rem' },
+      breakpoints: { mobile: 0, desktop: '64rem' }
     })
 
     const props = directive.getSSRProps!(
       { arg: 'c', value: { mobile: 'red', desktop: 'blue' } } as never,
-      null as never,
+      null as never
     )
 
     expect(props!.class).toBe('o:c-$c o:desktop:c-$c-desktop')
@@ -88,7 +88,7 @@ describe('createVUnoStyle', () => {
         element,
         { arg: 'c', value: { sm: 'red', md: 'green', lg: 'blue' } } as never,
         null as never,
-        null,
+        null
       )
 
       expect(element.className).toBe('o:c-$c o:md:c-$c-md o:lg:c-$c-lg')
@@ -120,7 +120,7 @@ describe('createVUnoStyle', () => {
       '--c': 'red',
       '--c-md': 'green',
       '--bg': 'blue',
-      '--bg-desktop': 'navy',
+      '--bg-desktop': 'navy'
     })
 
     canvasLike.beforeMount!(element, first as never, node, null)

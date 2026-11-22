@@ -22,8 +22,8 @@ const DEFAULT_OPTIONS = {
   breakpoints: {
     sm: 0,
     md: 768,
-    lg: 1024,
-  },
+    lg: 1024
+  }
 } as const satisfies VUnoStyleOptions
 
 /**
@@ -89,7 +89,7 @@ const combine = (bindings: Binding[], fallback: DirectiveContext): StyleResult =
 
     return {
       classes: [acc.classes, classes].filter(Boolean).join(' '),
-      style: { ...acc.style, ...style },
+      style: { ...acc.style, ...style }
     }
   }, EMPTY)
 
@@ -101,7 +101,7 @@ const splitClasses = (classes: string) => classes ? classes.split(' ') : []
 export const createVUnoStyle = (options: VUnoStyleOptions): ObjectDirective<HTMLElement, VUnoStyleValue> => {
   const context: DirectiveContext = {
     breakpoints: resolveBreakpoints(options),
-    properties: options.properties ? resolveProperties(options.properties) : undefined,
+    properties: options.properties ? resolveProperties(options.properties) : undefined
   }
 
   /**
@@ -177,10 +177,10 @@ export const createVUnoStyle = (options: VUnoStyleOptions): ObjectDirective<HTML
 
       return {
         class: classes,
-        style,
+        style
       }
     },
-    [MARKER]: context,
+    [MARKER]: context
   }
 
   return directive

@@ -71,14 +71,14 @@ export const noMultipleVStyle: Rule.RuleModule = {
     type: 'problem',
     fixable: 'code',
     docs: {
-      description: 'Disallow multiple v-uno-style directives and unconfigured properties',
+      description: 'Disallow multiple v-uno-style directives and unconfigured properties'
     },
     schema: [{
       type: 'object',
       properties: {
         directiveName: {
           type: 'string',
-          minLength: 1,
+          minLength: 1
         },
         properties: {
           type: 'array',
@@ -90,24 +90,24 @@ export const noMultipleVStyle: Rule.RuleModule = {
                 type: 'object',
                 properties: {
                   name: { type: 'string', minLength: 1 },
-                  format: { type: 'string' },
+                  format: { type: 'string' }
                 },
                 required: ['name'],
-                additionalProperties: false,
-              },
-            ],
-          },
-        },
+                additionalProperties: false
+              }
+            ]
+          }
+        }
       },
-      additionalProperties: false,
+      additionalProperties: false
     }],
     messages: {
       multipleVStyle:
         'Multiple v-{{directiveName}} directives on a single element are not allowed. '
         + 'Combine them using the object syntax: v-{{directiveName}}="{ prop1: val1, prop2: val2 }".',
       unknownStyleProp:
-        'Unknown v-{{directiveName}} property "{{prop}}". Add it to the configured properties.',
-    },
+        'Unknown v-{{directiveName}} property "{{prop}}". Add it to the configured properties.'
+    }
   },
 
   create(context) {
@@ -124,7 +124,7 @@ export const noMultipleVStyle: Rule.RuleModule = {
     return parserServices.defineTemplateBodyVisitor({
       VStartTag(node) {
         const directiveAttributes = node.attributes.filter(
-          (attribute) => attribute.directive && attribute.key?.name?.name === directiveName,
+          (attribute) => attribute.directive && attribute.key?.name?.name === directiveName
         )
 
         directiveAttributes.forEach((attribute) => {
@@ -139,8 +139,8 @@ export const noMultipleVStyle: Rule.RuleModule = {
               messageId: 'unknownStyleProp',
               data: {
                 directiveName,
-                prop: (argument as VueIdentifier).name,
-              },
+                prop: (argument as VueIdentifier).name
+              }
             })
           }
         })
@@ -158,14 +158,14 @@ export const noMultipleVStyle: Rule.RuleModule = {
               return [{
                 key: (argument as VueIdentifier).name,
                 value: valueSource,
-                dynamic: false,
+                dynamic: false
               }]
             }
 
             return [{
               key: sourceCode.getText(asRuleNode(argument)),
               value: valueSource,
-              dynamic: true,
+              dynamic: true
             }]
           }
 
@@ -185,7 +185,7 @@ export const noMultipleVStyle: Rule.RuleModule = {
         const isValidIdentifier = (name: string) => /^[a-z_$][\w$]*$/i.test(name)
         const entries = directiveAttributes.flatMap(getEntries)
         const anyKeyNeedsQuotes = entries.some(
-          (entry) => entry.key && !isValidIdentifier(entry.key),
+          (entry) => entry.key && !isValidIdentifier(entry.key)
         )
         const renderEntry = (entry: RenderEntry): string => {
           if (entry.spread) return `...${entry.spread}`
@@ -202,7 +202,7 @@ export const noMultipleVStyle: Rule.RuleModule = {
         const hasInterveningAttribute = node.attributes.some((attribute) =>
           !directiveAttributes.includes(attribute)
           && attribute.range[0] > firstAttribute.range[0]
-          && attribute.range[1] < lastAttribute.range[1],
+          && attribute.range[1] < lastAttribute.range[1]
         )
 
         context.report({
@@ -213,12 +213,12 @@ export const noMultipleVStyle: Rule.RuleModule = {
             ? undefined
             : (fixer) => fixer.replaceTextRange(
                 [firstAttribute.range[0], lastAttribute.range[1]],
-                mergedDirective,
-              ),
+                mergedDirective
+              )
         })
-      },
+      }
     })
-  },
+  }
 }
 
 const configs: Record<string, Linter.Config[]> = {}
@@ -226,19 +226,19 @@ const configs: Record<string, Linter.Config[]> = {}
 const plugin: VUnoStyleEslintPlugin = {
   meta: {
     name: 'vue-uno-style',
-    version: typeof __PACKAGE_VERSION__ === 'string' ? __PACKAGE_VERSION__ : '0.0.0-dev',
+    version: typeof __PACKAGE_VERSION__ === 'string' ? __PACKAGE_VERSION__ : '0.0.0-dev'
   },
   rules: {
-    'no-multiple-v-style': noMultipleVStyle,
+    'no-multiple-v-style': noMultipleVStyle
   },
-  configs,
+  configs
 }
 
 configs.recommended = [{
   name: 'vue-uno-style/recommended',
   files: ['**/*.vue'],
   plugins: { 'vue-uno-style': plugin },
-  rules: { 'vue-uno-style/no-multiple-v-style': 'error' },
+  rules: { 'vue-uno-style/no-multiple-v-style': 'error' }
 }]
 
 export default plugin

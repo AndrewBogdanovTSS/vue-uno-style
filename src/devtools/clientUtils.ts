@@ -8,7 +8,7 @@ const ESCAPES: Record<string, string> = {
   '<': '&lt;',
   '>': '&gt;',
   '"': '&quot;',
-  '\'': '&#39;',
+  '\'': '&#39;'
 }
 
 export const escapeHtml = (value: unknown): string =>
@@ -62,15 +62,15 @@ export const valuesByBreakpoint = (
   properties: readonly string[],
   variables: Readonly<Record<string, string>>,
   base: string,
-  prefixed: readonly string[],
+  prefixed: readonly string[]
 ): Record<string, Record<string, string>> => Object.fromEntries(properties.map((property) => [
   property,
   Object.fromEntries([base, ...prefixed]
     .map((breakpoint) => [
       breakpoint,
-      variables[breakpoint === base ? `--${property}` : `--${property}-${breakpoint}`],
+      variables[breakpoint === base ? `--${property}` : `--${property}-${breakpoint}`]
     ])
-    .filter(([, value]) => value !== undefined)),
+    .filter(([, value]) => value !== undefined))
 ]))
 
 /**
@@ -80,7 +80,7 @@ export const valuesByBreakpoint = (
 export const effectiveValue = (
   values: Record<string, unknown>,
   order: readonly string[],
-  breakpoint: string,
+  breakpoint: string
 ): unknown => {
   const index = order.indexOf(breakpoint)
   for (let position = index; position >= 0; position--) {
@@ -97,12 +97,12 @@ export interface ElementFlags {
 
 export const elementFlags = (element: { updates: number }): ElementFlags => ({
   churn: element.updates >= CHURN_THRESHOLD,
-  unchanged: element.updates === 0,
+  unchanged: element.updates === 0
 })
 
 export const matchesFilter = (
   element: { label: string, properties: readonly string[], className: string },
-  filter: string,
+  filter: string
 ): boolean => {
   const query = filter.trim().toLowerCase()
   if (!query) return true

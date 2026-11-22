@@ -11,13 +11,13 @@ vi.mock('@nuxt/kit', () => ({
   addVitePlugin: vi.fn(),
   defineNuxtModule: vi.fn((definition) => definition),
   hasNuxtModule: vi.fn(() => true),
-  useLogger: vi.fn(() => ({ warn })),
+  useLogger: vi.fn(() => ({ warn }))
 }))
 
 // The real writer targets the file next to the module, which is `src/` under test
 vi.mock('../src/webTypes', () => ({
   packageWebTypesPath: vi.fn(() => '/pkg/dist/web-types.json'),
-  writeWebTypes: vi.fn(() => 'written'),
+  writeWebTypes: vi.fn(() => 'written')
 }))
 
 import module from '../src/nuxt'
@@ -39,7 +39,7 @@ type ModuleDefinition = {
       properties?: Array<string | { name: string, format?: 'url' }>
       webTypes?: boolean
     },
-    nuxt: unknown,
+    nuxt: unknown
   ) => unknown
 }
 
@@ -62,10 +62,10 @@ const createNuxt = (unocss: UserConfig & { configFile?: string | false } = {}) =
       rootDir: process.cwd(),
       unocss: {
         configFile: false,
-        ...unocss,
-      },
+        ...unocss
+      }
     },
-    hook: vi.fn((name: string, callback: Hook) => hooks.set(name, callback)),
+    hook: vi.fn((name: string, callback: Hook) => hooks.set(name, callback))
   }
 
   return { hooks, nuxt }
@@ -73,7 +73,7 @@ const createNuxt = (unocss: UserConfig & { configFile?: string | false } = {}) =
 
 const setupModule = async (
   options: Parameters<ModuleDefinition['setup']>[0],
-  unocss?: UserConfig & { configFile?: string | false },
+  unocss?: UserConfig & { configFile?: string | false }
 ) => {
   const { hooks, nuxt } = createNuxt(unocss)
 
@@ -96,7 +96,7 @@ describe('vue-uno-style Nuxt module', () => {
     expect(moduleDefinition.meta).toEqual(expect.objectContaining({
       name: 'vue-uno-style',
       configKey: 'vUnoStyle',
-      compatibility: { nuxt: '>=3.17.0' },
+      compatibility: { nuxt: '>=3.17.0' }
     }))
     expect(moduleDefinition.defaults).toEqual({ directiveName: 'uno-style', webTypes: true, devtools: true })
   })
@@ -115,20 +115,20 @@ describe('vue-uno-style Nuxt module', () => {
 
   it.each([
     ['missing', undefined],
-    ['empty', []],
+    ['empty', []]
   ])('fails the build when properties are %s', async (_label, configured) => {
     const { nuxt } = createNuxt()
 
     await expect(async () => moduleDefinition.setup(
       { directiveName: 'style', properties: configured as never },
-      nuxt,
+      nuxt
     )).rejects.toThrow('No properties configured')
   })
 
   it('passes the configured properties to the runtime directive', async () => {
     const { hooks } = await setupModule({
       directiveName: 'style',
-      breakpoints: { sm: 0, md: 768 },
+      breakpoints: { sm: 0, md: 768 }
     })
 
     await hooks.get('modules:done')?.()
@@ -159,7 +159,7 @@ describe('vue-uno-style Nuxt module', () => {
   it('merges the preset into the UnoCSS config once', async () => {
     const { hooks, nuxt } = await setupModule(
       { directiveName: 'uno-style', baseBreakpoint: 'sm' },
-      { presets: [presetWind3()] },
+      { presets: [presetWind3()] }
     )
     const config: UserConfig = { presets: [presetWind3()] }
     const hook = hooks.get('unocss:config')
@@ -171,12 +171,12 @@ describe('vue-uno-style Nuxt module', () => {
     expect(config.variants?.filter(
       (variant) => typeof variant === 'object'
         && 'name' in variant
-        && variant.name === 'vue-uno-style-override',
+        && variant.name === 'vue-uno-style-override'
     )).toHaveLength(1)
     expect(config.rules ?? []).toHaveLength(0)
     expect(config.safelist).toHaveLength(1)
     expect(nuxt.options.unocss.presets?.some(
-      (preset) => !Array.isArray(preset) && 'name' in preset && preset.name === 'vue-uno-style',
+      (preset) => !Array.isArray(preset) && 'name' in preset && preset.name === 'vue-uno-style'
     )).toBe(true)
   })
 
@@ -191,8 +191,8 @@ describe('vue-uno-style Nuxt module', () => {
         { directiveName: 'style', baseBreakpoint: 'sm' },
         {
           presets: [preset()],
-          theme: { [themeKey]: { sm: '640px', md: '768px', lg: '1024px' } },
-        },
+          theme: { [themeKey]: { sm: '640px', md: '768px', lg: '1024px' } }
+        }
       )
 
       await hooks.get('modules:done')?.()
@@ -209,7 +209,7 @@ describe('vue-uno-style Nuxt module', () => {
     it('falls back to the preset\'s own breakpoints when the app sets none', async () => {
       const { hooks } = await setupModule(
         { directiveName: 'style', baseBreakpoint: 'sm' },
-        { presets: [preset()] },
+        { presets: [preset()] }
       )
 
       await hooks.get('modules:done')?.()
@@ -237,7 +237,7 @@ describe('vue-uno-style Nuxt module', () => {
   it('uses explicit breakpoints for both the preset and runtime directive', async () => {
     const { hooks } = await setupModule({
       directiveName: 'uno-style',
-      breakpoints: { mobile: 0, desktop: '64rem' },
+      breakpoints: { mobile: 0, desktop: '64rem' }
     })
 
     await hooks.get('modules:done')?.()

@@ -24,13 +24,13 @@ const isBaseValue = (value: BreakpointValue) => {
  */
 export const resolveBreakpoints = ({
   breakpoints,
-  baseBreakpoint,
+  baseBreakpoint
 }: ResolveBreakpointsOptions): ResolvedBreakpoints => {
   const names = Object.keys(breakpoints)
 
   if (baseBreakpoint && !names.includes(baseBreakpoint)) {
     throw new Error(
-      `[vue-uno-style] Base breakpoint "${baseBreakpoint}" does not exist in the configured breakpoints.`,
+      `[vue-uno-style] Base breakpoint "${baseBreakpoint}" does not exist in the configured breakpoints.`
     )
   }
 
@@ -38,12 +38,12 @@ export const resolveBreakpoints = ({
   if (!base) {
     throw new Error(
       '[vue-uno-style] Unable to resolve a base breakpoint. '
-      + 'Set baseBreakpoint or configure a breakpoint with the value 0, "0", "0px", or an empty string.',
+      + 'Set baseBreakpoint or configure a breakpoint with the value 0, "0", "0px", or an empty string.'
     )
   }
 
   return {
     base,
-    prefixed: names.filter((name) => name !== base),
+    prefixed: names.filter((name) => name !== base)
   }
 }

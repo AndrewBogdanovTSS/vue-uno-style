@@ -125,7 +125,7 @@ const componentOf = (binding: Binding): DevtoolsComponent | undefined => {
   const name = type.__name ?? type.name ?? type.__file?.split(/[/\\]/).pop()?.replace(/\.vue$/, '')
   return {
     ...(name ? { name } : {}),
-    ...(type.__file ? { file: type.__file } : {}),
+    ...(type.__file ? { file: type.__file } : {})
   }
 }
 
@@ -203,7 +203,7 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
       type,
       elementId: entry.id,
       label: entry.label,
-      changed,
+      changed
     }].slice(-MAX_EVENTS)
   }
 
@@ -224,7 +224,7 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
         value: item.value,
         classes,
         style,
-        ...(component ? { component } : {}),
+        ...(component ? { component } : {})
       }
     })
 
@@ -256,7 +256,7 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
       properties: [...used],
       overrides: [...usedBy].filter(([, count]) => count > 1).map(([key]) => key),
       warnings,
-      signature: safeJson(bindings.map((item) => [item.arg, item.value])),
+      signature: safeJson(bindings.map((item) => [item.arg, item.value]))
     }
   }
 
@@ -277,7 +277,7 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
       el,
       ...description,
       mountedAt: Date.now(),
-      updates: 0,
+      updates: 0
     }
     records.set(entry.id, entry)
     byElement.set(el, entry)
@@ -338,7 +338,7 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
         font: '600 12px/18px ui-monospace, SFMono-Regular, Menlo, monospace',
         color: '#fff',
         background: 'rgba(79, 70, 229, 0.9)',
-        pointerEvents: 'none',
+        pointerEvents: 'none'
       })
       document.body.append(element)
     }
@@ -357,7 +357,7 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
     properties: properties?.names ?? [],
     elements: () => [...records.values()].map(({ el, signature: _signature, ...rest }) => ({
       ...rest,
-      connected: el.isConnected,
+      connected: el.isConnected
     })),
     events: () => [...events],
     warnings: () => [...records.values()].flatMap((entry) =>
@@ -366,7 +366,7 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
       const configured = properties?.names ?? []
       return [
         ...configured.filter((name) => seen.has(name)),
-        ...[...seen].filter((name) => !configured.includes(name)),
+        ...[...seen].filter((name) => !configured.includes(name))
       ]
     },
     activeBreakpoint,
@@ -396,7 +396,7 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
         pointerEvents: 'none',
         outline: '2px solid #4f46e5',
         background: 'rgba(79, 70, 229, 0.15)',
-        borderRadius: '2px',
+        borderRadius: '2px'
       })
       if (!existing) document.body.append(overlay)
     },
@@ -412,7 +412,7 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
     subscribe: (listener) => {
       listeners.add(listener)
       return () => listeners.delete(listener)
-    },
+    }
   }
 
   /**
@@ -432,7 +432,7 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
     unmounted: (el, binding, vnode, previous) => {
       directive.unmounted?.(el, binding, vnode, previous)
       unmounted(el)
-    },
+    }
   })
 
   return { registry, instrument }

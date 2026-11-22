@@ -15,7 +15,7 @@ const target = join(root, pkg['web-types'])
 mkdirSync(join(target, '..'), { recursive: true })
 writeFileSync(target, serializeWebTypes(createWebTypes({
   directiveName: 'uno-style',
-  version: pkg.version,
+  version: pkg.version
 })))
 
 process.stdout.write(`web-types written to ${pkg['web-types']}\n`)

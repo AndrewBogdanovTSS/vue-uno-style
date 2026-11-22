@@ -12,7 +12,7 @@ import { breakpoints } from './vue-uno-style.config.js'
 const base = {
   mini: { preset: presetMini({ preflight: 'on-demand' }), theme: { breakpoints } },
   wind3: { preset: presetWind3({ preflight: 'on-demand' }), theme: { breakpoints } },
-  wind4: { preset: presetWind4({ preflights: { reset: false } }), theme: { breakpoint: breakpoints } },
+  wind4: { preset: presetWind4({ preflights: { reset: false } }), theme: { breakpoint: breakpoints } }
 }[process.env.PLAYGROUND_PRESET ?? 'wind3']
 
 if (!base) {
@@ -26,7 +26,7 @@ export default defineConfig({
     // its own. `[\w-]+` rather than `.+`: UnoCSS also scans prose, and `bgi-$*` there would become
     // `var(--*)`.
     [/^bgi-\$([\w-]+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })],
-    [/^bgv-\$([\w-]+)$/, ([, name]) => ({ background: `var(--${name})` })],
+    [/^bgv-\$([\w-]+)$/, ([, name]) => ({ background: `var(--${name})` })]
   ],
-  theme: base.theme,
+  theme: base.theme
 })

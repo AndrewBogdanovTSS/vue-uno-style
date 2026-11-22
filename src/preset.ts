@@ -31,15 +31,15 @@ const overrideVariant: Variant = {
 
     return {
       matcher: matcher.slice(2),
-      layer: 'override',
+      layer: 'override'
     }
-  },
+  }
 }
 
 const toUnoBreakpoints = (breakpoints: BreakpointConfig): Record<string, string> =>
   Object.fromEntries(Object.entries(breakpoints).map(([name, value]) => [
     name,
-    typeof value === 'number' ? `${value}px` : value,
+    typeof value === 'number' ? `${value}px` : value
   ]))
 
 /**
@@ -65,9 +65,9 @@ const createBreakpointVariant = (configuredBreakpoints?: BreakpointConfig): Vari
       // UnoCSS sorts media blocks by this order, and falls back to comparing them as strings,
       // which puts `1200px` before `768px` and lets the narrower breakpoint win. The scale
       // matches `@unocss/rule-utils`, so these blocks interleave with the base preset's own.
-      parent: [`@media (min-width: ${size})`, 3000 + index + 1],
+      parent: [`@media (min-width: ${size})`, 3000 + index + 1]
     }
-  },
+  }
 })
 
 /**
@@ -84,7 +84,7 @@ export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions>((options) =>
   return {
     name: 'vue-uno-style',
     layers: {
-      override: 10,
+      override: 10
     },
     variants: [overrideVariant, createBreakpointVariant(configuredBreakpoints)],
     // Written under the key the base preset reads, so its own breakpoint variants serve the
@@ -97,16 +97,16 @@ export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions>((options) =>
       if (!available) {
         throw new Error(
           '[vue-uno-style] No breakpoints found. Configure theme.breakpoints '
-          + '(theme.breakpoint with presetWind4) or pass breakpoints to presetVUnoStyle().',
+          + '(theme.breakpoint with presetWind4) or pass breakpoints to presetVUnoStyle().'
         )
       }
 
       const resolved = resolveBreakpoints({
         breakpoints: available,
-        baseBreakpoint,
+        baseBreakpoint
       })
 
       return names.flatMap((prop) => getVarsClasses(prop, resolved).split(' '))
-    }],
+    }]
   }
 })
