@@ -263,15 +263,35 @@ During `nuxt dev`, the module adds a **vue-uno-style** tab to Nuxt DevTools:
   the page. Turn on **Highlight active** to keep the selected element outlined
   while you work in the tab; the outline follows the element as the page
   scrolls.
-- **Warnings**: values the directive ignores without a word. That covers a
-  property you did not configure, a breakpoint key that does not exist, a
-  numeric `0` (use `'0'`), and a value that is neither a string nor a number.
+- **Warnings**: values that give no CSS or the wrong CSS without an error. That
+  covers a property you did not configure, a breakpoint key that does not
+  exist, a numeric `0` (use `'0'`), and a value that is neither a string nor a
+  number. See [Warnings tab](#warnings-tab) for each kind and
+  [Values that produce no CSS](#values-that-produce-no-css) for what the
+  directive does with them.
 - **Timeline**: the last 200 mounts, updates and unmounts, with the variables
   each one changed and how long the directive took. The timing covers every
   binding on the element and leaves out the tab's own bookkeeping. Browsers
   round it to 0.1 ms, so most events read `< 0.1 ms`; 1 ms or more is marked.
 - **REPL**: runs a value through the directive and your UnoCSS generator and
   shows the classes, variables and CSS.
+
+#### Warnings tab
+
+The tab checks every binding when its element mounts and each time it updates.
+It lists the warnings of the elements on the current page, one row per warning:
+the element, the kind and a message. Click the element to open it in
+**Elements**. The number of warnings shows next to the tab name.
+
+| Kind | When | Example |
+|------|------|---------|
+| `unknown-property` | The property is not in `properties`. The preset does not safelist its classes. | `v-uno-style:mt="'1rem'"` |
+| `unknown-breakpoint` | A key is not one of your breakpoints. The directive drops its value. | `{ sm: '1rem', tablet: '2rem' }` |
+| `dropped-value` | A value is the number `0`. The directive skips it. | `{ sm: 0 }` |
+| `invalid-value` | A value is neither a string nor a number, or the directive has no argument and the value is not an object. | `v-uno-style:c="true"`, `v-uno-style="'red'"` |
+
+An empty value (`''`, `null` or `undefined`) gives no warning. It is the normal
+way to leave a property or a breakpoint unset.
 
 In development the directive is wrapped to report to the tab, on the client
 only. Production builds and server rendering use the plain directive.
@@ -333,6 +353,33 @@ value collapse into one class.
 
 A single-root component may carry the directive on its root while its usage
 site applies another. Both apply, and the usage site wins a shared property.
+
+### Values that produce no CSS
+
+The directive does not throw on a value it cannot use. What it does instead:
+
+- **Empty values.** `''`, `null` and `undefined` write nothing. Use them to
+  leave a property or a breakpoint unset.
+- **The number `0`.** It is skipped like an empty value, as a scalar or at a
+  breakpoint. Write `'0'`, which sets `--p: 0`.
+- **A key that is not a breakpoint.** With `sm`, `md` and `lg`, the value for
+  `tablet` in `{ sm: '1rem', tablet: '2rem' }` is dropped. Only your
+  breakpoints are read.
+- **A property outside `properties`.** The class and the variable are still
+  written (`o:mt-$mt`, `--mt`), but the preset does not safelist the class, so
+  it has no CSS. When the directive has `properties`, development builds log
+  `[vue-uno-style] Property "mt" is not configured, so its classes are not safelisted.`
+- **A value that is neither a string nor a number.** It is written as text:
+  `true` sets `--c: true`, and an object sets `[object Object]`. The CSS gets a
+  value it cannot use.
+- **No argument and a value that is not an object.** `v-uno-style="'red'"`
+  reads the string as an object of characters. It writes the classes
+  `o:0-$0 o:1-$1 o:2-$2` and the variables `--0: r`, `--1: e`, `--2: d`. With
+  `properties`, development builds also log the unconfigured-property warning
+  for `0`, `1` and `2`.
+
+In `nuxt dev`, the [Warnings tab](#warnings-tab) of Nuxt DevTools lists each of
+these except empty values, with the element they came from.
 
 ## ESLint
 
