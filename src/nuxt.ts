@@ -205,17 +205,29 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
       && options.devtools !== false
       && isNuxtDevtoolsEnabled(nuxt.options.devtools)
 
-    // Filled in modules:done, once the UnoCSS config is loaded; requests wait for it
-    let resolveDevtoolsContext: (context: DevtoolsContext) => void = () => {}
-    const devtoolsContext = new Promise<DevtoolsContext>((resolve) => {
-      resolveDevtoolsContext = resolve
+    // Set in modules:done. The context itself is built on the first request: by then the dev server
+    // runs, so a UnoCSS config that imports files Nuxt generates (`.nuxt/uno.config.mjs` under
+    // `nuxtLayers`) can load. Requests made before modules:done wait for it.
+    let createDevtoolsContext: () => Promise<DevtoolsContext> = () => Promise.reject(new Error('unreachable'))
+    let markReady: () => void = () => {}
+    const ready = new Promise<void>((resolve) => {
+      markReady = resolve
     })
+    let devtoolsContext: Promise<DevtoolsContext> | undefined
+    const getDevtoolsContext = async () => {
+      await ready
+      // A failed load is not cached, so the next request retries it
+      return (devtoolsContext ??= createDevtoolsContext().catch((error: unknown) => {
+        devtoolsContext = undefined
+        throw error
+      }))
+    }
 
     if (devtools) {
       let data: ReturnType<typeof createDevtoolsData> | undefined
       const middleware = createDevtoolsMiddleware({
-        getData: async () => (data ??= createDevtoolsData(await devtoolsContext)),
-        generate: async (input) => generateSample(await devtoolsContext, input)
+        getData: async () => (data ??= createDevtoolsData(await getDevtoolsContext())),
+        generate: async (input) => generateSample(await getDevtoolsContext(), input)
       })
 
       addVitePlugin({
@@ -262,28 +274,50 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
         )
       }
 
-      const unoOptions = (nuxt.options.unocss ?? {}) as UnocssNuxtOptions
-      const configSource = unoOptions.configFile === false
-        ? unoOptions
-        : typeof unoOptions.configFile === 'string'
-          ? { configFile: resolve(nuxt.options.rootDir, unoOptions.configFile) }
-          : nuxt.options.rootDir
-      const defaults = unoOptions.configFile === false ? {} : unoOptions
-      const { config, sources } = await loadConfig(
-        nuxt.options.rootDir,
-        configSource,
-        [],
-        defaults
-      )
-      // The module's own preset object reaches this config through the defaults; any other
-      // vue-uno-style preset is one the app configured itself
-      const presetSource = config.presets?.some((item) => item !== preset && isVUnoStylePreset(item))
-        ? 'config'
-        : 'module'
-      addPreset(config, preset)
+      const loadUnoConfig = async () => {
+        const unoOptions = (nuxt.options.unocss ?? {}) as UnocssNuxtOptions
+        const configSource = unoOptions.configFile === false
+          ? unoOptions
+          : typeof unoOptions.configFile === 'string'
+            ? { configFile: resolve(nuxt.options.rootDir, unoOptions.configFile) }
+            : nuxt.options.rootDir
+        const defaults = unoOptions.configFile === false ? {} : unoOptions
+        const { config, sources } = await loadConfig(
+          nuxt.options.rootDir,
+          configSource,
+          [],
+          defaults
+        )
+        // The module's own preset object reaches this config through the defaults; any other
+        // vue-uno-style preset is one the app configured itself
+        const presetSource: DevtoolsContext['preset'] = config.presets?.some(
+          (item) => item !== preset && isVUnoStylePreset(item)
+        )
+          ? 'config'
+          : 'module'
+        addPreset(config, preset)
 
-      const generator = await createGenerator(config)
-      const breakpoints = options.breakpoints ?? getThemeBreakpoints(generator)
+        return { sources, presetSource, generator: await createGenerator(config) }
+      }
+      let unoConfig: ReturnType<typeof loadUnoConfig> | undefined
+      const getUnoConfig = () => (unoConfig ??= loadUnoConfig().catch((error: unknown) => {
+        unoConfig = undefined
+        throw error
+      }))
+
+      // Only theme breakpoints need the UnoCSS config this early. With `breakpoints` set, nothing
+      // here loads it, so a config that imports files Nuxt has yet to generate does not fail
+      // `nuxt prepare` on a fresh checkout.
+      const breakpoints = options.breakpoints ?? getThemeBreakpoints(await getUnoConfig().then(
+        ({ generator }) => generator,
+        (error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error)
+          throw new Error(
+            `[vue-uno-style] Could not load the UnoCSS config to read its breakpoints: ${message}. `
+            + 'Pass breakpoints to the module, which needs no config at this point.'
+          )
+        }
+      ))
       const resolved = resolveBreakpoints({
         breakpoints,
         baseBreakpoint: options.baseBreakpoint
@@ -300,22 +334,27 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
       })
 
       if (devtools) {
-        resolveDevtoolsContext({
-          version: version(),
-          directiveName,
-          properties: resolvedProperties,
-          breakpoints,
-          breakpointSource: options.breakpoints ? 'option' : 'theme',
-          breakpointThemeKey: breakpointThemeKey(generator.config.theme),
-          resolved,
-          preset: presetSource,
-          unoPresets: generator.config.presets
-            .map(({ name }) => name)
-            .filter((name) => name !== 'vue-uno-style'),
-          configSources: sources,
-          webTypes,
-          generator
-        })
+        createDevtoolsContext = async () => {
+          const { sources, presetSource, generator } = await getUnoConfig()
+
+          return {
+            version: version(),
+            directiveName,
+            properties: resolvedProperties,
+            breakpoints,
+            breakpointSource: options.breakpoints ? 'option' : 'theme',
+            breakpointThemeKey: breakpointThemeKey(generator.config.theme),
+            resolved,
+            preset: presetSource,
+            unoPresets: generator.config.presets
+              .map(({ name }) => name)
+              .filter((name) => name !== 'vue-uno-style'),
+            configSources: sources,
+            webTypes,
+            generator
+          }
+        }
+        markReady()
       }
     })
   }

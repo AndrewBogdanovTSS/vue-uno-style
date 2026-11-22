@@ -250,6 +250,33 @@ describe('vue-uno-style Nuxt module', () => {
     expect(contents).toContain('"baseBreakpoint":"mobile"')
   })
 
+  describe('with a UnoCSS config that imports a file Nuxt generates later', () => {
+    const configFile = 'test/fixtures/uno.generated-later.config.ts'
+
+    /**
+     * `nuxt prepare` on a fresh checkout reaches modules:done before Nuxt writes its templates,
+     * so a root `uno.config.ts` importing `.nuxt/uno.config.mjs` (`nuxtLayers`) cannot load yet.
+     * With breakpoints given, nothing at that point needs the config.
+     */
+    it('does not load it when breakpoints are given', async () => {
+      const { hooks } = await setupModule(
+        { directiveName: 'style', breakpoints: { sm: 0, md: 768 } },
+        { configFile }
+      )
+
+      await expect(hooks.get('modules:done')?.()).resolves.toBeUndefined()
+      expect(await pluginContents()).toContain('"breakpoints":{"sm":0,"md":768}')
+    })
+
+    it('says to pass breakpoints when it needs the theme\'s', async () => {
+      const { hooks } = await setupModule({ directiveName: 'style' }, { configFile })
+
+      await expect(hooks.get('modules:done')?.()).rejects.toThrow(
+        /Could not load the UnoCSS config to read its breakpoints: Cannot find module.*Pass breakpoints to the module/
+      )
+    })
+  })
+
   it('fails clearly when the UnoCSS Nuxt module is missing', async () => {
     vi.mocked(hasNuxtModule).mockReturnValue(false)
     const { hooks } = await setupModule({ directiveName: 'uno-style' })
