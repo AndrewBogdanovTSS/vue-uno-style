@@ -4,6 +4,8 @@ import { presetMini, presetWind3, presetWind4 } from 'unocss'
 /** A base preset the package supports, with the facts the tests need about it. */
 export interface BasePreset {
   name: 'presetMini' | 'presetWind3' | 'presetWind4'
+  /** The name UnoCSS lists the preset under in a resolved config. */
+  packageName: string
   preset: () => Preset
   /** Where the preset keeps breakpoints in its theme. */
   themeKey: 'breakpoint' | 'breakpoints'
@@ -14,10 +16,11 @@ export interface BasePreset {
 const tailwind3Defaults = { 'sm': '640px', 'md': '768px', 'lg': '1024px', 'xl': '1280px', '2xl': '1536px' }
 
 export const basePresets: BasePreset[] = [
-  { name: 'presetMini', preset: presetMini, themeKey: 'breakpoints', defaults: tailwind3Defaults },
-  { name: 'presetWind3', preset: presetWind3, themeKey: 'breakpoints', defaults: tailwind3Defaults },
+  { name: 'presetMini', packageName: '@unocss/preset-mini', preset: presetMini, themeKey: 'breakpoints', defaults: tailwind3Defaults },
+  { name: 'presetWind3', packageName: '@unocss/preset-wind3', preset: presetWind3, themeKey: 'breakpoints', defaults: tailwind3Defaults },
   {
     name: 'presetWind4',
+    packageName: '@unocss/preset-wind4',
     preset: presetWind4,
     themeKey: 'breakpoint',
     defaults: { 'sm': '40rem', 'md': '48rem', 'lg': '64rem', 'xl': '80rem', '2xl': '96rem' },

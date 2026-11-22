@@ -47,6 +47,10 @@
       "types": "./dist/nuxt.d.mts",
       "import": "./dist/nuxt.mjs"
     },
+    "./devtools": {
+      "types": "./dist/devtools.d.mts",
+      "import": "./dist/devtools.mjs"
+    },
     "./package.json": "./package.json"
   },
   "files": [

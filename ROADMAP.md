@@ -33,8 +33,12 @@ The directive itself is engine-agnostic: it writes whatever class strings and CS
 | --- | --- | --- |
 | `src/directive.ts`, `core/getStyle.ts`, `core/breakpoints.ts` | no | - |
 | `core/getStyleProps.ts:16`, `core/varsClasses.ts:14` | yes | Both hard-code `o:<bp>:<prop>-$<prop>-<bp>`, in two expressions kept equal only by `test/parity.test.ts` |
-| `src/preset.ts` | yes | Safelist, the `o:` variant and `override` layer, its own breakpoint variant, reads `theme.breakpoints` |
-| `src/nuxt.ts` | yes | Requires `@unocss/nuxt`, reads `theme.breakpoints` from a UnoCSS generator |
+| `src/preset.ts` | yes | Safelist, the `o:` variant and `override` layer, its own breakpoint variant |
+| `src/themeBreakpoints.ts` | yes | Reads breakpoints the way UnoCSS's variants do, from `theme.breakpoint` or `theme.breakpoints` |
+| `src/knownRules.ts` | yes | UnoCSS rules for the prefixes some base presets lack |
+| `src/nuxt.ts` | yes | Requires `@unocss/nuxt`, reads breakpoints from a UnoCSS generator, wires the DevTools tab |
+| `src/devtools/server.ts` | yes | The tab's rule coverage, REPL output and rule suggestions run on the app's UnoCSS generator |
+| `src/devtools/registry.ts`, `inspect.ts`, `client.ts`, `clientUtils.ts`, `page.ts` | no | Record and show directive bindings, and the values the directive ignores |
 | `src/eslint.ts`, `core/webTypes.ts`, `core/properties.ts` | wording only | Messages and docs say "UnoCSS utility prefix" |
 
 ---
@@ -290,9 +294,17 @@ v-uno-style:c="{ sm: 'red-300', md: 'blue-200' }"
      CSS colour name used as a raw value, in favour of `#hex`. `eslint.config.js` can `await`
      the token helper at the top level. This only covers values written in the template.
    - **Runtime, in development.** Values from an API or CMS, the package's main case, never
-     reach ESLint. So the directive also warns during development about a value shaped like a
-     token (`word-123`) that is not one. The warning is stripped from production builds, like
-     today's unknown-property warning.
+     reach ESLint. They surface in the Nuxt DevTools tab:
+     - `inspectValue` gains an `unknown-token` warning for a value shaped like a token
+       (`word-123`) that is not one, so the **Warnings** tab lists it next to the existing
+       unknown-breakpoint and dropped-value warnings.
+     - The **REPL** and the **Elements** table show what each value resolved to: a token
+       reference or the raw value.
+     - The **Overview** lists the enabled theme sections, their token counts, and the CSS the
+       emitted variables cost.
+
+     Without Nuxt DevTools, the directive warns in the console instead. Both are stripped from
+     production builds, like today's unknown-property warning.
 7. **Docs.** A "Design-system values" README section covering:
    - how a value resolves;
    - the prefix table;
@@ -356,9 +368,9 @@ change.
 
 | Package | Published | Contents |
 | --- | --- | --- |
-| `packages/core` | no, private | Directive factory, `getStyle`, breakpoints, properties, the ESLint rule factory, the web-types builder. It is engine-neutral through a class-format adapter. |
-| `packages/vue-uno-style` | yes | Core + UnoCSS adapter, `presetVUnoStyle`, the Nuxt module for `@unocss/nuxt`. |
-| `packages/vue-tw-style` | yes | Core + Tailwind adapter, the stylesheet fragment builder, its own Nuxt module. |
+| `packages/core` | no, private | Directive factory, `getStyle`, breakpoints, properties, the ESLint rule factory, the web-types builder, and the DevTools registry, `inspectValue` and tab client. It is engine-neutral through a class-format adapter. |
+| `packages/vue-uno-style` | yes | Core + UnoCSS adapter, `presetVUnoStyle`, the known gap rules, the Nuxt module for `@unocss/nuxt`, and the DevTools server part that checks coverage against the UnoCSS generator. |
+| `packages/vue-tw-style` | yes | Core + Tailwind adapter, the stylesheet fragment builder, its own Nuxt module and DevTools server part. |
 
 The core is bundled into each published package at build time, so only two packages are public
 and a core version can never drift from its adapter. The cost: an app that installs both packages
@@ -415,7 +427,8 @@ stays with its package.
    and phase 2's `--colors-*` references byte for byte.
 3. **Proof of no change.** `vue-uno-style`'s `npm pack` file list, its exports (publint and attw
    already run on build) and `pnpm smoke` must match the last release. The playground keeps
-   passing `playground:verify`.
+   passing `playground:verify`. `dist/devtools-client.mjs` is served as a file, so it must still
+   build without imports once its code comes from the core; `pnpm smoke` already checks that.
 4. **Release tooling.**
    - `scripts/release.ts` takes a package name and tags per package (`vue-uno-style@0.3.1`,
      `vue-tw-style@0.1.0`) instead of `v*`.
@@ -451,6 +464,9 @@ stays with its package.
      or both.
    - Whether the module can inject the fragment into the stylesheet Tailwind compiles, without
      a user-side import.
+
+   It also serves the same DevTools tab. Its server part checks coverage by compiling the
+   safelist with `@tailwindcss/node`, and suggests the Tailwind form of a missing utility.
 6. **Tests.** Contract tests against the real compiler (`@tailwindcss/node` `compile().build()`)
    that mirror `vue-uno-style`'s preset tests:
    - every safelisted class generates CSS;

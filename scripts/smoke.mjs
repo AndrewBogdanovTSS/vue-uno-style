@@ -92,6 +92,18 @@ check('the Nuxt module entry imports from the built package', async () => {
   assert.ok(api.default)
 })
 
+check('the DevTools entry exports the registry, and the tab script is self-contained', async () => {
+  const api = await import(built('devtools.mjs'))
+  for (const name of ['createDevtoolsRegistry', 'inspectValue']) {
+    assert.ok(name in api, `missing export: ${name}`)
+  }
+
+  // The module serves this file as is, so it must not import anything
+  const client = readFileSync(join(root, 'dist', 'devtools-client.mjs'), 'utf8')
+  assert.doesNotMatch(client, /^\s*import\s/m, 'devtools-client.mjs must not import other modules')
+  assert.match(client, /__NUXT_DEVTOOLS__/)
+})
+
 let failed = 0
 process.stdout.write(`\nSmoke test on Node ${process.version}\n`)
 process.stdout.write(`${'-'.repeat(28 + process.version.length)}\n`)

@@ -6,6 +6,7 @@ import { resolveBreakpoints } from '../src/core/breakpoints'
 import { getStyle } from '../src/core/getStyle'
 import { resolveProperties } from '../src/core/properties'
 import { getVarsClasses } from '../src/core/varsClasses'
+import { knownRuleSource } from '../src/knownRules'
 import { presetVUnoStyle } from '../src/preset'
 import { builtIn, checkedPrefixes, gapDeclarations, gapRules, urlRule } from './fixtures/customRules'
 
@@ -83,6 +84,20 @@ describe('custom rules', () => {
     expect(own).toContain('--un-blur:blur(var(--blur));')
     expect(replaced).toContain('filter:blur(var(--blur));')
     expect(replaced).not.toContain('--un-blur')
+  })
+
+  /**
+   * The README quotes, and the DevTools tab suggests, `knownRuleSource()` - text, not the rule the
+   * other tests run. Evaluating that text proves what a user pastes behaves like the tested rule.
+   */
+  it.each(prefixes)('quotes and suggests source text for "%s" that works as pasted', async (prefix) => {
+    // Evaluated on purpose: the point is to run the text a user would paste
+    const pasted = new Function(`return ${knownRuleSource(prefix)}`)() as Rule
+    const tokens = `${prefix}-$${prefix} md:${prefix}-$${prefix}-md`
+
+    expect(await generate(presetMini, tokens, [pasted]))
+      .toBe(await generate(presetMini, tokens, [gapRules[prefix]]))
+    expect(await generate(presetMini, tokens, [pasted])).toContain(gapDeclarations[prefix](prefix))
   })
 
   it('leaves prose such as `blur-$*` alone, thanks to the [\\w-]+ variable match', async () => {
