@@ -10,7 +10,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import { properties } from '../vue-uno-style.config.js'
+import { properties } from '../config/vue-uno-style.ts'
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 const output = join(root, '.output', 'public')

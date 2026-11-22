@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { breakpoints } from '~~/vue-uno-style.config.js'
+import { breakpoints } from '~~/config/vue-uno-style.ts'
 
 const THEME_KEY = 'vue-uno-style-theme'
 const REPOSITORY = 'https://github.com/AndrewBogdanovTSS/vue-uno-style'
@@ -254,7 +254,7 @@ const override = { sm: '#16a34a', md: '#2563eb' }
         <p><code>bgi</code> is configured as <code>{ name: 'bgi', format: 'url' }</code>, so plain image URLs are wrapped in <code>url()</code>. Its rule lives in the playground's <code>uno.config.ts</code>, because the package predefines no properties.</p>
         <div data-playground-format class="pattern" v-uno-style="pattern" />
         <GeneratedOutput :value="pattern" />
-        <pre><code>// vue-uno-style.config.js
+        <pre><code>// config/vue-uno-style.ts
 export const properties = ['c', 'bg', 'p', 'gap', 'w', 'bgv', { name: 'bgi', format: 'url' }]</code></pre>
       </section>
 

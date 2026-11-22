@@ -1,7 +1,7 @@
 import vUnoStyle from 'vue-uno-style/eslint'
 import babelParser from '@babel/eslint-parser'
 import vueParser from 'vue-eslint-parser'
-import { properties } from './vue-uno-style.config.js'
+import { properties } from './config/vue-uno-style.ts'
 
 const typescriptParserOptions = {
   // Babel parses TypeScript syntax without type checking

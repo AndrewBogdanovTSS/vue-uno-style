@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Responsive, ResponsiveStyles } from 'vue-uno-style'
 import { getStyle, resolveBreakpoints, resolveProperties } from 'vue-uno-style'
-import { breakpoints, properties } from '~~/vue-uno-style.config.js'
+import { breakpoints, properties } from '~~/config/vue-uno-style.ts'
 
 /**
  * Shows what the directive writes for a value: the same `getStyle()` call it makes, with the
