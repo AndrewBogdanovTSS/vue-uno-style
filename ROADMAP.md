@@ -45,7 +45,7 @@ The directive itself is engine-agnostic: it writes whatever class strings and CS
 
 ## Phase 1: UnoCSS `presetMini` and `presetWind4`
 
-**Status: implemented, waiting for the 0.2.0 release.** Every item below is done, and each
+**Status: released in 0.2.0.** Every item below is done, and each
 "Done when" condition holds:
 - 227 unit tests pass, run under all three presets.
 - `playground:verify` passes under each preset locally, and CI now runs it for all three.

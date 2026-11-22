@@ -3,11 +3,11 @@
 Standalone, publishable package extracted from Canvas (`GLOBAL15-132320`).
 Reference for package shape: `D:/personal/eslint-unocss-normalize-classes`.
 
-Status as of 2026-11-20: **phases 1-7 done, phase 8 (publish) pending.** PR AndrewBogdanovTSS/v-style-directive#1 carries the work; `vue-uno-style` is still unclaimed on npm.
+Status as of 2026-11-22: **phases 1-8 done.** `vue-uno-style@0.1.0` was published to npm on 2026-11-20 (tag `v0.1.0`). PR AndrewBogdanovTSS/vue-uno-style#1 carried the extraction. `0.2.0` ships roadmap phase 1 (`presetMini` and `presetWind4`, breakpoint fixes) and the Nuxt DevTools tab; see `ROADMAP.md`. Next: the Canvas migration (section 10).
 
-- **Phases 1-7:** package, directive, preset, ESLint plugin, Nuxt module, docs, demo and CI are in place. Unit tests, typecheck, lint, build (publint + attw), smoke and `check:docs` are green.
+- **Phases 1-8:** package, directive, preset, ESLint plugin, Nuxt module, docs, demo, CI and the npm release are in place. Releases go through the tag-triggered `release.yml` with npm trusted publishing. Unit tests, typecheck, lint, build (publint + attw), smoke and `check:docs` are green.
 - **Synced with Canvas `develop` on 2026-11-20:** the directive includes Canvas `fd50a1df54` (2026-10-28, nested v-style fix), which composes every binding on a vnode. The ESLint rule, `getStyleProps`, `getVarsClasses`, the `o:` variant, the `bgi`/`bgv` rules and the safelist have not drifted.
-- **Phase 0 in Canvas: partly done.** Only the `'**/.claude/**'` vitest exclude has landed. Still open: `layers: { override: 10 }`, the `getVarsClasses` docblock (`md:o:c-$c-md`), the `v-style.c` example in `docs/core/plugins/style.md`, unknown-prop linting, and the contract tests. The package already fixes each of these on its side, so none blocks publishing; they matter only for Canvas until it migrates. The two Canvas records cited below are not present in Canvas `develop`.
+- **Phase 0 in Canvas: partly done** (rechecked against Canvas `develop` `389c4f02d8`, 2026-11-20). Only the `'**/.claude/**'` vitest exclude has landed. Still open: `layers: { override: 10 }`, the `getVarsClasses` docblock (`md:o:c-$c-md`), the `v-style.c` example in `docs/core/plugins/style.md`, unknown-prop linting, and the contract tests. The package already fixes each of these on its side, so none blocks publishing; they matter only for Canvas until it migrates. The two Canvas records cited below are not present in Canvas `develop`.
 
 Audited against the running UnoCSS generator on 2026-09-21 at Canvas `13c8288c5e`. Result: **v-style works** - 40/40 props generate CSS, runtime classes are byte-identical to safelisted tokens, 44/44 directive tests pass. Six issues found around it, now scheduled as phase 0. Recorded in Canvas at `docs/development/proposals/GLOBAL15-132320-extract-v-style-package.md` and `docs/development/findings/GLOBAL15-132320-v-style-extraction-defects.md`.
 
