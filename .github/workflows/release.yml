@@ -16,7 +16,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '26'
           registry-url: https://registry.npmjs.org
           cache: pnpm
 
@@ -41,7 +41,8 @@ jobs:
 
       # Trusted publishing: npm exchanges the job's OIDC token for a
       # short-lived publish token, so no NPM_TOKEN secret exists.
-      # It needs npm >= 11.5.1, newer than the npm bundled with Node 24.
+      # It needs npm >= 11.5.1. Node 26 bundles npm 11.20.0, which meets
+      # that; the upgrade keeps the floor if the Node version changes.
       - run: npm install -g npm@latest
       - run: npm publish --access public
 
