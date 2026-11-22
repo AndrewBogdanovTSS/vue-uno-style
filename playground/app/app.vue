@@ -134,7 +134,8 @@ const override = { sm: '#16a34a', md: '#2563eb' }
 
 <template>
   <header class="topbar">
-    <div class="container topbar-inner">
+    <!-- `mt` is left out of the configured properties on purpose, so the DevTools Warnings tab has an entry to show -->
+    <div class="container topbar-inner" v-uno-style:mt="'1rem'">
       <span class="brand"><span class="brand-mark" aria-hidden="true" /> vue-uno-style</span>
       <span class="breakpoint" :class="{ hidden: !breakpoint }" aria-live="polite">
         Breakpoint <strong>{{ breakpoint ?? 'sm' }}</strong>
