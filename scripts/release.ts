@@ -28,7 +28,7 @@ const capture = (command: string): string | null => {
     return execSync(command, {
       cwd: root,
       encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
+      stdio: ['ignore', 'pipe', 'ignore']
     }).trim()
   }
   catch {
@@ -49,7 +49,7 @@ const run = (command: string, args: string[]): number => {
 const verdict = (ok: boolean, claim: string, passed: string, failed: string): Finding => ({
   level: ok ? 'pass' : 'error',
   claim,
-  detail: ok ? passed : failed,
+  detail: ok ? passed : failed
 })
 
 const defaultBranch = (): string => {
@@ -69,7 +69,7 @@ const versionIsFree = async (name: string, version: string): Promise<Finding> =>
     return {
       level: 'unverifiable',
       claim,
-      detail: `could not reach npm: ${(error as Error).message}`,
+      detail: `could not reach npm: ${(error as Error).message}`
     }
   }
 }
@@ -83,7 +83,7 @@ const runChecks = (): number => {
     ['pnpm', ['smoke']],
     ['pnpm', ['check:docs']],
     ['pnpm', ['playground:install']],
-    ['pnpm', ['playground:verify']],
+    ['pnpm', ['playground:verify']]
   ] as const
 
   for (const [command, args] of checks) {
@@ -96,7 +96,7 @@ const runChecks = (): number => {
 const preflight = async (
   pkg: { name: string },
   target: string,
-  skipChecks: boolean,
+  skipChecks: boolean
 ): Promise<Finding[]> => {
   const findings: Finding[] = []
   const main = defaultBranch()
@@ -105,13 +105,13 @@ const preflight = async (
     branch === main,
     `the release is cut from ${main}`,
     `on ${main}`,
-    `on ${branch ?? '(unknown)'}`,
+    `on ${branch ?? '(unknown)'}`
   ))
   findings.push(verdict(
     capture('git status --porcelain') === '',
     'the working tree is clean',
     'nothing uncommitted',
-    'uncommitted changes would not be included in the tag',
+    'uncommitted changes would not be included in the tag'
   ))
 
   capture('git fetch origin --quiet')
@@ -121,7 +121,7 @@ const preflight = async (
     findings.push({
       level: 'unverifiable',
       claim: `HEAD matches origin/${main}`,
-      detail: !local ? 'HEAD does not resolve' : `origin/${main} does not resolve`,
+      detail: !local ? 'HEAD does not resolve' : `origin/${main} does not resolve`
     })
   }
   else if (local !== remote) {
@@ -130,7 +130,7 @@ const preflight = async (
     findings.push({
       level: behind !== '0' ? 'error' : 'warning',
       claim: `HEAD matches origin/${main}`,
-      detail: behind !== '0' ? `${behind} commit(s) behind` : `${ahead} commit(s) ahead; release will push them`,
+      detail: behind !== '0' ? `${behind} commit(s) behind` : `${ahead} commit(s) ahead; release will push them`
     })
   }
   else findings.push({ level: 'pass', claim: `HEAD matches origin/${main}`, detail: 'in sync' })
@@ -139,7 +139,7 @@ const preflight = async (
     capture(`git tag -l v${target}`) === '',
     `tag v${target} is unused`,
     'free',
-    'the tag already exists locally',
+    'the tag already exists locally'
   ))
   findings.push(await versionIsFree(pkg.name, target))
 
@@ -147,7 +147,7 @@ const preflight = async (
     findings.push({
       level: 'unverifiable',
       claim: 'the repository checks pass',
-      detail: 'skipped by --skip-checks',
+      detail: 'skipped by --skip-checks'
     })
   }
   else {
@@ -156,7 +156,7 @@ const preflight = async (
       code === 0,
       'lint, types, build, tests, smoke, docs, and playground checks pass',
       'the full sequence exited 0',
-      `the sequence exited ${code}`,
+      `the sequence exited ${code}`
     ))
   }
 
@@ -168,7 +168,7 @@ const report = (title: string, findings: Finding[]) => {
     pass: 'PASS ',
     error: 'FAIL ',
     warning: 'WARN ',
-    unverifiable: '?????',
+    unverifiable: '?????'
   }
   console.log(`\n${title}\n${'-'.repeat(title.length)}`)
   for (const finding of findings) {
@@ -212,7 +212,7 @@ try {
   const output = execFileSync('pnpm', versionArgs, {
     cwd: root,
     encoding: 'utf8',
-    shell: process.platform === 'win32',
+    shell: process.platform === 'win32'
   })
   target = /→\s*(\S+)\s*$/m.exec(output)?.[1]
 }

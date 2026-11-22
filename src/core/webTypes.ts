@@ -60,17 +60,17 @@ export const createWebTypes = ({ directiveName, version, properties }: WebTypesO
         'doc-url': DOC_URL,
         'attribute-value': {
           type: 'VUnoStyleValue',
-          required: true,
+          required: true
         },
         'argument': {
           name: 'property',
           description: 'Style property to set responsively. Omit it to pass several '
             + 'properties as an object.',
-          ...(properties ? { pattern: { or: resolveProperties(properties).names } } : {}),
-        },
-      }],
-    },
-  },
+          ...(properties ? { pattern: { or: resolveProperties(properties).names } } : {})
+        }
+      }]
+    }
+  }
 })
 
 /** Serialises web-types the same way for the shipped file and the Nuxt module's rewrite. */

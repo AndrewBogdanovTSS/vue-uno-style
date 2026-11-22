@@ -19,7 +19,7 @@ export const knownRules = {
   'object': { property: 'object-fit', value: 'var(--{name})' },
   'blur': { property: 'filter', value: 'blur(var(--{name}))' },
   'columns': { property: 'columns', value: 'var(--{name})' },
-  'col-span': { property: 'grid-column', value: 'span var(--{name}) / span var(--{name})' },
+  'col-span': { property: 'grid-column', value: 'span var(--{name}) / span var(--{name})' }
 } as const satisfies Record<string, KnownRule>
 
 export type KnownRulePrefix = keyof typeof knownRules
@@ -33,7 +33,7 @@ export const knownRule = (prefix: KnownRulePrefix): Rule => {
 
   return [
     new RegExp(`^${prefix}-\\$([\\w-]+)$`),
-    ([, name]) => ({ [property]: value.replaceAll('{name}', name) }),
+    ([, name]) => ({ [property]: value.replaceAll('{name}', name) })
   ]
 }
 

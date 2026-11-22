@@ -6,23 +6,28 @@ import plugin from './src/eslint.ts'
 const typescriptParserOptions = {
   requireConfigFile: false,
   babelOptions: {
-    plugins: ['@babel/plugin-syntax-typescript'],
-  },
+    plugins: ['@babel/plugin-syntax-typescript']
+  }
 }
 
 export default [
   {
     ignores: ['dist/**', 'node_modules/**'],
     linterOptions: {
-      reportUnusedDisableDirectives: 'error',
-    },
+      reportUnusedDisableDirectives: 'error'
+    }
   },
   js.configs.recommended,
+  {
+    rules: {
+      'comma-dangle': ['error', 'never']
+    }
+  },
   {
     files: ['**/*.ts'],
     languageOptions: {
       parser: babelParser,
-      parserOptions: typescriptParserOptions,
+      parserOptions: typescriptParserOptions
     },
     // Babel parses TypeScript syntactically, with no type information, so both
     // of these rules fire on code that is correct: `no-undef` on every
@@ -36,8 +41,8 @@ export default [
     // TypeScript 7. Revisit when it supports 7.
     rules: {
       'no-undef': 'off',
-      'no-unused-vars': 'off',
-    },
+      'no-unused-vars': 'off'
+    }
   },
   ...plugin.configs.recommended,
   {
@@ -46,8 +51,8 @@ export default [
       parser: vueParser,
       parserOptions: {
         ...typescriptParserOptions,
-        parser: babelParser,
-      },
-    },
-  },
+        parser: babelParser
+      }
+    }
+  }
 ]

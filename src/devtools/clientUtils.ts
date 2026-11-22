@@ -8,7 +8,7 @@ const ESCAPES: Record<string, string> = {
   '<': '&lt;',
   '>': '&gt;',
   '"': '&quot;',
-  '\'': '&#39;',
+  '\'': '&#39;'
 }
 
 export const escapeHtml = (value: unknown): string =>
@@ -20,6 +20,15 @@ export const formatBytes = (bytes: number): string => {
 }
 
 const pad = (value: number, length = 2) => String(value).padStart(length, '0')
+
+/**
+ * A hook duration in milliseconds. Browsers round `performance.now()` to 0.1 ms or coarser
+ * outside cross-origin isolation, so anything shorter reads as `< 0.1 ms`.
+ */
+export const formatDuration = (milliseconds: number): string => {
+  if (milliseconds < 0.1) return '< 0.1 ms'
+  return `${milliseconds.toFixed(milliseconds < 10 ? 2 : 1)} ms`
+}
 
 /** `HH:MM:SS.mmm` in local time. */
 export const formatTime = (time: number): string => {
@@ -62,15 +71,15 @@ export const valuesByBreakpoint = (
   properties: readonly string[],
   variables: Readonly<Record<string, string>>,
   base: string,
-  prefixed: readonly string[],
+  prefixed: readonly string[]
 ): Record<string, Record<string, string>> => Object.fromEntries(properties.map((property) => [
   property,
   Object.fromEntries([base, ...prefixed]
     .map((breakpoint) => [
       breakpoint,
-      variables[breakpoint === base ? `--${property}` : `--${property}-${breakpoint}`],
+      variables[breakpoint === base ? `--${property}` : `--${property}-${breakpoint}`]
     ])
-    .filter(([, value]) => value !== undefined)),
+    .filter(([, value]) => value !== undefined))
 ]))
 
 /**
@@ -80,7 +89,7 @@ export const valuesByBreakpoint = (
 export const effectiveValue = (
   values: Record<string, unknown>,
   order: readonly string[],
-  breakpoint: string,
+  breakpoint: string
 ): unknown => {
   const index = order.indexOf(breakpoint)
   for (let position = index; position >= 0; position--) {
@@ -97,12 +106,12 @@ export interface ElementFlags {
 
 export const elementFlags = (element: { updates: number }): ElementFlags => ({
   churn: element.updates >= CHURN_THRESHOLD,
-  unchanged: element.updates === 0,
+  unchanged: element.updates === 0
 })
 
 export const matchesFilter = (
   element: { label: string, properties: readonly string[], className: string },
-  filter: string,
+  filter: string
 ): boolean => {
   const query = filter.trim().toLowerCase()
   if (!query) return true

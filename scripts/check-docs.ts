@@ -29,7 +29,7 @@ const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
 const verdict = (ok: boolean, claim: string, passed: string, failed: string): Finding => ({
   level: ok ? 'pass' : 'error',
   claim,
-  detail: ok ? passed : failed,
+  detail: ok ? passed : failed
 })
 
 const packageChecks = (): Finding[] => {
@@ -37,7 +37,7 @@ const packageChecks = (): Finding[] => {
     ['root directive', "from 'vue-uno-style'"],
     ['UnoCSS preset', "from 'vue-uno-style/preset'"],
     ['ESLint plugin', "from 'vue-uno-style/eslint'"],
-    ['Nuxt module', "'vue-uno-style/nuxt'"],
+    ['Nuxt module', "'vue-uno-style/nuxt'"]
   ] as const
   const nodeFloor = /Requires Node (\d+) or newer/.exec(readme)?.[1]
   const declaredNodeFloor = /(\d+)/.exec(pkg.engines?.node ?? '')?.[1]
@@ -47,19 +47,19 @@ const packageChecks = (): Finding[] => {
       readme.includes(`npm install ${pkg.name}`),
       'the install command names the published package',
       pkg.name,
-      `README does not install ${pkg.name}`,
+      `README does not install ${pkg.name}`
     ),
     verdict(
       Boolean(nodeFloor) && nodeFloor === declaredNodeFloor,
       'the documented Node floor matches package.json',
       `both say ${declaredNodeFloor}`,
-      `README says ${nodeFloor ?? '(nothing)'}, package.json says ${pkg.engines?.node ?? '(nothing)'}`,
+      `README says ${nodeFloor ?? '(nothing)'}, package.json says ${pkg.engines?.node ?? '(nothing)'}`
     ),
     ...integrations.map(([name, needle]) => verdict(
       readme.includes(needle),
       `the README documents the ${name} entry`,
       needle,
-      `missing example containing ${needle}`,
+      `missing example containing ${needle}`
     )),
     verdict(
       readme.includes('`baseBreakpoint` is required')
@@ -67,26 +67,26 @@ const packageChecks = (): Finding[] => {
       && /explicit `baseBreakpoint` always wins/i.test(readme),
       'the base-breakpoint contract is stated explicitly',
       'automatic zero base, required fallback, and explicit precedence are documented',
-      'README is missing part of the base-breakpoint contract',
+      'README is missing part of the base-breakpoint contract'
     ),
     verdict(
       readme.includes('source scanning cannot find') && readme.includes('Always install `presetVUnoStyle()`'),
       'the README explains why the preset is required',
       'runtime-generated classes and safelisting are connected',
-      'README does not explain that runtime classes require the preset',
+      'README does not explain that runtime classes require the preset'
     ),
     verdict(
       readme.includes('`properties` is required') && !/^## Supported properties/m.test(readme),
       'properties are documented as consumer configuration',
       'required `properties`, no predefined property table',
-      'README must state that `properties` is required and must not list predefined properties',
+      'README must state that `properties` is required and must not list predefined properties'
     ),
     verdict(
       readme.includes('vue-uno-style/no-multiple-v-style'),
       'the shipped ESLint rule is documented',
       'vue-uno-style/no-multiple-v-style',
-      'the rule name is missing',
-    ),
+      'the rule name is missing'
+    )
   ]
 }
 
@@ -97,7 +97,7 @@ const optionInterfaces = [
   ['src/directive.ts', 'VUnoStyleOptions'],
   ['src/core/breakpoints.ts', 'ResolveBreakpointsOptions'],
   ['src/eslint.ts', 'NoMultipleVStyleOptions'],
-  ['src/core/webTypes.ts', 'WebTypesOptions'],
+  ['src/core/webTypes.ts', 'WebTypesOptions']
 ] as const
 
 /** Field names declared directly in an interface body, ignoring comments. */
@@ -119,7 +119,7 @@ const optionChecks = (): Finding[] => optionInterfaces.map(([file, name]) => {
     missing.length === 0,
     `${name} options are documented`,
     fields.join(', '),
-    `no README table row for: ${missing.join(', ')}`,
+    `no README table row for: ${missing.join(', ')}`
   )
 })
 
@@ -134,7 +134,7 @@ const customRuleChecks = (): Finding[] => {
   const fixture = readFileSync(join(root, 'test/fixtures/customRules.ts'), 'utf8')
   const rules = [
     ...[...fixture.matchAll(/\[\/\^.*?\}\)\]/g)].map((match) => match[0]),
-    ...(Object.keys(knownRules) as KnownRulePrefix[]).map(knownRuleSource),
+    ...(Object.keys(knownRules) as KnownRulePrefix[]).map(knownRuleSource)
   ]
   const expectedRules = Object.keys(builtIn).length + 1
   const unquoted = rules.filter((rule) => !readme.includes(rule))
@@ -156,7 +156,7 @@ const customRuleChecks = (): Finding[] => {
       missingPresetRows.length === 0,
       'the README\'s base-preset table matches the tested presets',
       basePresets.map(({ name }) => name).join(', '),
-      `missing or different: ${missingPresetRows.join(' ')}`,
+      `missing or different: ${missingPresetRows.join(' ')}`
     ),
     verdict(
       rules.length === expectedRules && unquoted.length === 0,
@@ -164,14 +164,14 @@ const customRuleChecks = (): Finding[] => {
       `${rules.length} rules from test/fixtures/customRules.ts and src/knownRules.ts`,
       rules.length === expectedRules
         ? `not in the README: ${unquoted.join(' ')}`
-        : `found ${rules.length} rules in the fixture, expected ${expectedRules}`,
+        : `found ${rules.length} rules in the fixture, expected ${expectedRules}`
     ),
     verdict(
       missingRows.length === 0,
       'the README\'s preset table matches the tested one',
       `${rows.length} rows`,
-      `missing or different: ${missingRows.join(' ')}`,
-    ),
+      `missing or different: ${missingRows.join(' ')}`
+    )
   ]
 }
 
@@ -186,7 +186,7 @@ const buildChecks = (): Finding[] => {
     return [{
       level: 'unverifiable',
       claim: 'every package export exists in the build',
-      detail: 'dist/ is missing; run `pnpm build` first',
+      detail: 'dist/ is missing; run `pnpm build` first'
     }]
   }
 
@@ -195,7 +195,7 @@ const buildChecks = (): Finding[] => {
     missing.length === 0,
     'every package export exists in the build',
     `${files.length} export files, all present`,
-    `missing: ${missing.join(', ')}`,
+    `missing: ${missing.join(', ')}`
   )]
 }
 

@@ -3,7 +3,7 @@ import { resolveBreakpoints } from '../src/core/breakpoints'
 import { getVarsClasses } from '../src/core/varsClasses'
 
 const breakpoints = resolveBreakpoints({
-  breakpoints: { sm: 0, md: 768, lg: 1024 },
+  breakpoints: { sm: 0, md: 768, lg: 1024 }
 })
 
 describe('getVarsClasses', () => {

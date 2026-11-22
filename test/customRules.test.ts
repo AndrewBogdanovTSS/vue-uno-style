@@ -53,7 +53,7 @@ describe('custom rules', () => {
     it.each(missing)('serves every class the directive writes for "%s" with the documented rule', async (prefix) => {
       const uno = await createGenerator({
         presets: [preset(), presetVUnoStyle({ properties: [prefix], breakpoints })],
-        rules: [gapRules[prefix]],
+        rules: [gapRules[prefix]]
       })
       const { css, matched } = await uno.generate('', { preflights: false })
 
@@ -69,7 +69,7 @@ describe('custom rules', () => {
     const { style } = getStyle({ sm: '/hero.png' }, resolved, 'bgi', resolveProperties(properties))
     const uno = await createGenerator({
       presets: [presetMini(), presetVUnoStyle({ properties, breakpoints })],
-      rules: [urlRule],
+      rules: [urlRule]
     })
     const { css } = await uno.generate('', { preflights: false })
 
@@ -109,7 +109,7 @@ describe('custom rules', () => {
   it('reports nothing for a property no rule serves, as the README states', async () => {
     const warn = vi.spyOn(console, 'warn')
     const uno = await createGenerator({
-      presets: [presetMini(), presetVUnoStyle({ properties: ['object'], breakpoints })],
+      presets: [presetMini(), presetVUnoStyle({ properties: ['object'], breakpoints })]
     })
     const { css, matched } = await uno.generate('', { preflights: false })
 

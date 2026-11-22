@@ -28,7 +28,7 @@ export const getStyleProps = (
   prop: string,
   obj: ObjectValue,
   breakpoints: ResolvedBreakpoints,
-  format?: PropertyFormat,
+  format?: PropertyFormat
 ): StylePropsResult => {
   if (!obj) return {}
 
@@ -45,10 +45,10 @@ export const getStyleProps = (
     styles: Object.fromEntries(
       filteredValues.map(([breakpoint, value]) => [
         getVariableName(prop, breakpoint, breakpoints.base),
-        formatValue(value, format),
-      ]),
+        formatValue(value, format)
+      ])
     ),
     classList: filteredValues.map(([breakpoint]) =>
-      `o:${getClassValue(prop, breakpoint, breakpoints.base)}`),
+      `o:${getClassValue(prop, breakpoint, breakpoints.base)}`)
   }
 }

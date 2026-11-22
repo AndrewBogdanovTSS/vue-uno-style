@@ -6,7 +6,7 @@ import type { ResolvedBreakpoints } from './breakpoints'
 export const getVarsClasses = (
   prop: string,
   breakpoints: ResolvedBreakpoints,
-  isOverride = true,
+  isOverride = true
 ): string => ['', ...breakpoints.prefixed].map((breakpoint) => {
   const prefix = breakpoint ? `${breakpoint}:` : ''
   const postfix = breakpoint ? `-${breakpoint}` : ''

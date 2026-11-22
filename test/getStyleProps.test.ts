@@ -3,7 +3,7 @@ import { resolveBreakpoints } from '../src/core/breakpoints'
 import { getStyleProps } from '../src/core/getStyleProps'
 
 const breakpoints = resolveBreakpoints({
-  breakpoints: { sm: 0, md: 768, lg: 1024 },
+  breakpoints: { sm: 0, md: 768, lg: 1024 }
 })
 
 describe('getStyleProps', () => {
@@ -13,7 +13,7 @@ describe('getStyleProps', () => {
     expect(getStyleProps(prop, { sm: '1rem', md: '2rem', lg: '3rem' }, breakpoints))
       .toEqual({
         styles: { '--p': '1rem', '--p-md': '2rem', '--p-lg': '3rem' },
-        classList: ['o:p-$p', 'o:md:p-$p-md', 'o:lg:p-$p-lg'],
+        classList: ['o:p-$p', 'o:md:p-$p-md', 'o:lg:p-$p-lg']
       })
   })
 
@@ -21,21 +21,21 @@ describe('getStyleProps', () => {
     expect(getStyleProps(prop, { sm: '1rem', md: '2rem' }, breakpoints))
       .toEqual({
         styles: { '--p': '1rem', '--p-md': '2rem' },
-        classList: ['o:p-$p', 'o:md:p-$p-md'],
+        classList: ['o:p-$p', 'o:md:p-$p-md']
       })
   })
 
   it('handles a number as the base value', () => {
     expect(getStyleProps(prop, 1, breakpoints)).toEqual({
       styles: { '--p': 1 },
-      classList: ['o:p-$p'],
+      classList: ['o:p-$p']
     })
   })
 
   it('handles a string as the base value', () => {
     expect(getStyleProps(prop, '1rem', breakpoints)).toEqual({
       styles: { '--p': '1rem' },
-      classList: ['o:p-$p'],
+      classList: ['o:p-$p']
     })
   })
 
@@ -47,7 +47,7 @@ describe('getStyleProps', () => {
     expect(getStyleProps(prop, { sm: '1rem', md: '1rem', lg: '2rem' }, breakpoints))
       .toEqual({
         styles: { '--p': '1rem', '--p-lg': '2rem' },
-        classList: ['o:p-$p', 'o:lg:p-$p-lg'],
+        classList: ['o:p-$p', 'o:lg:p-$p-lg']
       })
   })
 
@@ -55,7 +55,7 @@ describe('getStyleProps', () => {
     expect(getStyleProps(prop, { sm: '1rem', md: '2rem', lg: '1rem' }, breakpoints))
       .toEqual({
         styles: { '--p': '1rem', '--p-md': '2rem', '--p-lg': '1rem' },
-        classList: ['o:p-$p', 'o:md:p-$p-md', 'o:lg:p-$p-lg'],
+        classList: ['o:p-$p', 'o:md:p-$p-md', 'o:lg:p-$p-lg']
       })
   })
 
@@ -63,7 +63,7 @@ describe('getStyleProps', () => {
     expect(getStyleProps('bgi', { sm: 'image-sm.png' }, breakpoints))
       .toEqual({
         styles: { '--bgi': 'image-sm.png' },
-        classList: ['o:bgi-$bgi'],
+        classList: ['o:bgi-$bgi']
       })
   })
 
@@ -72,9 +72,9 @@ describe('getStyleProps', () => {
       .toEqual({
         styles: {
           '--bgi': 'url(image-sm.png)',
-          '--bgi-md': 'url(image-md.png)',
+          '--bgi-md': 'url(image-md.png)'
         },
-        classList: ['o:bgi-$bgi', 'o:md:bgi-$bgi-md'],
+        classList: ['o:bgi-$bgi', 'o:md:bgi-$bgi-md']
       })
   })
 })

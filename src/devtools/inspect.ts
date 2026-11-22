@@ -22,7 +22,7 @@ const isEmpty = (value: unknown) => value === undefined || value === null || val
 const checkScalar = (
   value: unknown,
   property: string,
-  breakpoint: string,
+  breakpoint: string
 ): ValueWarning | undefined => {
   if (isEmpty(value)) return undefined
   // getStyleProps skips falsy values, so a numeric 0 never reaches the CSS
@@ -31,7 +31,7 @@ const checkScalar = (
       kind: 'dropped-value',
       property,
       breakpoint,
-      message: `"${property}" at "${breakpoint}" is the number 0, which the directive skips. Use the string '0'.`,
+      message: `"${property}" at "${breakpoint}" is the number 0, which the directive skips. Use the string '0'.`
     }
   }
   if (typeof value !== 'string' && typeof value !== 'number') {
@@ -39,7 +39,7 @@ const checkScalar = (
       kind: 'invalid-value',
       property,
       breakpoint,
-      message: `"${property}" at "${breakpoint}" is ${Array.isArray(value) ? 'an array' : `a ${typeof value}`}, not a string or a number.`,
+      message: `"${property}" at "${breakpoint}" is ${Array.isArray(value) ? 'an array' : `a ${typeof value}`}, not a string or a number.`
     }
   }
   return undefined
@@ -54,14 +54,14 @@ export const inspectValue = (
   value: unknown,
   arg: string | undefined,
   breakpoints: ResolvedBreakpoints,
-  properties?: ResolvedProperties,
+  properties?: ResolvedProperties
 ): ValueWarning[] => {
   if (isEmpty(value)) return []
 
   if (!arg && !isObject(value)) {
     return [{
       kind: 'invalid-value',
-      message: 'Without an argument the value must be an object of properties, such as { c: \'#111\' }.',
+      message: 'Without an argument the value must be an object of properties, such as { c: \'#111\' }.'
     }]
   }
 
@@ -76,7 +76,7 @@ export const inspectValue = (
       warnings.push({
         kind: 'unknown-property',
         property,
-        message: `"${property}" is not a configured property, so its classes are not safelisted.`,
+        message: `"${property}" is not a configured property, so its classes are not safelisted.`
       })
     }
 
@@ -92,7 +92,7 @@ export const inspectValue = (
           kind: 'unknown-breakpoint',
           property,
           breakpoint,
-          message: `"${property}" has a value for "${breakpoint}", which is not a breakpoint (${known.join(', ')}). The directive drops it.`,
+          message: `"${property}" has a value for "${breakpoint}", which is not a breakpoint (${known.join(', ')}). The directive drops it.`
         })
         return
       }

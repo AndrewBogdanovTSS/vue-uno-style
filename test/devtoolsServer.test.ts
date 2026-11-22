@@ -10,7 +10,7 @@ import {
   createDevtoolsMiddleware,
   DEVTOOLS_ROUTE,
   generateSample,
-  suggestRule,
+  suggestRule
 } from '../src/devtools/server'
 import { knownRuleSource } from '../src/knownRules'
 import { presetVUnoStyle } from '../src/preset'
@@ -26,7 +26,7 @@ const configured = ['c', 'bg', 'nope', { name: 'bgi', format: 'url' as const }, 
 const createContext = async ({ preset }: Pick<BasePreset, 'preset'>): Promise<DevtoolsContext> => {
   const generator = await createGenerator({
     presets: [preset(), presetVUnoStyle({ properties: configured, breakpoints })],
-    rules: [[/^bgi-\$([\w-]+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })]],
+    rules: [[/^bgi-\$([\w-]+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })]]
   })
 
   return {
@@ -41,7 +41,7 @@ const createContext = async ({ preset }: Pick<BasePreset, 'preset'>): Promise<De
     unoPresets: generator.config.presets.map(({ name }) => name).filter((name) => name !== 'vue-uno-style'),
     configSources: ['/app/uno.config.ts'],
     webTypes: { status: 'unchanged', file: '/pkg/dist/web-types.json' },
-    generator,
+    generator
   }
 }
 
@@ -59,7 +59,7 @@ describe('suggestRule', () => {
 
   it('falls back to the README\'s general shape for any other prefix', () => {
     expect(suggestRule('nope')).toBe(
-      '[/^nope-\\$([\\w-]+)$/, ([, name]) => ({ \'<css-property>\': `var(--${name})` })]',
+      '[/^nope-\\$([\\w-]+)$/, ([, name]) => ({ \'<css-property>\': `var(--${name})` })]'
     )
   })
 })
@@ -86,15 +86,15 @@ describe.each(basePresets)('createDevtoolsData with $name', (base) => {
         themeKey: base.themeKey,
         values: { sm: '0px', md: '768px', lg: '1024px' },
         base: 'sm',
-        prefixed: ['md', 'lg'],
-      },
+        prefixed: ['md', 'lg']
+      }
     }))
     expect(data.properties).toEqual([
       { name: 'c' },
       { name: 'bg' },
       { name: 'nope' },
       { name: 'bgi', format: 'url' },
-      ...gaps.map((name) => ({ name })),
+      ...gaps.map((name) => ({ name }))
     ])
   })
 
@@ -112,7 +112,7 @@ describe.each(basePresets)('createDevtoolsData with $name', (base) => {
     expect(color.tokens).toEqual([
       { token: 'o:c-$c', matched: true },
       { token: 'o:md:c-$c-md', matched: true },
-      { token: 'o:lg:c-$c-lg', matched: true },
+      { token: 'o:lg:c-$c-lg', matched: true }
     ])
     expect(color.bytes).toBeGreaterThan(0)
     expect(color.suggestion).toBeUndefined()
@@ -126,7 +126,7 @@ describe.each(basePresets)('createDevtoolsData with $name', (base) => {
     expect(missing.tokens.every((token) => !token.matched)).toBe(true)
     expect(missing.bytes).toBe(0)
     expect(missing.suggestion).toBe(
-      '[/^nope-\\$([\\w-]+)$/, ([, name]) => ({ \'<css-property>\': `var(--${name})` })]',
+      '[/^nope-\\$([\\w-]+)$/, ([, name]) => ({ \'<css-property>\': `var(--${name})` })]'
     )
   })
 
@@ -167,7 +167,7 @@ describe.each(basePresets)('generateSample with $name', (base) => {
 
   it.each<[string, SampleInput, string]>([
     ['an empty value', { property: 'c', value: '' }, 'Enter a value.'],
-    ['a scalar without a property', { value: 'red' }, 'Without a property'],
+    ['a scalar without a property', { value: 'red' }, 'Without a property']
   ])('explains %s', async (_label, input, message) => {
     const result = await generateSample(context, input)
 
@@ -185,20 +185,20 @@ const call = async (
   middleware: ReturnType<typeof createDevtoolsMiddleware>,
   method: string,
   url: string,
-  body?: string,
+  body?: string
 ) => {
   const req = Object.assign(new EventEmitter(), {
     method,
     url,
     setEncoding: vi.fn(),
-    destroy: vi.fn(),
+    destroy: vi.fn()
   })
   const response: FakeResponse = { statusCode: 0, headers: {}, body: '' }
   const res = {
     set statusCode(value: number) { response.statusCode = value },
     get statusCode() { return response.statusCode },
     setHeader: (name: string, value: string) => (response.headers[name] = value),
-    end: (text = '') => (response.body = text),
+    end: (text = '') => (response.body = text)
   }
   const next = vi.fn()
   const done = middleware(req as never, res as never, next)
@@ -214,7 +214,7 @@ describe('createDevtoolsMiddleware', () => {
   const middleware = createDevtoolsMiddleware({
     getData: async () => createDevtoolsData(context),
     generate: async (input) => generateSample(context, input),
-    readClient: () => 'console.log("client")',
+    readClient: () => 'console.log("client")'
   })
 
   it('leaves other requests to the next handler', async () => {
@@ -245,7 +245,7 @@ describe('createDevtoolsMiddleware', () => {
     const unbuilt = createDevtoolsMiddleware({
       getData: async () => createDevtoolsData(context),
       generate: async (input) => generateSample(context, input),
-      readClient: () => undefined,
+      readClient: () => undefined
     })
     const { statusCode, body } = await call(unbuilt, 'GET', `${DEVTOOLS_ROUTE}/client.mjs`)
 
@@ -266,7 +266,7 @@ describe('createDevtoolsMiddleware', () => {
       middleware,
       'POST',
       `${DEVTOOLS_ROUTE}/api/generate`,
-      JSON.stringify({ property: 'c', value: 'red' }),
+      JSON.stringify({ property: 'c', value: 'red' })
     )
 
     expect(statusCode).toBe(200)
@@ -292,7 +292,7 @@ describe('createDevtoolsMiddleware', () => {
       getData: async () => {
         throw new Error('config broke')
       },
-      generate: async (input) => generateSample(context, input),
+      generate: async (input) => generateSample(context, input)
     })
     const { statusCode, body } = await call(failing, 'GET', `${DEVTOOLS_ROUTE}/api/data`)
 

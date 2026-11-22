@@ -1,7 +1,7 @@
 /**
  * Confirms the ESLint plugin fires through the package export.
  *
- * `eslint app` passing proves the config loads and the app is clean - it does
+ * `eslint .` passing proves the config loads and the playground is clean - it does
  * not prove the rule still matches anything. A plugin that resolved but whose
  * rule stopped firing would leave that command just as green. So this lints a
  * fixture that is known to violate the rule and fails if the report is missing.
@@ -22,7 +22,7 @@ assert.equal(
   reported.length,
   1,
   `expected exactly one ${ruleId} report, got ${reported.length}: `
-  + JSON.stringify(result.messages.map((m) => m.ruleId)),
+  + JSON.stringify(result.messages.map((m) => m.ruleId))
 )
 
 // The fixture puts `class="card"` between the two directives. The fix rewrites
@@ -31,7 +31,7 @@ assert.equal(
 assert.equal(
   reported[0].fix,
   undefined,
-  'the rule offered an autofix across an intervening attribute',
+  'the rule offered an autofix across an intervening attribute'
 )
 
 console.log(`PASS  ${ruleId} fires on the fixture and withholds the unsafe fix`)

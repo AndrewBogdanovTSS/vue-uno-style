@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { breakpoints } from '~~/vue-uno-style.config.js'
+import { breakpoints } from '~~/config/vue-uno-style.ts'
 
 const THEME_KEY = 'vue-uno-style-theme'
 const REPOSITORY = 'https://github.com/AndrewBogdanovTSS/vue-uno-style'
@@ -9,10 +9,10 @@ useHead({
   link: [
     { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
     { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-    { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500&display=swap' },
+    { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500&display=swap' }
   ],
   // Applies a saved theme before the first paint, so the page doesn't flash the system theme.
-  script: [{ innerHTML: `try{var t=localStorage.getItem('${THEME_KEY}');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}` }],
+  script: [{ innerHTML: `try{var t=localStorage.getItem('${THEME_KEY}');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}` }]
 })
 
 // The theme follows the system until the toggle picks one, saved per browser.
@@ -60,7 +60,7 @@ const base = useRuntimeConfig().app.baseURL
 const editor = reactive({
   c: { sm: '#1e1b4b', md: '#ffffff', lg: '#052e16' },
   bg: { sm: '#c7d2fe', md: '#4f46e5', lg: '#86efac' },
-  p: { sm: '1rem', md: '2rem', lg: '3rem' },
+  p: { sm: '1rem', md: '2rem', lg: '3rem' }
 })
 // A fresh object per edit: the directive compares each new value with the previous one.
 const editorStyles = computed(() => JSON.parse(JSON.stringify(editor)) as typeof editor)
@@ -76,7 +76,7 @@ const width = { sm: '100%', md: '100%', lg: '50%' }
 /* 4. Value formats. */
 const pattern = computed(() => ({
   bg: { sm: '#4f46e5', md: '#0f766e' },
-  bgi: { sm: `${base}dots.svg`, md: `${base}grid.svg` },
+  bgi: { sm: `${base}dots.svg`, md: `${base}grid.svg` }
 }))
 
 /* 5. Updates: a second palette drives the directive's update path. */
@@ -85,15 +85,15 @@ const palettes = {
     label: 'Indigo',
     c: { sm: '#0f172a', md: '#ffffff' },
     bgv: { sm: 'linear-gradient(135deg, #e0e7ff, #f5f3ff)', md: 'linear-gradient(135deg, #4338ca, #7c3aed)' },
-    p: { sm: '1.5rem', md: '3rem' },
+    p: { sm: '1.5rem', md: '3rem' }
   },
   amber: {
     label: 'Amber',
     c: { sm: '#451a03', md: '#fffbeb' },
     bgv: { sm: 'linear-gradient(135deg, #fef3c7, #fffbeb)', md: 'linear-gradient(135deg, #b45309, #f59e0b)' },
     // No `md` padding: switching here has to remove `--p-md` and its class.
-    p: { sm: '2.25rem' },
-  },
+    p: { sm: '2.25rem' }
+  }
 }
 const active = ref<keyof typeof palettes>('indigo')
 const palette = computed(() => {
@@ -134,7 +134,8 @@ const override = { sm: '#16a34a', md: '#2563eb' }
 
 <template>
   <header class="topbar">
-    <div class="container topbar-inner">
+    <!-- `mt` is left out of the configured properties on purpose, so the DevTools Warnings tab has an entry to show -->
+    <div class="container topbar-inner" v-uno-style:mt="'1rem'">
       <span class="brand"><span class="brand-mark" aria-hidden="true" /> vue-uno-style</span>
       <span class="breakpoint" :class="{ hidden: !breakpoint }" aria-live="polite">
         Breakpoint <strong>{{ breakpoint ?? 'sm' }}</strong>
@@ -254,7 +255,7 @@ const override = { sm: '#16a34a', md: '#2563eb' }
         <p><code>bgi</code> is configured as <code>{ name: 'bgi', format: 'url' }</code>, so plain image URLs are wrapped in <code>url()</code>. Its rule lives in the playground's <code>uno.config.ts</code>, because the package predefines no properties.</p>
         <div data-playground-format class="pattern" v-uno-style="pattern" />
         <GeneratedOutput :value="pattern" />
-        <pre><code>// vue-uno-style.config.js
+        <pre><code>// config/vue-uno-style.ts
 export const properties = ['c', 'bg', 'p', 'gap', 'w', 'bgv', { name: 'bgi', format: 'url' }]</code></pre>
       </section>
 

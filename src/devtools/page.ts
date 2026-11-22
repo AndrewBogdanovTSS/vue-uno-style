@@ -16,8 +16,8 @@ export const renderDevtoolsPage = (): string => `<!doctype html>
   --border: #e5e7eb;
   --text: #1f2937;
   --muted: #6b7280;
-  --accent: #4f46e5;
-  --accent-soft: rgba(79, 70, 229, 0.12);
+  --accent: #00a15c;
+  --accent-soft: rgba(0, 220, 130, 0.14);
   --ok: #059669;
   --warn: #b45309;
   --error: #dc2626;
@@ -30,8 +30,8 @@ export const renderDevtoolsPage = (): string => `<!doctype html>
   --border: #2e2e32;
   --text: #e5e7eb;
   --muted: #9ca3af;
-  --accent: #818cf8;
-  --accent-soft: rgba(129, 140, 248, 0.16);
+  --accent: #00dc82;
+  --accent-soft: rgba(0, 220, 130, 0.16);
   --ok: #34d399;
   --warn: #fbbf24;
   --error: #f87171;
@@ -49,7 +49,6 @@ header {
   padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--bg-soft);
 }
 header h1 { margin: 0; font-size: 14px; font-weight: 600; }
-header .meta { color: var(--muted); }
 nav { display: flex; gap: 4px; flex-wrap: wrap; }
 nav button {
   border: 0; background: none; color: var(--muted); padding: 4px 10px; border-radius: 4px;
@@ -76,6 +75,7 @@ pre { margin: 0; padding: 8px; background: var(--bg-soft); border: 1px solid var
 .warn { color: var(--warn); }
 .error { color: var(--error); }
 .muted { color: var(--muted); }
+.nowrap { white-space: nowrap; }
 .pill {
   display: inline-block; padding: 0 6px; border-radius: 999px; font-size: 11px; line-height: 18px;
   border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
@@ -106,6 +106,8 @@ button.action {
   border-radius: 4px; padding: 3px 10px; cursor: pointer;
 }
 button.action:hover { border-color: var(--accent); color: var(--accent); }
+.toolbar .toggle { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
+.toolbar .toggle input { margin: 0; accent-color: var(--accent); }
 a { color: var(--accent); }
 .empty { color: var(--muted); padding: 24px; text-align: center; border: 1px dashed var(--border); border-radius: 6px; }
 .tokens { display: flex; flex-wrap: wrap; gap: 4px; }

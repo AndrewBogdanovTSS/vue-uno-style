@@ -21,7 +21,7 @@ check('the root entry exports the directive and core API', async () => {
     'getStyleProps',
     'getVarsClasses',
     'resolveBreakpoints',
-    'resolveProperties',
+    'resolveProperties'
   ]) assert.ok(name in api, `missing export: ${name}`)
   assert.ok(!('styleProps' in api), 'the package must not predefine properties')
 })
@@ -31,7 +31,7 @@ check('the built preset generates runtime CSS and its safelist', async () => {
   const { createGenerator, presetWind3 } = await import('unocss')
   const breakpoints = { sm: 0, md: '768px', lg: '1024px' }
   const uno = await createGenerator({
-    presets: [presetWind3(), presetVUnoStyle({ breakpoints, properties: ['c'] })],
+    presets: [presetWind3(), presetVUnoStyle({ breakpoints, properties: ['c'] })]
   })
   const { css, matched } = await uno.generate('', { preflights: false })
 
@@ -52,7 +52,7 @@ check('the built ESLint plugin reports its version and fixes real Vue input', as
   assert.ok(plugin.rules['no-multiple-v-style'])
   assert.deepEqual(
     Object.keys(plugin.configs.recommended[0].rules),
-    ['vue-uno-style/no-multiple-v-style'],
+    ['vue-uno-style/no-multiple-v-style']
   )
 
   const eslint = new ESLint({
@@ -62,18 +62,18 @@ check('the built ESLint plugin reports its version and fixes real Vue input', as
       files: ['**/*.vue'],
       languageOptions: { parser: vueParser, ecmaVersion: 2022, sourceType: 'module' },
       plugins: { 'vue-uno-style': plugin },
-      rules: { 'vue-uno-style/no-multiple-v-style': 'error' },
+      rules: { 'vue-uno-style/no-multiple-v-style': 'error' }
     }],
-    fix: true,
+    fix: true
   })
   const [result] = await eslint.lintText(
     '<template><div v-uno-style:c="color" v-uno-style:bg="background" /></template>',
-    { filePath: join(root, 'smoke.vue') },
+    { filePath: join(root, 'smoke.vue') }
   )
 
   assert.equal(
     result.output,
-    '<template><div v-uno-style="{ c: color, bg: background }" /></template>',
+    '<template><div v-uno-style="{ c: color, bg: background }" /></template>'
   )
 })
 

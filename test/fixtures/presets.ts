@@ -23,8 +23,8 @@ export const basePresets: BasePreset[] = [
     packageName: '@unocss/preset-wind4',
     preset: presetWind4,
     themeKey: 'breakpoint',
-    defaults: { 'sm': '40rem', 'md': '48rem', 'lg': '64rem', 'xl': '80rem', '2xl': '96rem' },
-  },
+    defaults: { 'sm': '40rem', 'md': '48rem', 'lg': '64rem', 'xl': '80rem', '2xl': '96rem' }
+  }
 ]
 
 /**

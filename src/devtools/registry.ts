@@ -53,6 +53,11 @@ export interface DevtoolsEvent {
   label: string
   /** Variables added, changed or removed by this event. */
   changed: string[]
+  /**
+   * Milliseconds the directive's own hooks took for this event, summed over every binding on
+   * the element. The DevTools bookkeeping is not included.
+   */
+  duration: number
 }
 
 export interface DevtoolsElementWarning extends ValueWarning {
@@ -75,7 +80,10 @@ export interface DevtoolsRegistry {
   /** The breakpoint the app window is in now. */
   activeBreakpoint: () => string
   clearEvents: () => void
-  /** Outlines the element on the page; `null` removes the outline. */
+  /**
+   * Outlines the element on the page; `null` removes the outline. The outline follows the
+   * element until it is removed or the element leaves the page.
+   */
   highlight: (id: number | null) => void
   scrollTo: (id: number) => void
   /** Shows the active breakpoint in a badge on the page. */
@@ -125,7 +133,7 @@ const componentOf = (binding: Binding): DevtoolsComponent | undefined => {
   const name = type.__name ?? type.name ?? type.__file?.split(/[/\\]/).pop()?.replace(/\.vue$/, '')
   return {
     ...(name ? { name } : {}),
-    ...(type.__file ? { file: type.__file } : {}),
+    ...(type.__file ? { file: type.__file } : {})
   }
 }
 
@@ -196,15 +204,44 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
     else setTimeout(flush, 0)
   }
 
-  const record = (type: DevtoolsEventType, entry: ElementRecord, changed: string[]) => {
-    events = [...events, {
+  const clock = view?.performance ?? (typeof performance === 'undefined' ? undefined : performance)
+
+  /** Runs a directive hook and returns how long it took, in milliseconds. */
+  const measure = (run: () => void) => {
+    const start = clock?.now() ?? 0
+    run()
+    return clock ? clock.now() - start : 0
+  }
+
+  /**
+   * The event the last hook call recorded. Vue calls the hooks of every binding on a vnode one
+   * after another, so the next call on the same element before a microtask passes belongs to
+   * that event and adds its duration to it.
+   */
+  let lastCall: { el: HTMLElement, event: DevtoolsEvent } | undefined
+
+  const addDuration = (el: HTMLElement, duration: number) => {
+    if (lastCall?.el !== el) return false
+    lastCall.event.duration += duration
+    return true
+  }
+
+  const record = (type: DevtoolsEventType, entry: ElementRecord, changed: string[], duration: number) => {
+    const event: DevtoolsEvent = {
       id: nextEventId++,
       time: Date.now(),
       type,
       elementId: entry.id,
       label: entry.label,
       changed,
-    }].slice(-MAX_EVENTS)
+      duration
+    }
+    events = [...events, event].slice(-MAX_EVENTS)
+    const call = { el: entry.el, event }
+    lastCall = call
+    queueMicrotask(() => {
+      if (lastCall === call) lastCall = undefined
+    })
   }
 
   const describe = (el: HTMLElement, vnode: VNode | null | undefined, binding: Binding) => {
@@ -224,7 +261,7 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
         value: item.value,
         classes,
         style,
-        ...(component ? { component } : {}),
+        ...(component ? { component } : {})
       }
     })
 
@@ -256,11 +293,11 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
       properties: [...used],
       overrides: [...usedBy].filter(([, count]) => count > 1).map(([key]) => key),
       warnings,
-      signature: safeJson(bindings.map((item) => [item.arg, item.value])),
+      signature: safeJson(bindings.map((item) => [item.arg, item.value]))
     }
   }
 
-  const mounted = (el: HTMLElement, binding: Binding, vnode: VNode | null | undefined) => {
+  const mounted = (el: HTMLElement, binding: Binding, vnode: VNode | null | undefined, duration = 0) => {
     const description = describe(el, vnode, binding)
     description.properties.forEach((property) => seen.add(property))
 
@@ -268,6 +305,7 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
     if (existing) {
       // A second binding on the same element mounts after the first
       Object.assign(existing, description)
+      addDuration(el, duration)
       notify()
       return
     }
@@ -277,35 +315,43 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
       el,
       ...description,
       mountedAt: Date.now(),
-      updates: 0,
+      updates: 0
     }
     records.set(entry.id, entry)
     byElement.set(el, entry)
-    record('mount', entry, Object.keys(entry.variables))
+    record('mount', entry, Object.keys(entry.variables), duration)
     notify()
   }
 
-  const updated = (el: HTMLElement, binding: Binding, vnode: VNode | null | undefined) => {
+  const updated = (el: HTMLElement, binding: Binding, vnode: VNode | null | undefined, duration = 0) => {
     const entry = byElement.get(el)
-    if (!entry) return mounted(el, binding, vnode)
+    if (!entry) return mounted(el, binding, vnode, duration)
 
     const description = describe(el, vnode, binding)
-    if (description.signature === entry.signature) return
+    if (description.signature === entry.signature) {
+      // Another binding on the element, after the one that recorded this update
+      if (addDuration(el, duration)) notify()
+      return
+    }
 
     description.properties.forEach((property) => seen.add(property))
     const changed = diffKeys(entry.variables, description.variables)
     Object.assign(entry, description, { updates: entry.updates + 1, updatedAt: Date.now() })
-    record('update', entry, changed)
+    record('update', entry, changed, duration)
     notify()
   }
 
-  const unmounted = (el: HTMLElement) => {
+  const unmounted = (el: HTMLElement, duration = 0) => {
     const entry = byElement.get(el)
-    if (!entry) return
+    if (!entry) {
+      // Another binding on the element, after the one that recorded the unmount
+      if (addDuration(el, duration)) notify()
+      return
+    }
 
     records.delete(entry.id)
     byElement.delete(el)
-    record('unmount', entry, Object.keys(entry.variables))
+    record('unmount', entry, Object.keys(entry.variables), duration)
     notify()
   }
 
@@ -336,14 +382,63 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
         padding: '2px 8px',
         borderRadius: '4px',
         font: '600 12px/18px ui-monospace, SFMono-Regular, Menlo, monospace',
-        color: '#fff',
-        background: 'rgba(79, 70, 229, 0.9)',
-        pointerEvents: 'none',
+        color: '#052e1c',
+        background: 'rgba(0, 220, 130, 0.9)',
+        pointerEvents: 'none'
       })
       document.body.append(element)
     }
     const name = activeBreakpoint()
     element.textContent = `${name} ${toPixels(values[name] ?? '0') ? `≥ ${values[name]}` : '(base)'}`
+  }
+
+  let highlighted: number | null = null
+  let tracking = false
+
+  /** Puts the outline over the highlighted element. Returns `false` when there is nothing to outline. */
+  const placeHighlight = () => {
+    const document = view?.document
+    if (!document) return false
+    const existing = document.getElementById(HIGHLIGHT_ID)
+    const target = highlighted === null ? undefined : records.get(highlighted)?.el
+    if (!target?.isConnected) {
+      existing?.remove()
+      return false
+    }
+    const box = target.getBoundingClientRect()
+    const overlay = existing ?? document.createElement('div')
+    overlay.id = HIGHLIGHT_ID
+    Object.assign(overlay.style, {
+      position: 'fixed',
+      top: `${box.top}px`,
+      left: `${box.left}px`,
+      width: `${box.width}px`,
+      height: `${box.height}px`,
+      zIndex: '2147483647',
+      pointerEvents: 'none',
+      outline: '2px solid #00dc82',
+      background: 'rgba(0, 220, 130, 0.15)',
+      borderRadius: '2px'
+    })
+    if (!existing) document.body.append(overlay)
+    return true
+  }
+
+  /**
+   * Moves the outline with its element once per frame, so it stays in place while the page
+   * scrolls, resizes or lays out again. Stops when the outline goes away.
+   */
+  const trackHighlight = () => {
+    if (tracking || !view?.requestAnimationFrame) return
+    tracking = true
+    const step = () => {
+      if (!placeHighlight()) {
+        tracking = false
+        return
+      }
+      view.requestAnimationFrame(step)
+    }
+    view.requestAnimationFrame(step)
   }
 
   const onResize = () => {
@@ -357,7 +452,7 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
     properties: properties?.names ?? [],
     elements: () => [...records.values()].map(({ el, signature: _signature, ...rest }) => ({
       ...rest,
-      connected: el.isConnected,
+      connected: el.isConnected
     })),
     events: () => [...events],
     warnings: () => [...records.values()].flatMap((entry) =>
@@ -366,7 +461,7 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
       const configured = properties?.names ?? []
       return [
         ...configured.filter((name) => seen.has(name)),
-        ...[...seen].filter((name) => !configured.includes(name)),
+        ...[...seen].filter((name) => !configured.includes(name))
       ]
     },
     activeBreakpoint,
@@ -375,30 +470,8 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
       notify()
     },
     highlight: (id) => {
-      const document = view?.document
-      if (!document) return
-      const existing = document.getElementById(HIGHLIGHT_ID)
-      const target = id === null ? undefined : records.get(id)?.el
-      if (!target?.isConnected) {
-        existing?.remove()
-        return
-      }
-      const box = target.getBoundingClientRect()
-      const overlay = existing ?? document.createElement('div')
-      overlay.id = HIGHLIGHT_ID
-      Object.assign(overlay.style, {
-        position: 'fixed',
-        top: `${box.top}px`,
-        left: `${box.left}px`,
-        width: `${box.width}px`,
-        height: `${box.height}px`,
-        zIndex: '2147483647',
-        pointerEvents: 'none',
-        outline: '2px solid #4f46e5',
-        background: 'rgba(79, 70, 229, 0.15)',
-        borderRadius: '2px',
-      })
-      if (!existing) document.body.append(overlay)
+      highlighted = id
+      if (placeHighlight()) trackHighlight()
     },
     scrollTo: (id) => {
       records.get(id)?.el.scrollIntoView({ block: 'center', behavior: 'smooth' })
@@ -412,7 +485,7 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
     subscribe: (listener) => {
       listeners.add(listener)
       return () => listeners.delete(listener)
-    },
+    }
   }
 
   /**
@@ -422,17 +495,17 @@ export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
   const instrument = (directive: Directive): Directive => ({
     ...directive,
     mounted: (el, binding, vnode, previous) => {
-      directive.mounted?.(el, binding, vnode, previous)
-      mounted(el, binding, vnode)
+      const duration = measure(() => directive.mounted?.(el, binding, vnode, previous))
+      mounted(el, binding, vnode, duration)
     },
     updated: (el, binding, vnode, previous) => {
-      directive.updated?.(el, binding, vnode, previous)
-      updated(el, binding, vnode)
+      const duration = measure(() => directive.updated?.(el, binding, vnode, previous))
+      updated(el, binding, vnode, duration)
     },
     unmounted: (el, binding, vnode, previous) => {
-      directive.unmounted?.(el, binding, vnode, previous)
-      unmounted(el)
-    },
+      const duration = measure(() => directive.unmounted?.(el, binding, vnode, previous))
+      unmounted(el, duration)
+    }
   })
 
   return { registry, instrument }

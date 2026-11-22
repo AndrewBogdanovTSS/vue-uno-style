@@ -27,7 +27,7 @@ export const getStyle = (
   config: Responsive | ResponsiveStyles,
   breakpoints: ResolvedBreakpoints,
   arg?: string,
-  properties?: ResolvedProperties,
+  properties?: ResolvedProperties
 ): StyleResult => {
   const styleConfig = (arg ? { [arg]: config } : config) as Record<string, Responsive | undefined>
 
@@ -45,11 +45,11 @@ export const getStyle = (
 
     return {
       classes: [...acc.classes, ...classList],
-      style: { ...acc.style, ...styles },
+      style: { ...acc.style, ...styles }
     }
   }, {
     classes: [],
-    style: {},
+    style: {}
   })
 
   return { ...result, classes: result.classes.join(' ') }

@@ -8,20 +8,20 @@ const properties = ['c', 'bg', { name: 'bgi', format: 'url' as const }]
 
 const createConfig = (
   directiveName?: string,
-  configured?: typeof properties,
+  configured?: typeof properties
 ): LinterType.Config[] => [{
   files: ['**/*.vue', '*.vue'],
   plugins: {
     'vue-uno-style': {
-      rules: { 'no-multiple-v-style': noMultipleVStyle },
-    },
+      rules: { 'no-multiple-v-style': noMultipleVStyle }
+    }
   },
   rules: {
     'vue-uno-style/no-multiple-v-style': directiveName || configured
       ? ['error', { directiveName, properties: configured }]
-      : 'error',
+      : 'error'
   },
-  languageOptions: { parser: vueParser },
+  languageOptions: { parser: vueParser }
 }]
 
 const verify = (code: string, directiveName?: string, configured?: typeof properties) =>
@@ -48,7 +48,7 @@ describe('vue-uno-style/no-multiple-v-style', () => {
 
     it('allows one directive per element across multiple elements', () => {
       expect(verify(
-        '<template><div v-uno-style:c="a" /><div v-uno-style:c="b" /></template>',
+        '<template><div v-uno-style:c="a" /><div v-uno-style:c="b" /></template>'
       )).toHaveLength(0)
     })
 
@@ -78,7 +78,7 @@ describe('vue-uno-style/no-multiple-v-style', () => {
         .toEqual([expect.objectContaining({
           messageId: 'unknownStyleProp',
           message:
-            'Unknown v-uno-style property "paddign". Add it to the configured properties.',
+            'Unknown v-uno-style property "paddign". Add it to the configured properties.'
         })])
     })
 
@@ -86,7 +86,7 @@ describe('vue-uno-style/no-multiple-v-style', () => {
       expect(verify('<template><div v-style:paddign="value" /></template>', 'style', properties))
         .toEqual([expect.objectContaining({
           messageId: 'unknownStyleProp',
-          message: 'Unknown v-style property "paddign". Add it to the configured properties.',
+          message: 'Unknown v-style property "paddign". Add it to the configured properties.'
         })])
     })
 
@@ -94,10 +94,10 @@ describe('vue-uno-style/no-multiple-v-style', () => {
       const code = '<template><div v-uno-style:c="textColor" v-uno-style:display="display" /></template>'
 
       expect(verify(code)).toEqual([
-        expect.objectContaining({ messageId: 'multipleVStyle' }),
+        expect.objectContaining({ messageId: 'multipleVStyle' })
       ])
       expect(fix(code)).toBe(
-        '<template><div v-uno-style="{ c: textColor, display: display }" /></template>',
+        '<template><div v-uno-style="{ c: textColor, display: display }" /></template>'
       )
     })
 
@@ -105,10 +105,10 @@ describe('vue-uno-style/no-multiple-v-style', () => {
       const code = '<template><div v-style:c="textColor" v-style:display="display" /></template>'
 
       expect(verify(code, 'style')).toEqual([
-        expect.objectContaining({ messageId: 'multipleVStyle' }),
+        expect.objectContaining({ messageId: 'multipleVStyle' })
       ])
       expect(fix(code, 'style')).toBe(
-        '<template><div v-style="{ c: textColor, display: display }" /></template>',
+        '<template><div v-style="{ c: textColor, display: display }" /></template>'
       )
     })
 
@@ -116,7 +116,7 @@ describe('vue-uno-style/no-multiple-v-style', () => {
       const code = '<template><div v-uno-style:c="a" v-uno-style:display="b" v-uno-style:p="c" /></template>'
 
       expect(fix(code)).toBe(
-        '<template><div v-uno-style="{ c: a, display: b, p: c }" /></template>',
+        '<template><div v-uno-style="{ c: a, display: b, p: c }" /></template>'
       )
     })
 
@@ -124,7 +124,7 @@ describe('vue-uno-style/no-multiple-v-style', () => {
       const code = '<template><div v-uno-style="{ c: a }" v-uno-style:display="b" /></template>'
 
       expect(fix(code)).toBe(
-        '<template><div v-uno-style="{ c: a, display: b }" /></template>',
+        '<template><div v-uno-style="{ c: a, display: b }" /></template>'
       )
     })
 
@@ -132,7 +132,7 @@ describe('vue-uno-style/no-multiple-v-style', () => {
       const code = '<template><div v-uno-style="myStyles" v-uno-style:display="b" /></template>'
 
       expect(fix(code)).toBe(
-        '<template><div v-uno-style="{ ...myStyles, display: b }" /></template>',
+        '<template><div v-uno-style="{ ...myStyles, display: b }" /></template>'
       )
     })
 
@@ -140,10 +140,10 @@ describe('vue-uno-style/no-multiple-v-style', () => {
       const code = '<template><div v-uno-style:c="a" v-uno-style:display="b" /><span v-uno-style:c="c" /></template>'
 
       expect(verify(code)).toEqual([
-        expect.objectContaining({ messageId: 'multipleVStyle' }),
+        expect.objectContaining({ messageId: 'multipleVStyle' })
       ])
       expect(fix(code)).toBe(
-        '<template><div v-uno-style="{ c: a, display: b }" /><span v-uno-style:c="c" /></template>',
+        '<template><div v-uno-style="{ c: a, display: b }" /><span v-uno-style:c="c" /></template>'
       )
     })
 
@@ -151,7 +151,7 @@ describe('vue-uno-style/no-multiple-v-style', () => {
       const code = '<template><div v-uno-style:c="a" class="card" v-uno-style:p="b" /></template>'
 
       expect(verify(code)).toEqual([
-        expect.objectContaining({ messageId: 'multipleVStyle' }),
+        expect.objectContaining({ messageId: 'multipleVStyle' })
       ])
       expect(fix(code)).toBe(code)
     })
@@ -160,7 +160,7 @@ describe('vue-uno-style/no-multiple-v-style', () => {
       const code = '<template><div v-uno-style:m="a" v-uno-style:text-size="b" /></template>'
 
       expect(fix(code)).toBe(
-        `<template><div v-uno-style="{ 'm': a, 'text-size': b }" /></template>`,
+        `<template><div v-uno-style="{ 'm': a, 'text-size': b }" /></template>`
       )
     })
   })
@@ -168,14 +168,14 @@ describe('vue-uno-style/no-multiple-v-style', () => {
   it('exports a flat recommended config', () => {
     expect(plugin.meta).toEqual({
       name: 'vue-uno-style',
-      version: '0.0.0-dev',
+      version: '0.0.0-dev'
     })
     expect(plugin.configs.recommended).toEqual([
       expect.objectContaining({
         files: ['**/*.vue'],
         plugins: { 'vue-uno-style': plugin },
-        rules: { 'vue-uno-style/no-multiple-v-style': 'error' },
-      }),
+        rules: { 'vue-uno-style/no-multiple-v-style': 'error' }
+      })
     ])
   })
 
@@ -184,17 +184,17 @@ describe('vue-uno-style/no-multiple-v-style', () => {
       ...plugin.configs.recommended,
       {
         files: ['**/*.vue'],
-        languageOptions: { parser: vueParser },
-      },
+        languageOptions: { parser: vueParser }
+      }
     ]
     const messages = new Linter({ configType: 'flat' }).verify(
       '<template><div v-uno-style:c="a" v-uno-style:p="b" /></template>',
       config,
-      { filename: 'test.vue' },
+      { filename: 'test.vue' }
     )
 
     expect(messages).toEqual([
-      expect.objectContaining({ messageId: 'multipleVStyle' }),
+      expect.objectContaining({ messageId: 'multipleVStyle' })
     ])
   })
 })

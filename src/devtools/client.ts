@@ -13,11 +13,12 @@ import {
   elementFlags,
   escapeHtml as esc,
   formatBytes,
+  formatDuration,
   formatTime,
   formatValue,
   matchesFilter,
   parseReplValue,
-  valuesByBreakpoint,
+  valuesByBreakpoint
 } from './clientUtils'
 
 interface DevtoolsClient {
@@ -36,8 +37,32 @@ const TABS: Array<[Tab, string]> = [
   ['elements', 'Elements'],
   ['warnings', 'Warnings'],
   ['timeline', 'Timeline'],
-  ['repl', 'REPL'],
+  ['repl', 'REPL']
 ]
+
+const HIGHLIGHT_ACTIVE_KEY = 'vue-uno-style:highlight-active'
+
+/** A hook run this long or longer is marked in the Timeline. */
+const SLOW_HOOK_MS = 1
+
+/** Storage can be blocked in the iframe, so a setting falls back to its default. */
+const readSetting = (key: string) => {
+  try {
+    return localStorage.getItem(key)
+  }
+  catch {
+    return null
+  }
+}
+
+const writeSetting = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value)
+  }
+  catch {
+    // The setting lasts until the tab reloads
+  }
+}
 
 const state: {
   tab: Tab
@@ -45,15 +70,18 @@ const state: {
   dataError?: string
   registry?: DevtoolsRegistry
   selected?: number
+  /** Keeps the selected element outlined on the page, not only while its row is hovered. */
+  highlightActive: boolean
   filter: string
   replProperty: string
   replValue: string
   replResult?: SampleResult
 } = {
   tab: 'overview',
+  highlightActive: readSetting(HIGHLIGHT_ACTIVE_KEY) === 'true',
   filter: '',
   replProperty: '',
-  replValue: '',
+  replValue: ''
 }
 
 /** Starts the REPL on the app's first property and its own breakpoint names. */
@@ -64,7 +92,7 @@ const seedRepl = (data: DevtoolsData) => {
   state.replProperty = first?.name ?? ''
   state.replValue = JSON.stringify({
     [data.breakpoints.base]: first?.format === 'url' ? '/image.png' : '1rem',
-    ...(second ? { [second]: first?.format === 'url' ? '/image-wide.png' : '2rem' } : {}),
+    ...(second ? { [second]: first?.format === 'url' ? '/image-wide.png' : '2rem' } : {})
   })
 }
 
@@ -182,7 +210,7 @@ const renderOverview = () => {
     <p>These properties are safelisted but no UnoCSS rule matches <code>&lt;prefix&gt;-$&lt;variable&gt;</code>,
     so every class the directive writes for them has no CSS. Add a rule to <code>uno.config.ts</code>, with the
     CSS property in place of <code>&lt;css-property&gt;</code>:</p>
-    ${missing.map((item) => `<p><code>${esc(item.property)}</code></p><pre>rules: [\n  ${esc(item.suggestion)},\n]</pre>`).join('')}
+    ${missing.map((item) => `<p><code>${esc(item.property)}</code></p><pre>rules: [\n  ${esc(item.suggestion)}\n]</pre>`).join('')}
   </section>` : ''}
 
   ${unused.length ? `<section>
@@ -201,7 +229,7 @@ const renderElementRow = (element: DevtoolsElement) => {
     element.warnings.length ? pill(`${element.warnings.length} warning${element.warnings.length > 1 ? 's' : ''}`, 'warn') : '',
     element.bindings.length > 1 ? pill(`${element.bindings.length} bindings`) : '',
     flags.churn ? pill(`${element.updates} updates`, 'error') : flags.unchanged ? pill('never updated') : pill(`${element.updates} updates`),
-    element.connected ? '' : pill('detached'),
+    element.connected ? '' : pill('detached')
   ].join(' ')
 
   return `<button type="button" data-action="select" data-id="${element.id}" aria-selected="${state.selected === element.id}">
@@ -221,6 +249,10 @@ const renderElementDetail = (element: DevtoolsElement, registry: DevtoolsRegistr
   <div class="toolbar">
     <strong><code>${esc(element.label)}</code></strong>
     <button type="button" class="action" data-action="scroll" data-id="${element.id}">Scroll to</button>
+    <label class="toggle" title="Keep the selected element outlined on the page">
+      <input type="checkbox" data-action="highlight-active" ${state.highlightActive ? 'checked' : ''}>
+      Highlight active
+    </label>
   </div>
 
   ${flags.unchanged ? `<p class="muted">Never updated since it mounted. If the value never changes at runtime, plain
@@ -318,15 +350,17 @@ const renderTimeline = () => {
   return `
   <div class="toolbar">
     <button type="button" class="action" data-action="clear-events">Clear</button>
-    <span class="muted">Last ${events.length} directive events, newest first. Kept for the last 200.</span>
+    <span class="muted">Last ${events.length} directive events, newest first. Kept for the last 200.
+      Timing is how long the directive's hooks ran for the element, without the DevTools' own work.</span>
   </div>
-  ${events.length ? `<table><thead><tr><th>Time</th><th>Event</th><th>Element</th><th>Variables</th></tr></thead><tbody>
+  ${events.length ? `<table><thead><tr><th>Time</th><th>Event</th><th>Element</th><th>Timing</th><th>Variables</th></tr></thead><tbody>
     ${events.map((event) => `<tr>
       <td class="mono">${formatTime(event.time)}</td>
       <td>${pill(event.type, event.type === 'update' ? 'active' : event.type === 'unmount' ? '' : 'ok')}</td>
       <td>${event.type === 'unmount'
         ? `<code>${esc(event.label)}</code>`
         : `<button type="button" class="action" data-action="open-element" data-id="${event.elementId}">${esc(event.label)}</button>`}</td>
+      <td class="mono nowrap${event.duration >= SLOW_HOOK_MS ? ' warn' : ''}">${formatDuration(event.duration)}</td>
       <td class="mono">${event.changed.map(esc).join(', ') || '<span class="muted">–</span>'}</td>
     </tr>`).join('')}
   </tbody></table>` : '<div class="empty">No events yet.</div>'}`
@@ -404,7 +438,6 @@ const render = () => {
   <header>
     <h1>vue-uno-style</h1>
     <nav>${renderNav()}</nav>
-    <span class="meta">${state.registry ? `breakpoint ${pill(state.registry.activeBreakpoint(), 'active')}` : 'build data only'}</span>
   </header>
   <main>${renderBody()}</main>`
 
@@ -430,7 +463,7 @@ const runRepl = async () => {
     const response = await fetch('./api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ property: state.replProperty, value: parseReplValue(state.replValue) }),
+      body: JSON.stringify({ property: state.replProperty, value: parseReplValue(state.replValue) })
     })
     state.replResult = await response.json() as SampleResult
   }
@@ -445,6 +478,15 @@ let replTimer: ReturnType<typeof setTimeout> | undefined
 const scheduleRepl = () => {
   clearTimeout(replTimer)
   replTimer = setTimeout(() => void runRepl(), 300)
+}
+
+/**
+ * Outlines the selected element while "Highlight active" is on and the Elements tab is open,
+ * and removes the outline otherwise.
+ */
+const syncHighlight = () => {
+  const keep = state.highlightActive && state.tab === 'elements' && state.selected !== undefined
+  state.registry?.highlight(keep ? state.selected! : null)
 }
 
 const openUnoCss = () => {
@@ -463,17 +505,21 @@ root.addEventListener('click', (event) => {
     case 'tab':
       state.tab = target.dataset.tab as Tab
       render()
+      syncHighlight()
       if (state.tab === 'repl' && !state.replResult) void runRepl()
       break
     case 'select':
       state.selected = id
       render()
+      // With the toggle off, the hover outline of the clicked row stays
+      if (state.highlightActive) syncHighlight()
       break
     case 'open-element':
       state.tab = 'elements'
       state.selected = id
       state.filter = ''
       render()
+      syncHighlight()
       break
     case 'scroll':
       state.registry?.scrollTo(id)
@@ -495,7 +541,16 @@ root.addEventListener('click', (event) => {
 
 root.addEventListener('change', (event) => {
   const target = event.target as HTMLInputElement
-  if (target.dataset.action === 'badge') state.registry?.setBadge(target.checked)
+  switch (target.dataset.action) {
+    case 'badge':
+      state.registry?.setBadge(target.checked)
+      break
+    case 'highlight-active':
+      state.highlightActive = target.checked
+      writeSetting(HIGHLIGHT_ACTIVE_KEY, String(target.checked))
+      syncHighlight()
+      break
+  }
 })
 
 root.addEventListener('input', (event) => {
@@ -532,7 +587,8 @@ root.addEventListener('mouseover', (event) => {
 root.addEventListener('mouseout', (event) => {
   const row = (event.target as HTMLElement).closest<HTMLElement>('[data-action="select"]')
   const next = (event as MouseEvent).relatedTarget as HTMLElement | null
-  if (row && !row.contains(next)) state.registry?.highlight(null)
+  // Hovering outlines the row's element for a moment; leaving the row restores the active outline
+  if (row && !row.contains(next)) syncHighlight()
 })
 
 /** DevTools sets the client after the iframe loads, so look for the registry until it appears. */

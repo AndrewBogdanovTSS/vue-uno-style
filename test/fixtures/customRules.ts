@@ -16,7 +16,7 @@ export type GapPrefix = KnownRulePrefix
 
 /** Rules for the prefixes `presetMini` lacks, and `col-span`, which `presetWind3` lacks too. */
 export const gapRules = Object.fromEntries(
-  (Object.keys(knownRules) as GapPrefix[]).map((prefix) => [prefix, knownRule(prefix)]),
+  (Object.keys(knownRules) as GapPrefix[]).map((prefix) => [prefix, knownRule(prefix)])
 ) as Record<GapPrefix, Rule>
 
 /** The declaration each gap rule writes for a variable, as UnoCSS prints it: the tests' oracle. */
@@ -24,7 +24,7 @@ export const gapDeclarations: Record<GapPrefix, (variable: string) => string> = 
   'object': (variable) => `object-fit:var(--${variable});`,
   'blur': (variable) => `filter:blur(var(--${variable}));`,
   'columns': (variable) => `columns:var(--${variable});`,
-  'col-span': (variable) => `grid-column:span var(--${variable}) / span var(--${variable});`,
+  'col-span': (variable) => `grid-column:span var(--${variable}) / span var(--${variable});`
 }
 
 export type SupportedPreset = 'presetMini' | 'presetWind3' | 'presetWind4'
@@ -34,7 +34,7 @@ export const builtIn: Record<GapPrefix, Record<SupportedPreset, boolean>> = {
   'object': { presetMini: false, presetWind3: true, presetWind4: true },
   'blur': { presetMini: false, presetWind3: true, presetWind4: true },
   'columns': { presetMini: false, presetWind3: true, presetWind4: true },
-  'col-span': { presetMini: false, presetWind3: false, presetWind4: true },
+  'col-span': { presetMini: false, presetWind3: false, presetWind4: true }
 }
 
 /**
@@ -48,5 +48,5 @@ export const checkedPrefixes = [
   'gap', 'gap-x', 'rounded', 'shadow', 'opacity', 'font', 'leading', 'tracking', 'b', 'top', 'left',
   'inset', 'z', 'order', 'flex', 'basis', 'grid-cols', 'col-span', 'aspect', 'object', 'translate-x',
   'rotate', 'scale', 'blur', 'duration', 'columns', 'indent', 'outline', 'ring', 'fill', 'stroke',
-  'decoration', 'text-size', 'fw', 'lh',
+  'decoration', 'text-size', 'fw', 'lh'
 ] as const

@@ -33,7 +33,7 @@ The page needs no extra rules under `presetMini`: its properties are either in e
 
 | Where | What |
 |-------|------|
-| `vue-uno-style.config.js` | The breakpoints and properties, in one plain-JS file that `nuxt.config.ts`, `uno.config.ts`, `eslint.config.js` and the page all import. |
+| `config/vue-uno-style.ts` | The breakpoints and properties, in one TypeScript file that `nuxt.config.ts`, `uno.config.ts`, `eslint.config.js` and the page all import. |
 | `uno.config.ts` | The base preset chosen by `PLAYGROUND_PRESET`, and the playground's own `bgi-$*` and `bgv-$*` rules, since the package predefines no properties. |
 | `app/app.vue` | The page, one section per behaviour: values per breakpoint, argument and object forms, scalars and collapsed repeats, value formats, updates, composition and the override layer. |
 | `app/components/GeneratedOutput.vue` | Shows the classes and variables for a value, from the same `getStyle()` call the directive makes. |

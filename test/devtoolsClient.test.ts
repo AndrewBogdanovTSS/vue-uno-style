@@ -5,10 +5,11 @@ import {
   elementFlags,
   escapeHtml,
   formatBytes,
+  formatDuration,
   formatTime,
   matchesFilter,
   parseReplValue,
-  valuesByBreakpoint,
+  valuesByBreakpoint
 } from '../src/devtools/clientUtils'
 
 describe('DevTools client helpers', () => {
@@ -22,6 +23,10 @@ describe('DevTools client helpers', () => {
     expect(formatBytes(1536)).toBe('1.5 kB')
     expect(formatBytes(20 * 1024)).toBe('20 kB')
     expect(formatTime(new Date(2026, 0, 1, 9, 5, 7, 42).getTime())).toBe('09:05:07.042')
+    expect(formatDuration(0)).toBe('< 0.1 ms')
+    expect(formatDuration(0.1)).toBe('0.10 ms')
+    expect(formatDuration(1.234)).toBe('1.23 ms')
+    expect(formatDuration(12.34)).toBe('12.3 ms')
   })
 
   it('reads the REPL value as JSON, else as text', () => {
@@ -36,11 +41,11 @@ describe('DevTools client helpers', () => {
       ['c', 'bg', 'p'],
       { '--c': 'white', '--c-md': 'red', '--bg-lg': 'gray', '--bg-image': 'x' },
       'sm',
-      ['md', 'lg'],
+      ['md', 'lg']
     )).toEqual({
       c: { sm: 'white', md: 'red' },
       bg: { lg: 'gray' },
-      p: {},
+      p: {}
     })
   })
 
