@@ -25,7 +25,7 @@ describe('createVUnoStyle', () => {
       null
     )
 
-    expect(element.className).toBe('o:c-$c o:desktop:c-$c-desktop')
+    expect(element.className).toBe('vs:c-$c vs:desktop:c-$c-desktop')
     expect(element.style.getPropertyValue('--c')).toBe('red')
     expect(element.style.getPropertyValue('--c-desktop')).toBe('blue')
   })
@@ -42,8 +42,8 @@ describe('createVUnoStyle', () => {
       directive[hook]!(element, { arg: 'c', value: { mobile: 'red', desktop: 'blue' } } as never, node, null as never)
 
       expect(node.props!.class).toContain('existing')
-      expect(node.props!.class).toContain('o:c-$c')
-      expect(node.props!.class).toContain('o:desktop:c-$c-desktop')
+      expect(node.props!.class).toContain('vs:c-$c')
+      expect(node.props!.class).toContain('vs:desktop:c-$c-desktop')
       expect(node.props!.style).toEqual({ '--c': 'red', '--c-desktop': 'blue' })
     }
   )
@@ -58,7 +58,7 @@ describe('createVUnoStyle', () => {
       null as never
     )
 
-    expect(props!.class).toBe('o:c-$c o:desktop:c-$c-desktop')
+    expect(props!.class).toBe('vs:c-$c vs:desktop:c-$c-desktop')
     expect(props!.style).toEqual({ '--c': 'red', '--c-desktop': 'blue' })
   })
 
@@ -91,7 +91,7 @@ describe('createVUnoStyle', () => {
         null
       )
 
-      expect(element.className).toBe('o:c-$c o:md:c-$c-md o:lg:c-$c-lg')
+      expect(element.className).toBe('vs:c-$c vs:md:c-$c-md vs:lg:c-$c-lg')
       expect(element.style.getPropertyValue('--c')).toBe('red')
       expect(element.style.getPropertyValue('--c-md')).toBe('green')
       expect(element.style.getPropertyValue('--c-lg')).toBe('blue')
@@ -115,7 +115,7 @@ describe('createVUnoStyle', () => {
     canvasLike.created!(element, first as never, node, null as never)
     custom.created!(element, second as never, node, null as never)
 
-    expect(node.props!.class).toBe('existing o:c-$c o:md:c-$c-md o:bg-$bg o:desktop:bg-$bg-desktop')
+    expect(node.props!.class).toBe('existing vs:c-$c vs:md:c-$c-md vs:bg-$bg vs:desktop:bg-$bg-desktop')
     expect(node.props!.style).toEqual({
       '--c': 'red',
       '--c-md': 'green',
@@ -126,7 +126,7 @@ describe('createVUnoStyle', () => {
     canvasLike.beforeMount!(element, first as never, node, null)
     custom.beforeMount!(element, second as never, node, null)
 
-    expect(element.className).toBe('o:c-$c o:md:c-$c-md o:bg-$bg o:desktop:bg-$bg-desktop')
+    expect(element.className).toBe('vs:c-$c vs:md:c-$c-md vs:bg-$bg vs:desktop:bg-$bg-desktop')
   })
 
   it('ignores directives that were not built by the factory when combining siblings', () => {
@@ -138,7 +138,7 @@ describe('createVUnoStyle', () => {
 
     directive.created!(element, binding as never, node, null as never)
 
-    expect(node.props!.class).toBe('o:c-$c')
+    expect(node.props!.class).toBe('vs:c-$c')
     expect(node.props!.style).toEqual({ '--c': 'red' })
   })
 
@@ -151,6 +151,6 @@ describe('createVUnoStyle', () => {
     directive.created!(element, binding, node, null as never)
     directive.beforeUpdate!(element, binding, node, null as never)
 
-    expect(node.props!.class).toBe('existing o:c-$c')
+    expect(node.props!.class).toBe('existing vs:c-$c')
   })
 })

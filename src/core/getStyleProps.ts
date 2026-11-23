@@ -2,6 +2,7 @@ import type { ResolvedBreakpoints } from './breakpoints'
 import type { Responsive, StyleValue } from './getStyle'
 import type { PropertyFormat } from './properties'
 import { formatValue } from './properties'
+import { VARIANT_PREFIX } from './varsClasses'
 
 export interface StylePropsResult {
   styles?: Record<string, StyleValue>
@@ -49,6 +50,6 @@ export const getStyleProps = (
       ])
     ),
     classList: filteredValues.map(([breakpoint]) =>
-      `o:${getClassValue(prop, breakpoint, breakpoints.base)}`)
+      `${VARIANT_PREFIX}${getClassValue(prop, breakpoint, breakpoints.base)}`)
   }
 }

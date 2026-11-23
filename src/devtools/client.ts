@@ -174,7 +174,7 @@ const renderOverview = () => {
       <td><code>${esc(name)}</code></td>
       <td><code>${esc(data.breakpoints.values[name])}</code></td>
       <td>${name === data.breakpoints.base ? 'base, no media query' : 'media query'}</td>
-      <td><code>${name === data.breakpoints.base ? 'o:' : `o:${esc(name)}:`}</code></td>
+      <td><code>${name === data.breakpoints.base ? 'vs:' : `vs:${esc(name)}:`}</code></td>
       <td>${name === active ? pill('active now', 'active') : ''}</td>
     </tr>`).join('')}
     </tbody></table>

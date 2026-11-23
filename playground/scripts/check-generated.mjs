@@ -25,18 +25,18 @@ const tag = (marker) => {
 }
 
 const expectations = {
-  'data-playground-responsive': ['o:c-$c', 'o:md:c-$c-md', 'o:lg:bg-$bg-lg', '--c:#1e1b4b', '--p-lg:3rem'],
-  'data-playground-argument': ['o:c-$c', 'o:md:c-$c-md', '--c:#7c3aed'],
-  'data-playground-object': ['o:gap-$gap', 'o:md:gap-$gap-md', '--gap-md:1.5rem'],
-  'data-playground-scalar': ['o:p-$p', '--p:1.5rem'],
+  'data-playground-responsive': ['vs:c-$c', 'vs:md:c-$c-md', 'vs:lg:bg-$bg-lg', '--c:#1e1b4b', '--p-lg:3rem'],
+  'data-playground-argument': ['vs:c-$c', 'vs:md:c-$c-md', '--c:#7c3aed'],
+  'data-playground-object': ['vs:gap-$gap', 'vs:md:gap-$gap-md', '--gap-md:1.5rem'],
+  'data-playground-scalar': ['vs:p-$p', '--p:1.5rem'],
   // `md` repeats `sm`, so it must collapse: no `md` class or variable
-  'data-playground-collapsed': ['o:w-$w', 'o:lg:w-$w-lg', '--w-lg:50%'],
+  'data-playground-collapsed': ['vs:w-$w', 'vs:lg:w-$w-lg', '--w-lg:50%'],
   // The `url` format wraps the plain URLs, which carry the site's base path
-  'data-playground-format': ['o:bgi-$bgi', `--bgi:url(${base}dots.svg)`, `--bgi-md:url(${base}grid.svg)`],
-  'data-playground-update': ['o:md:p-$p-md', '--bgv:linear-gradient(135deg, #e0e7ff, #f5f3ff)'],
+  'data-playground-format': ['vs:bgi-$bgi', `--bgi:url(${base}dots.svg)`, `--bgi-md:url(${base}grid.svg)`],
+  'data-playground-update': ['vs:md:p-$p-md', '--bgv:linear-gradient(135deg, #e0e7ff, #f5f3ff)'],
   // Both the component's own binding (`p`) and the usage site's (`md` background) are present
-  'data-playground-composed': ['o:md:p-$p-md', '--bg-md:#2563eb'],
-  'data-playground-override': ['c-slate-400', 'o:c-$c', '--c:#16a34a']
+  'data-playground-composed': ['vs:md:p-$p-md', '--bg-md:#2563eb'],
+  'data-playground-override': ['c-slate-400', 'vs:c-$c', '--c:#16a34a']
 }
 
 for (const [marker, values] of Object.entries(expectations)) {
@@ -61,8 +61,8 @@ const css = readdirSync(assets)
 // Every configured property is safelisted and matched by a rule, so its base class has CSS.
 for (const property of properties) {
   const name = typeof property === 'string' ? property : property.name
-  // UnoCSS escapes the selector as `.o\:<name>-\$<name>`
-  assert.ok(css.includes(`.o\\:${name}-\\$${name}{`), `no CSS for the configured property "${name}"`)
+  // UnoCSS escapes the selector as `.vs\:<name>-\$<name>`
+  assert.ok(css.includes(`.vs\\:${name}-\\$${name}{`), `no CSS for the configured property "${name}"`)
 }
 assert.match(css, /@media \((?:min-width: ?768px|width>=768px)\)/)
 

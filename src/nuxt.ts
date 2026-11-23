@@ -21,6 +21,11 @@ export interface VUnoStyleNuxtModuleOptions extends PresetVUnoStyleOptions {
   /** Directive registration name without the `v-` prefix. */
   directiveName?: string
   /**
+   * The UnoCSS layer of the `vs:` classes. Defaults to `v-<directiveName>`: `v-uno-style`, or
+   * `v-style` with `directiveName: 'style'`.
+   */
+  layer?: string
+  /**
    * Rewrite the package's own `web-types.json` with `directiveName`, so WebStorm completes the
    * directive under the name the app registers. Nothing is written to the project. Set `false`
    * to keep the shipped file, which describes the default `uno-style` name.
@@ -84,7 +89,7 @@ const hasResolvedPreset = (config: UserConfig) => config.variants?.some(
   (variant) => typeof variant === 'object'
     && variant !== null
     && 'name' in variant
-    && variant.name === 'vue-uno-style-override'
+    && variant.name === 'vue-uno-style-layer'
 ) ?? false
 
 const toArray = <T>(value: T | T[]): T[] => Array.isArray(value) ? value : [value]
@@ -252,7 +257,8 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
     const preset = presetVUnoStyle({
       properties: options.properties,
       breakpoints: options.breakpoints,
-      baseBreakpoint: options.baseBreakpoint
+      baseBreakpoint: options.baseBreakpoint,
+      layer: options.layer ?? `v-${directiveName}`
     })
 
     // @unocss/nuxt captures this options object during module setup and reads

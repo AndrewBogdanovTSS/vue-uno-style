@@ -171,13 +171,26 @@ describe('vue-uno-style Nuxt module', () => {
     expect(config.variants?.filter(
       (variant) => typeof variant === 'object'
         && 'name' in variant
-        && variant.name === 'vue-uno-style-override'
+        && variant.name === 'vue-uno-style-layer'
     )).toHaveLength(1)
     expect(config.rules ?? []).toHaveLength(0)
     expect(config.safelist).toHaveLength(1)
     expect(nuxt.options.unocss.presets?.some(
       (preset) => !Array.isArray(preset) && 'name' in preset && preset.name === 'vue-uno-style'
     )).toBe(true)
+  })
+
+  it.each([
+    [{ directiveName: 'uno-style' }, 'v-uno-style'],
+    [{ directiveName: 'style' }, 'v-style'],
+    [{ directiveName: 'style', layer: 'cms' }, 'cms']
+  ])('names the preset layer after the directive unless layer is set: %o', async (options, layer) => {
+    const { nuxt } = await setupModule({ ...options, baseBreakpoint: 'sm' }, { presets: [presetWind3()] })
+    const preset = nuxt.options.unocss.presets?.find(
+      (item) => !Array.isArray(item) && 'name' in item && item.name === 'vue-uno-style'
+    ) as { layers?: Record<string, number> } | undefined
+
+    expect(preset?.layers).toEqual({ [layer]: 10 })
   })
 
   describe.each(basePresets)('with $name', ({ preset, themeKey, defaults }) => {

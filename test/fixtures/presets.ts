@@ -31,7 +31,7 @@ export const basePresets: BasePreset[] = [
  * The `min-width` of every media block in one layer, in the order the CSS emits them. Equal
  * selectors cascade by source order, so this order decides which breakpoint's value wins.
  */
-export const mediaOrder = (css: string, layer = 'override'): string[] => {
+export const mediaOrder = (css: string, layer = 'v-uno-style'): string[] => {
   const start = css.indexOf(`/* layer: ${layer} */`)
   if (start === -1) return []
   const end = css.indexOf('/* layer:', start + 1)

@@ -7,9 +7,9 @@ const breakpoints = resolveBreakpoints({
 })
 
 describe('getVarsClasses', () => {
-  it('moves generated classes to the override layer by default', () => {
+  it('puts the vs: variant on generated classes by default', () => {
     expect(getVarsClasses('bg', breakpoints))
-      .toBe('o:bg-$bg o:md:bg-$bg-md o:lg:bg-$bg-lg')
+      .toBe('vs:bg-$bg vs:md:bg-$bg-md vs:lg:bg-$bg-lg')
   })
 
   it('can leave generated classes in the default layer', () => {

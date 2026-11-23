@@ -287,8 +287,8 @@ describe('vUnoStyle directive', () => {
       vUnoStyle[hook]!(element, { value } as never, node, null as never)
 
       expect(node.props!.class).toContain('existing')
-      expect(node.props!.class).toContain('o:display-$display')
-      expect(node.props!.class).toContain('o:md:display-$display-md')
+      expect(node.props!.class).toContain('vs:display-$display')
+      expect(node.props!.class).toContain('vs:md:display-$display-md')
     })
 
     it('writes generated CSS variables into the vnode props', () => {
@@ -318,7 +318,7 @@ describe('vUnoStyle directive', () => {
       // @ts-expect-error Testing directive lifecycle hooks
       vUnoStyle.created(element, { value, arg: 'c' } as never, node, null)
 
-      expect(node.props!.class).toContain('o:c-$c')
+      expect(node.props!.class).toContain('vs:c-$c')
       expect(node.props!.style).toEqual({ '--c': 'green' })
     })
 
@@ -331,7 +331,7 @@ describe('vUnoStyle directive', () => {
       // @ts-expect-error Testing directive lifecycle hooks
       vUnoStyle.beforeUpdate(element, { value, oldValue: value } as never, { props: shared } as never, null)
 
-      expect(shared.class).toBe('static o:c-$c')
+      expect(shared.class).toBe('static vs:c-$c')
       expect(shared.style).toEqual({ 'color': 'red', '--c': 'red' })
     })
 
@@ -345,7 +345,7 @@ describe('vUnoStyle directive', () => {
       // @ts-expect-error Testing directive lifecycle hooks
       vUnoStyle.beforeUpdate(element, { value, oldValue } as never, { props: shared } as never, null)
 
-      expect(shared.class).toBe('static o:c-$c')
+      expect(shared.class).toBe('static vs:c-$c')
       expect(shared.style).toEqual({ '--c': 'red' })
     })
 
@@ -357,11 +357,11 @@ describe('vUnoStyle directive', () => {
 
       // @ts-expect-error Testing directive lifecycle hooks
       vUnoStyle.created(element, { value: wide } as never, { props: shared } as never, null)
-      expect(shared.class).toBe('static o:c-$c o:md:c-$c-md')
+      expect(shared.class).toBe('static vs:c-$c vs:md:c-$c-md')
 
       // @ts-expect-error Testing directive lifecycle hooks
       vUnoStyle.created(element, { value: narrow } as never, { props: shared } as never, null)
-      expect(shared.class).toBe('static o:c-$c')
+      expect(shared.class).toBe('static vs:c-$c')
     })
 
     it('does not apply twice to the same vnode', () => {
@@ -373,7 +373,7 @@ describe('vUnoStyle directive', () => {
       // @ts-expect-error Testing directive lifecycle hooks
       vUnoStyle.beforeUpdate(element, { value } as never, node, null)
 
-      expect(node.props!.class).toBe('existing o:c-$c')
+      expect(node.props!.class).toBe('existing vs:c-$c')
     })
 
     it('does nothing when the vnode, its props or the value are missing', () => {
@@ -556,7 +556,7 @@ describe('vUnoStyle directive', () => {
       // no props object exists to inject into, so `beforeMount` is what applies it - and Vue never
       // patches `class` on such an element either, so nothing can overwrite it
       expect(element.__vnode.props).toBeNull()
-      expect(element.className).toContain('o:c-$c')
+      expect(element.className).toContain('vs:c-$c')
       expect(element.style.cssText).toContain('--c: red')
     })
   })
@@ -576,8 +576,8 @@ describe('vUnoStyle directive', () => {
       bump.value++
       await nextTick()
 
-      expect(element.className.match(/o:c-\$c/g)).toHaveLength(1)
-      expect(String(element.__vnode.props.class).match(/o:c-\$c/g)).toHaveLength(1)
+      expect(element.className.match(/vs:c-\$c/g)).toHaveLength(1)
+      expect(String(element.__vnode.props.class).match(/vs:c-\$c/g)).toHaveLength(1)
     })
   })
 
@@ -680,14 +680,14 @@ describe('vUnoStyle directive', () => {
       // @ts-expect-error Testing directive lifecycle hooks
       vUnoStyle.beforeMount(element, { value: oldValue } as never, null as never, null)
 
-      expect(element.classList.toString()).toContain('o:md:c-$c-md')
+      expect(element.classList.toString()).toContain('vs:md:c-$c-md')
 
       // @ts-expect-error Testing directive lifecycle hooks
       vUnoStyle.updated(element, { value, oldValue } as never, null as never, null)
 
       // md now equals sm, so the md breakpoint class and variable must be gone
-      expect(element.classList.toString()).toContain('o:c-$c')
-      expect(element.classList.toString()).not.toContain('o:md:c-$c-md')
+      expect(element.classList.toString()).toContain('vs:c-$c')
+      expect(element.classList.toString()).not.toContain('vs:md:c-$c-md')
       expect(element.style.cssText).not.toContain('--c-md')
     })
   })
@@ -730,15 +730,15 @@ describe('vUnoStyle directive', () => {
       const wrapper = mountLink({ display: { sm: 'inline', md: 'none' } } as any)
       const link = wrapper.get('a')
 
-      expect(link.classes()).toContain('o:display-$display')
-      expect(link.classes()).toContain('o:md:display-$display-md')
+      expect(link.classes()).toContain('vs:display-$display')
+      expect(link.classes()).toContain('vs:md:display-$display-md')
 
       active.value = true
       await nextTick()
 
       expect(link.classes()).toContain('router-link-active')
-      expect(link.classes()).toContain('o:display-$display')
-      expect(link.classes()).toContain('o:md:display-$display-md')
+      expect(link.classes()).toContain('vs:display-$display')
+      expect(link.classes()).toContain('vs:md:display-$display-md')
     })
 
     // The actual defect: the generated classes lived only on the DOM node, so the next
@@ -747,8 +747,8 @@ describe('vUnoStyle directive', () => {
       const wrapper = mountLink({ display: { sm: 'inline', md: 'none' } } as any)
       const { __vnode: vnode } = wrapper.get('a').element as any
 
-      expect(vnode.props.class).toContain('o:display-$display')
-      expect(vnode.props.class).toContain('o:md:display-$display-md')
+      expect(vnode.props.class).toContain('vs:display-$display')
+      expect(vnode.props.class).toContain('vs:md:display-$display-md')
     })
 
     it('keeps generated classes through a class rewrite driven from the vnode', async () => {
@@ -762,8 +762,8 @@ describe('vUnoStyle directive', () => {
       element.className = element.__vnode.props.class
 
       expect(element.className).toContain('router-link-active')
-      expect(element.className).toContain('o:display-$display')
-      expect(element.className).toContain('o:md:display-$display-md')
+      expect(element.className).toContain('vs:display-$display')
+      expect(element.className).toContain('vs:md:display-$display-md')
     })
 
     it('keeps generated CSS variables when the child re-renders with a different class', async () => {

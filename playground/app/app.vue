@@ -108,7 +108,7 @@ const removed = ref<string[]>([])
 const readCard = () => {
   const el = card.value
   if (!el) return []
-  const classes = [...el.classList].filter((name) => name.startsWith('o:'))
+  const classes = [...el.classList].filter((name) => name.startsWith('vs:'))
   const variables = Array.from({ length: el.style.length }, (_, i) => el.style.item(i))
     .filter((name) => name.startsWith('--'))
   return [...classes, ...variables]
@@ -296,7 +296,7 @@ export const properties = ['c', 'bg', 'p', 'gap', 'w', 'bgv', { name: 'bgi', for
 
       <section>
         <h2>Runtime values win</h2>
-        <p>The directive's classes sit in UnoCSS's <code>override</code> layer, declared after the default one, so they beat ordinary utilities on the same element. This text has <code>c-slate-400</code> and still takes the runtime color.</p>
+        <p>The directive's classes carry the <code>vs:</code> variant, which puts them in their own <code>v-uno-style</code> layer after the default one, so they beat ordinary utilities on the same element. This text has <code>c-slate-400</code> and still takes the runtime color.</p>
         <p data-playground-override class="c-slate-400 sample" v-uno-style:c="override">Green, then blue from md</p>
         <pre><code>&lt;p class="c-slate-400" v-uno-style:c="{ sm: '#16a34a', md: '#2563eb' }" /&gt;</code></pre>
       </section>
