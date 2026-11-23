@@ -11,7 +11,7 @@ import { resolveBreakpoints } from './core/breakpoints'
 import { resolveProperties } from './core/properties'
 import { createWebTypes, serializeWebTypes } from './core/webTypes'
 import { createDevtoolsData, createDevtoolsMiddleware, DEVTOOLS_ROUTE, generateSample } from './devtools/server'
-import { DEFAULT_DIRECTIVE_NAME, presetVUnoStyle } from './preset'
+import { DEFAULT_DIRECTIVE_NAME, getScannedProperties, presetVUnoStyle } from './preset'
 import { breakpointThemeKey, resolveThemeBreakpoints } from './themeBreakpoints'
 import { packageWebTypesPath, writeWebTypes } from './webTypes'
 
@@ -240,9 +240,9 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
     }
 
     if (devtools) {
-      let data: ReturnType<typeof createDevtoolsData> | undefined
       const middleware = createDevtoolsMiddleware({
-        getData: async () => (data ??= createDevtoolsData(await getDevtoolsContext())),
+        // Built on every request: the scanned properties grow as `nuxt dev` transforms pages
+        getData: async () => createDevtoolsData(await getDevtoolsContext()),
         generate: async (input) => generateSample(await getDevtoolsContext(), input)
       })
 
@@ -373,7 +373,10 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
               .filter((name) => name !== 'vue-uno-style'),
             configSources: sources,
             webTypes,
-            generator
+            generator,
+            // The module's own preset is the one @unocss/nuxt scans with; a preset from the app's
+            // config is another object, whose findings the tab cannot reach
+            ...(presetSource === 'module' ? { scannedProperties: () => getScannedProperties(preset) ?? [] } : {})
           }
         }
         markReady()

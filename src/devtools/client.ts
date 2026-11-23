@@ -134,6 +134,8 @@ const renderOverview = () => {
   const seen = registry ? new Set(registry.seenProperties()) : undefined
   const unused = seen ? data.properties.filter(({ name }) => !seen.has(name)) : []
   const missing = data.coverage.filter((item) => item.suggestion)
+  const scannedCount = data.coverage.filter((item) => item.source === 'scanned').length
+  const configuredCount = data.coverage.length - scannedCount
   const order = [data.breakpoints.base, ...data.breakpoints.prefixed]
 
   return `
@@ -160,7 +162,10 @@ const renderOverview = () => {
       <dt>Blocked</dt><dd>${data.blocked.length
         ? data.blocked.map(({ name }) => `<code>${esc(name)}</code>`).join(' ')
         : '<span class="muted">none</span>'}</dd>
-      <dt>Safelist</dt><dd>${data.safelist.classes} classes, ${formatBytes(data.safelist.bytes)}</dd>
+      <dt>Safelist</dt><dd>${data.safelist.classes} classes, ${formatBytes(data.safelist.bytes)}<br>
+        <span class="muted">${data.scanTracked
+          ? `${configuredCount} configured, ${scannedCount} found in the source so far`
+          : `${configuredCount} configured. The preset in your UnoCSS config adds what it finds in the source, which this tab cannot see.`}</span></dd>
       <dt>Used this session</dt><dd>${seen
         ? `${data.properties.length - unused.length} of ${data.properties.length} properties`
         : '<span class="muted">needs DevTools</span>'}</dd>
@@ -190,7 +195,9 @@ const renderOverview = () => {
 
   <section>
     <h2>Properties</h2>
-    <table><thead><tr><th>Property</th><th>Format</th><th>Rule</th><th>CSS</th><th>Used</th></tr></thead><tbody>
+    <p class="muted">The configured properties, then the default ones the preset has found in the source.
+    In <code>nuxt dev</code> that grows as pages load: reload the tab to update it.</p>
+    <table><thead><tr><th>Property</th><th>Source</th><th>Format</th><th>Rule</th><th>CSS</th><th>Used</th></tr></thead><tbody>
     ${data.coverage.map((item) => {
       const matched = item.tokens.filter((token) => token.matched).length
       const rule = matched === item.tokens.length
@@ -201,6 +208,7 @@ const renderOverview = () => {
       const used = !seen ? '<span class="muted">–</span>' : seen.has(item.property) ? pill('yes', 'ok') : pill('not yet')
       return `<tr>
         <td><code>${esc(item.property)}</code></td>
+        <td>${item.source === 'scanned' ? pill('found in source') : pill('configured')}</td>
         <td>${item.format ? `<code>${esc(item.format)}</code>` : '<span class="muted">–</span>'}</td>
         <td>${rule}${matched < item.tokens.length
           ? `<div class="tokens">${item.tokens.filter((token) => !token.matched)

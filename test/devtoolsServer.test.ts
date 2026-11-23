@@ -138,6 +138,26 @@ describe.each(basePresets)('createDevtoolsData with $name', (base) => {
   })
 })
 
+describe('scanned properties in the tab', () => {
+  it('covers the default properties the preset found, and counts them in the safelist', async () => {
+    const data = await createDevtoolsData({ ...context, scannedProperties: () => ['mt', 'c', 'px'] })
+    const scanned = data.coverage.filter((item) => item.source === 'scanned')
+
+    expect(scanned.map((item) => item.property)).toEqual(['mt', 'px'])
+    expect(scanned.every((item) => item.tokens.every((token) => token.matched))).toBe(true)
+    expect(data.coverage.find((item) => item.property === 'c')!.source).toBe('configured')
+    expect(data.safelist.classes).toBe((configured.length + 2) * 3)
+    expect(data.scanTracked).toBe(true)
+  })
+
+  it('says so when it cannot see the scan', async () => {
+    const data = await createDevtoolsData(context)
+
+    expect(data.scanTracked).toBe(false)
+    expect(data.coverage.every((item) => item.source === 'configured')).toBe(true)
+  })
+})
+
 /**
  * A UnoCSS `blocklist` entry such as `/^opacity-/` also matches the directive's classes once `vs:`
  * is stripped, so their CSS disappears. The tab names the entry instead of suggesting a rule.

@@ -34,7 +34,7 @@ The page needs no extra rules under any preset: its properties are either in eve
 | Where | What |
 |-------|------|
 | `config/vue-uno-style.ts` | The breakpoints, properties and blocked properties, in one TypeScript file that `nuxt.config.ts`, `uno.config.ts`, `eslint.config.js` and the page all import. |
-| `uno.config.ts` | The base preset chosen by `PLAYGROUND_PRESET`. |
+| `uno.config.ts` | The base preset chosen by `PLAYGROUND_PRESET`, and a `blocklist` entry against `order-*`. It also removes the CSS of the default property `order`, which the DevTools tab lists under "Removed by the UnoCSS blocklist". |
 | `app/app.vue` | The page, one section per behaviour: values per breakpoint, argument and object forms, scalars and collapsed repeats, value formats, updates, composition and the directive's layer. |
 | `app/components/GeneratedOutput.vue` | Shows the classes and variables for a value, from the same `getStyle()` call the directive makes. |
 | `app/components/StatusBadge.vue` | A component with its own directive on its root, for the composition demo. |

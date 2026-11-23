@@ -150,6 +150,8 @@ describe('vue-uno-style Nuxt DevTools', () => {
         breakpoints: { source: 'option', themeKey, values: { sm: '0px', md: '768px' }, base: 'sm', prefixed: ['md'] }
       }))
       expect(data.properties).toEqual([{ name: 'c' }, { name: 'bg' }, { name: 'bgi', format: 'url' }])
+      // The module added the preset itself, so the tab sees what it finds in the source
+      expect(data.scanTracked).toBe(true)
       // Every base preset has rules for c and bg, and the package's preset serves bgi
       expect(data.coverage.map((item: { property: string, suggestion?: string }) =>
         [item.property, Boolean(item.suggestion)])).toEqual([['c', false], ['bg', false], ['bgi', false]])

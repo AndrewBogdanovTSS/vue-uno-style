@@ -1,6 +1,6 @@
 import type { BreakpointConfig } from './core/breakpoints'
 import type { BlockedPropertyConfig, PropertyConfig } from './core/properties'
-import type { Extractor, Variant } from 'unocss'
+import type { Extractor, Preset, Variant } from 'unocss'
 import { definePreset } from 'unocss'
 import { resolveBreakpoints } from './core/breakpoints'
 import { resolveProperties } from './core/properties'
@@ -116,6 +116,19 @@ const createUsageExtractor = (directiveName: string, known: ReadonlySet<string>,
   }
 })
 
+/** Each preset object's scan results, for `getScannedProperties`. */
+const scanned = new WeakMap<object, ReadonlySet<string>>()
+
+/**
+ * The properties a `presetVUnoStyle()` object has found in the source so far, in the order it
+ * found them, or `undefined` for any other object. UnoCSS scans as it transforms each module, so
+ * during `nuxt dev` the list grows as pages load.
+ */
+export const getScannedProperties = (preset: unknown): string[] | undefined => {
+  const used = typeof preset === 'object' && preset !== null ? scanned.get(preset) : undefined
+  return used ? [...used] : undefined
+}
+
 /**
  * Adds the `vs:` variant and its layer, the breakpoint variant, the `bgi` and `bgv` rules, and the
  * safelist: every configured property, and each known one the scanned source sets. Throws when no
@@ -137,7 +150,7 @@ export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions | undefined>(
   // Filled while UnoCSS scans the source, read each time it generates the CSS
   const used = new Set<string>()
 
-  return {
+  const preset: Preset = {
     name: 'vue-uno-style',
     layers: {
       [layer]: 10
@@ -169,4 +182,7 @@ export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions | undefined>(
       return [...safelisted].flatMap((prop) => getVarsClasses(prop, resolved).split(' '))
     }]
   }
+  scanned.set(preset, used)
+
+  return preset
 })

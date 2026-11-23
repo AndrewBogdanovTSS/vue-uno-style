@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { resolveBreakpoints } from '../src/core/breakpoints'
 import { defaultProperties } from '../src/core/properties'
 import { getVarsClasses } from '../src/core/varsClasses'
-import { presetVUnoStyle } from '../src/preset'
+import { getScannedProperties, presetVUnoStyle } from '../src/preset'
 import { basePresets, mediaOrder } from './fixtures/presets'
 
 const canvasBreakpoints = { sm: '0px', md: '768px', lg: '1024px' }
@@ -328,6 +328,19 @@ describe.each(basePresets)('presetVUnoStyle scanning with $name', ({ preset, the
   it('throws when a property is both configured and blocked', () => {
     expect(() => presetVUnoStyle({ properties: ['mt'], blockedProperties: ['mt'] }))
       .toThrow('Property "mt" is both configured and blocked')
+  })
+
+  it('reports what each preset object has found so far, and nothing for other objects', async () => {
+    const preset = presetVUnoStyle({ properties: ['c'], breakpoints: canvasBreakpoints })
+    const other = presetVUnoStyle({ breakpoints: canvasBreakpoints })
+    const uno = await createGenerator({ presets: [preset] })
+
+    expect(getScannedProperties(preset)).toEqual([])
+    await uno.generate('<div v-uno-style:mt="a" v-uno-style="{ px: b, c: d }" />', { preflights: false })
+
+    expect(getScannedProperties(preset)).toEqual(['mt', 'px', 'c'])
+    expect(getScannedProperties(other)).toEqual([])
+    expect(getScannedProperties({ name: 'vue-uno-style' })).toBeUndefined()
   })
 
   it('serves every default property with a rule', async () => {
