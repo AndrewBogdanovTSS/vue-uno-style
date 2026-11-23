@@ -47,7 +47,7 @@ The header shows the breakpoint the window is in, so the responsive demos can be
 
 ## Known SSR difference
 
-In the **Components compose** demo, the pre-rendered HTML has the component's own values winning the shared `c` and `bg` keys, and its classes are listed twice. Vue's SSR compiler merges a component's own directive output after the attributes its parent passed down, and `getSSRProps` gets no vnode to look at the parent's binding. On the client the directive recombines both bindings when it mounts, so the usage site wins from then on. The first paint shows the component's colors until then.
+In the **Scope relationships and composition** demo, the pre-rendered HTML has the component's own values winning the shared `c` and `bg` keys, and its classes are listed twice. Vue's SSR compiler merges a component's own directive output after the attributes its parent passed down, and `getSSRProps` gets no vnode to look at the parent's binding. On the client the directive recombines both bindings when it mounts, so the usage site wins from then on. The first paint shows the component's colors until then.
 
 ## Checking a renamed directive
 
