@@ -73,7 +73,7 @@ const toolbar = { c: { sm: '#7c3aed', md: '#0891b2' }, gap: { sm: '0.5rem', md: 
 /* 3. Scalars and repeated values. */
 const width = { sm: '100%', md: '100%', lg: '50%' }
 
-/* 4. Value formats. */
+/* 4. Custom value formats. */
 const pattern = computed(() => ({
   bg: { sm: '#4f46e5', md: '#0f766e' },
   bgi: { sm: `${base}dots.svg`, md: `${base}grid.svg` }
@@ -122,13 +122,13 @@ const switchPalette = async () => {
   removed.value = before.filter((name) => !written.value.includes(name))
 }
 
-/* 6. Components compose. */
+/* 6. Scope relationships and composition. */
 const highlighted = ref(true)
 const highlight = computed(() => highlighted.value
   ? { c: { sm: '#ffffff' }, bg: { sm: '#16a34a', md: '#2563eb' } }
   : undefined)
 
-/* 7. Runtime values win over utilities. */
+/* 7. Style priority: the directive's layer wins over utilities. */
 const override = { sm: '#16a34a', md: '#2563eb' }
 </script>
 
@@ -251,8 +251,8 @@ const override = { sm: '#16a34a', md: '#2563eb' }
       </section>
 
       <section>
-        <h2>Value formats</h2>
-        <p><code>bgi</code> is configured as <code>{ name: 'bgi', format: 'url' }</code>, so plain image URLs are wrapped in <code>url()</code>. Its rule lives in the playground's <code>uno.config.ts</code>, because the package predefines no properties.</p>
+        <h2>Custom value formats</h2>
+        <p>You can extend the directive with custom value formats. In the playground project you can find a custom <code>bgi</code> rule, which is configured as <code>{ name: 'bgi', format: 'url' }</code>, so plain image URLs are wrapped in <code>url()</code>.</p>
         <div data-playground-format class="pattern" v-uno-style="pattern" />
         <GeneratedOutput :value="pattern" />
         <pre><code>// config/vue-uno-style.ts
@@ -282,8 +282,8 @@ export const properties = ['c', 'bg', 'p', 'gap', 'w', 'bgv', { name: 'bgi', for
       </section>
 
       <section>
-        <h2>Components compose</h2>
-        <p>A component can style its own root with the directive while its usage site adds another. Both apply, and the usage site wins a property both set. Turn the highlight off and the badge falls back to its own colors.</p>
+        <h2>Scope relationships and composition</h2>
+        <p>The directive can be applied to a component both from inside (on its root) and from outside (in the parent scope). Both apply, and the outer one wins a property both set. Turn the highlight off and the badge falls back to its own colors.</p>
         <div class="row">
           <StatusBadge label="Default" />
           <StatusBadge data-playground-composed label="Highlighted" v-uno-style="highlight" />
@@ -295,8 +295,9 @@ export const properties = ['c', 'bg', 'p', 'gap', 'w', 'bgv', { name: 'bgi', for
       </section>
 
       <section>
-        <h2>Runtime values win</h2>
-        <p>The directive's classes carry the <code>vs:</code> variant, which puts them in their own <code>v-uno-style</code> layer after the default one, so they beat ordinary utilities on the same element. This text has <code>c-slate-400</code> and still takes the runtime color.</p>
+        <h2>Style priority with a custom UnoCSS layer</h2>
+        <p>The directive's classes carry the <code>vs:</code> variant, which puts them in their own <code>v-uno-style</code> <a href="https://unocss.dev/config/layers">layer</a> after the default one, so they beat ordinary utilities on the same element. This text has <code>c-slate-400</code> and still takes the runtime color.</p>
+        <p>To make your own classes win over the directive, put them in a new UnoCSS layer ordered after <code>v-uno-style</code>, or use <code>!important</code>.</p>
         <p data-playground-override class="c-slate-400 sample" v-uno-style:c="override">Green, then blue from md</p>
         <pre><code>&lt;p class="c-slate-400" v-uno-style:c="{ sm: '#16a34a', md: '#2563eb' }" /&gt;</code></pre>
       </section>
