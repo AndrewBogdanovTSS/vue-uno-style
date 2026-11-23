@@ -141,8 +141,8 @@ const override = { sm: '#16a34a', md: '#2563eb' }
         Breakpoint <strong>{{ breakpoint ?? 'sm' }}</strong>
       </span>
       <nav class="links">
-        <a :href="`${REPOSITORY}#readme`">Docs</a>
-        <a :href="REPOSITORY">GitHub</a>
+        <a :href="`${REPOSITORY}#readme`" target="_blank">Docs</a>
+        <a :href="REPOSITORY" target="_blank">GitHub</a>
       </nav>
       <button
         type="button"
@@ -162,7 +162,7 @@ const override = { sm: '#16a34a', md: '#2563eb' }
       <h1>Responsive styles from <br><span class="accent">runtime data</span></h1>
       <p>A directive that turns API or CMS values into CSS variables and UnoCSS classes, one value per breakpoint, with the CSS generated at build time.</p>
       <div class="actions">
-        <a class="button primary" :href="`${REPOSITORY}#install`">Get started →</a>
+        <a class="button primary" :href="`${REPOSITORY}#install`" target="_blank">Get started →</a>
         <button type="button" class="button subtle mono" :aria-label="`Copy ${installCommand}`" @click="copyInstall">
           {{ installCommand }}
           <span v-if="copied" class="accent" aria-hidden="true">✓</span>
@@ -296,7 +296,7 @@ export const properties = ['c', 'bg', 'p', 'gap', 'w', 'bgv', { name: 'bgi', for
 
       <section>
         <h2>Style priority with a custom UnoCSS layer</h2>
-        <p>The directive's classes carry the <code>vs:</code> variant, which puts them in their own <code>v-uno-style</code> <a href="https://unocss.dev/config/layers">layer</a> after the default one, so they beat ordinary utilities on the same element. This text has <code>c-slate-400</code> and still takes the runtime color.</p>
+        <p>The directive's classes carry the <code>vs:</code> variant, which puts them in their own <code>v-uno-style</code> <a href="https://unocss.dev/config/layers" target="_blank">layer</a> after the default one, so they beat ordinary utilities on the same element. This text has <code>c-slate-400</code> and still takes the runtime color.</p>
         <p>To make your own classes win over the directive, put them in a new UnoCSS layer ordered after <code>v-uno-style</code>, or use <code>!important</code>.</p>
         <p data-playground-override class="c-slate-400 sample" v-uno-style:c="override">Green, then blue from md</p>
         <pre><code>&lt;p class="c-slate-400" v-uno-style:c="{ sm: '#16a34a', md: '#2563eb' }" /&gt;</code></pre>
@@ -305,7 +305,7 @@ export const properties = ['c', 'bg', 'p', 'gap', 'w', 'bgv', { name: 'bgi', for
 
     <footer>
       This page is pre-rendered with the Nuxt module: view its source to see the classes and variables in the HTML.
-      The <a :href="`${REPOSITORY}/tree/main/playground`">playground</a> runs the same way locally.
+      The <a :href="`${REPOSITORY}/tree/main/playground`" target="_blank">playground</a> runs the same way locally.
     </footer>
   </div>
 </template>
