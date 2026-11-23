@@ -19,9 +19,17 @@ describe('inspectValue', () => {
     expect(kinds({ c: undefined, p: null })).toEqual([])
   })
 
-  it('reports a property outside the configured list', () => {
-    expect(kinds({ gap: '1rem' })).toEqual(['unknown-property gap'])
-    expect(inspectValue({ gap: '1rem' }, undefined, breakpoints)).toEqual([])
+  it('reports a property that is neither configured nor a default one', () => {
+    expect(kinds({ blur: '4px' })).toEqual(['unknown-property blur'])
+    expect(kinds({ gap: '1rem', mt: '8px' })).toEqual([])
+    expect(inspectValue({ blur: '4px' }, undefined, breakpoints)).toEqual([])
+  })
+
+  it('reports a default property once the defaults are off', () => {
+    const configuredOnly = resolveProperties(['c'], { defaultProperties: false })
+
+    expect(inspectValue({ gap: '1rem' }, undefined, breakpoints, configuredOnly).map(({ kind }) => kind))
+      .toEqual(['unknown-property'])
   })
 
   it('reports a breakpoint key the directive drops', () => {
@@ -30,9 +38,9 @@ describe('inspectValue', () => {
     expect(getStyle({ sm: '#111', xl: '#222' }, breakpoints, 'c').style).toEqual({ '--c': '#111' })
   })
 
-  it('reports a numeric zero, which the directive skips', () => {
-    expect(kinds({ sm: 0, md: '1rem' }, 'p')).toEqual(['dropped-value p sm'])
-    expect(getStyle({ sm: 0, md: '1rem' }, breakpoints, 'p').style).toEqual({ '--p-md': '1rem' })
+  it('accepts a numeric zero, which the directive writes', () => {
+    expect(kinds({ sm: 0, md: '1rem' }, 'p')).toEqual([])
+    expect(getStyle({ sm: 0, md: '1rem' }, breakpoints, 'p').style).toEqual({ '--p': 0, '--p-md': '1rem' })
   })
 
   it('reports values that are neither strings nor numbers', () => {

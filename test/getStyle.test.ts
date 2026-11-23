@@ -34,13 +34,15 @@ describe('getStyle', () => {
     })
   })
 
-  it('warns about a property outside the configured ones during development', () => {
+  it('warns about a property that is neither configured nor a default one during development', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    getStyle({ sm: '1rem' }, breakpoints, 'paddign', resolveProperties(['p']))
+    getStyle({ sm: '1rem' }, breakpoints, 'paddign', resolveProperties(['c']))
+    getStyle({ sm: '1rem' }, breakpoints, 'p', resolveProperties(['c']))
 
+    expect(warn).toHaveBeenCalledOnce()
     expect(warn).toHaveBeenCalledWith(
-      '[vue-uno-style] Property "paddign" is not configured, so its classes are not safelisted.'
+      '[vue-uno-style] Property "paddign" is neither configured nor a default property, so its classes are not safelisted.'
     )
   })
 
@@ -56,5 +58,13 @@ describe('getStyle', () => {
 
     expect(getStyle({ c: { sm: 'red' }, bgi: { sm: 'a.png' } }, breakpoints, undefined, properties).style)
       .toEqual({ '--c': 'red', '--bgi': 'url(a.png)' })
+  })
+
+  it('applies bgi\'s built-in url format, with or without configured properties', () => {
+    const value = { bgi: { sm: 'a.png' }, bgv: { sm: 'linear-gradient(red, blue)' } }
+    const expected = { '--bgi': 'url(a.png)', '--bgv': 'linear-gradient(red, blue)' }
+
+    expect(getStyle(value, breakpoints).style).toEqual(expected)
+    expect(getStyle(value, breakpoints, undefined, resolveProperties(['bgi', 'bgv'])).style).toEqual(expected)
   })
 })

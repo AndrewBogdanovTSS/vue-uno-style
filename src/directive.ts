@@ -5,6 +5,7 @@ import type { DirectiveBinding, ObjectDirective, VNode } from 'vue'
 import { normalizeClass, normalizeStyle } from 'vue'
 import { resolveBreakpoints } from './core/breakpoints'
 import { getStyle } from './core/getStyle'
+import { isEmptyValue } from './core/getStyleProps'
 import { resolveProperties } from './core/properties'
 
 export type VUnoStyleValue = Responsive | ResponsiveStyles
@@ -12,10 +13,12 @@ export type VUnoStyleValue = Responsive | ResponsiveStyles
 export interface VUnoStyleOptions extends ResolveBreakpointsOptions {
   /**
    * The properties configured for the preset. Optional here: without them the directive still
-   * writes classes for any property, but applies no value formats and cannot warn about a
-   * property the preset does not safelist.
+   * writes classes for any property, but applies only the built-in formats (`bgi` as `url`) and
+   * cannot warn about a property the preset does not safelist.
    */
   properties?: readonly PropertyConfig[]
+  /** Whether the default properties count as known. Defaults to `true`. */
+  defaultProperties?: boolean
 }
 
 const DEFAULT_OPTIONS = {
@@ -82,7 +85,7 @@ const activeBindings = (vnode: VNode | null | undefined, binding: Binding): Bind
  */
 const combine = (bindings: Binding[], fallback: DirectiveContext): StyleResult =>
   bindings.reduce<StyleResult>((acc, { arg, value, dir }) => {
-    if (!value) return acc
+    if (isEmptyValue(value)) return acc
 
     const { breakpoints, properties } = (dir as MarkedDirective | undefined)?.[MARKER] ?? fallback
     const { classes, style } = getStyle(value, breakpoints, arg, properties)
@@ -101,7 +104,9 @@ const splitClasses = (classes: string) => classes ? classes.split(' ') : []
 export const createVUnoStyle = (options: VUnoStyleOptions): ObjectDirective<HTMLElement, VUnoStyleValue> => {
   const context: DirectiveContext = {
     breakpoints: resolveBreakpoints(options),
-    properties: options.properties ? resolveProperties(options.properties) : undefined
+    properties: options.properties
+      ? resolveProperties(options.properties, { defaultProperties: options.defaultProperties })
+      : undefined
   }
 
   /**
@@ -139,7 +144,7 @@ export const createVUnoStyle = (options: VUnoStyleOptions): ObjectDirective<HTML
     const current = combine(bindings, context)
     const classes = splitClasses(current.classes)
 
-    if (binding.oldValue) {
+    if (!isEmptyValue(binding.oldValue)) {
       const oldBindings = bindings.map((sibling) =>
         sibling === binding ? { ...binding, value: binding.oldValue } : sibling)
       const previous = combine(oldBindings, context)
@@ -172,7 +177,7 @@ export const createVUnoStyle = (options: VUnoStyleOptions): ObjectDirective<HTML
     beforeUpdate: (_el, binding, vnode) => inject(vnode, binding),
     updated: (el, binding, vnode) => updated(el, binding, vnode),
     getSSRProps({ arg, value }: DirectiveBinding<VUnoStyleValue>) {
-      if (!value) return
+      if (isEmptyValue(value)) return
       const { classes, style } = getStyle(value, context.breakpoints, arg, context.properties)
 
       return {

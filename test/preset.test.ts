@@ -2,6 +2,7 @@ import type { BreakpointConfig } from '../src/core/breakpoints'
 import { createGenerator } from 'unocss'
 import { describe, expect, it } from 'vitest'
 import { resolveBreakpoints } from '../src/core/breakpoints'
+import { defaultProperties } from '../src/core/properties'
 import { getVarsClasses } from '../src/core/varsClasses'
 import { presetVUnoStyle } from '../src/preset'
 import { basePresets, mediaOrder } from './fixtures/presets'
@@ -40,17 +41,39 @@ describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, de
     expect(css).toContain('.vs\\:md\\:c-\\$c-md{color:var(--c-md);}')
   })
 
-  it('ships no rules of its own, so a consumer rule serves a custom property', async () => {
+  it('serves bgi and bgv with its own rules, at every breakpoint', async () => {
     const uno = await createGenerator({
-      presets: [preset(), presetVUnoStyle({ properties: [{ name: 'bgi', format: 'url' }] })],
-      rules: [[/^bgi-\$(.+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })]],
+      presets: [preset(), presetVUnoStyle({ properties: ['bgi', 'bgv'] })],
       theme: { [themeKey]: canvasBreakpoints }
     })
     const { css, matched } = await uno.generate('', { preflights: false })
 
-    expect(presetVUnoStyle({ properties }).rules).toBeUndefined()
     expect(matched).toContain('vs:bgi-$bgi')
-    expect(css).toContain('background-image:var(--bgi);')
+    expect(matched).toContain('vs:md:bgv-$bgv-md')
+    expect(css).toContain('.vs\\:bgi-\\$bgi{background-image:var(--bgi);}')
+    expect(css).toContain('.vs\\:md\\:bgv-\\$bgv-md{background:var(--bgv-md);}')
+  })
+
+  it('writes no CSS for bgi or bgv unless they are configured', async () => {
+    const uno = await createGenerator({
+      presets: [preset(), presetVUnoStyle({ properties: ['c'] })],
+      theme: { [themeKey]: canvasBreakpoints }
+    })
+    const { css } = await uno.generate('', { preflights: false })
+
+    expect(css).not.toContain('bgi')
+    expect(css).not.toContain('bgv')
+  })
+
+  it('lets a consumer rule replace a built-in one', async () => {
+    const uno = await createGenerator({
+      presets: [preset(), presetVUnoStyle({ properties: ['bgv'] })],
+      rules: [[/^bgv-\$([\w-]+)$/, ([, name]) => ({ 'background-color': `var(--${name})` })]],
+      theme: { [themeKey]: canvasBreakpoints }
+    })
+    const { css } = await uno.generate('', { preflights: false })
+
+    expect(css).toContain('.vs\\:bgv-\\$bgv{background-color:var(--bgv);}')
   })
 
   it('safelists every runtime class for exactly the configured properties', async () => {
@@ -224,8 +247,82 @@ describe('presetVUnoStyle without a base preset', () => {
   it.each([
     ['missing', undefined],
     ['empty', []]
-  ])('throws at configuration time when properties are %s', (_label, configured) => {
-    expect(() => presetVUnoStyle({ properties: configured as never }))
+  ])('throws at configuration time when properties are %s and the defaults are off', (_label, configured) => {
+    expect(() => presetVUnoStyle({ properties: configured as never, defaultProperties: false }))
       .toThrow('No properties configured')
+    expect(() => presetVUnoStyle({ properties: configured as never })).not.toThrow()
+  })
+})
+
+/**
+ * The preset safelists a default property only once the scanned source sets it, so an unused
+ * side such as `mb` costs no CSS. `generate(code)` runs the preset's extractor on `code` the way
+ * the Vite plugin runs it on each module.
+ */
+describe.each(basePresets)('presetVUnoStyle scanning with $name', ({ preset, themeKey }) => {
+  const createUno = async (options: Parameters<typeof presetVUnoStyle>[0] = {}) => createGenerator({
+    presets: [preset(), presetVUnoStyle(options)],
+    theme: { [themeKey]: canvasBreakpoints }
+  })
+  const classesOf = (props: string[]) => safelisted(canvasBreakpoints, undefined, props)
+  const vsClasses = (matched: Set<string>) => [...matched].filter((name) => name.startsWith('vs:')).sort()
+
+  it('safelists nothing for the defaults until the source uses them', async () => {
+    const uno = await createUno()
+    const { matched } = await uno.generate('', { preflights: false })
+
+    expect(vsClasses(matched)).toEqual([])
+  })
+
+  it('safelists every breakpoint class of each default property the source sets, and no other', async () => {
+    const uno = await createUno()
+    const code = '<div v-uno-style:mt="a" v-uno-style="{ px: b, \'gap-y\': c }" /><p v-uno-style="data" />'
+    const { matched } = await uno.generate(code, { preflights: false })
+
+    expect(vsClasses(matched)).toEqual(classesOf(['mt', 'px', 'gap-y']))
+  })
+
+  it('always safelists the configured properties, next to the scanned ones', async () => {
+    const uno = await createUno({ properties: ['c', 'mb'] })
+    const { matched } = await uno.generate('<div v-uno-style:mt="a" />', { preflights: false })
+
+    expect(vsClasses(matched)).toEqual(classesOf(['c', 'mb', 'mt']))
+  })
+
+  it('keeps what earlier files used, as a build scans one module at a time', async () => {
+    const uno = await createUno()
+    await uno.generate('<div v-uno-style:mt="a" />', { preflights: false })
+    const { matched } = await uno.generate('<div v-uno-style:pb="b" />', { preflights: false })
+
+    expect(vsClasses(matched)).toEqual(classesOf(['mt', 'pb']))
+  })
+
+  it('ignores a property that is neither configured nor a default one', async () => {
+    const uno = await createUno()
+    const { matched } = await uno.generate('<div v-uno-style:paddign="a" v-uno-style:blur="b" />', { preflights: false })
+
+    expect(vsClasses(matched)).toEqual([])
+  })
+
+  it('scans for the configured directive name', async () => {
+    const uno = await createUno({ directiveName: 'style' })
+    const { matched } = await uno.generate('<div v-style:mt="a" v-uno-style:mb="b" />', { preflights: false })
+
+    expect(vsClasses(matched)).toEqual(classesOf(['mt']))
+  })
+
+  it('scans only the configured properties once the defaults are off', async () => {
+    const uno = await createUno({ properties: ['c'], defaultProperties: false })
+    const { matched } = await uno.generate('<div v-uno-style:mt="a" />', { preflights: false })
+
+    expect(vsClasses(matched)).toEqual(classesOf(['c']))
+  })
+
+  it('serves every default property with a rule', async () => {
+    const uno = await createUno({ properties: [...defaultProperties] })
+    const { matched } = await uno.generate('', { preflights: false })
+    const unserved = defaultProperties.filter((prop) => !matched.has(`vs:${prop}-$${prop}`))
+
+    expect(unserved).toEqual([])
   })
 })

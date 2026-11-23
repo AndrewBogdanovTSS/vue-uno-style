@@ -5,7 +5,6 @@ export type ValueWarningKind =
   | 'unknown-property'
   | 'unknown-breakpoint'
   | 'invalid-value'
-  | 'dropped-value'
 
 export interface ValueWarning {
   kind: ValueWarningKind
@@ -25,15 +24,6 @@ const checkScalar = (
   breakpoint: string
 ): ValueWarning | undefined => {
   if (isEmpty(value)) return undefined
-  // getStyleProps skips falsy values, so a numeric 0 never reaches the CSS
-  if (value === 0) {
-    return {
-      kind: 'dropped-value',
-      property,
-      breakpoint,
-      message: `"${property}" at "${breakpoint}" is the number 0, which the directive skips. Use the string '0'.`
-    }
-  }
   if (typeof value !== 'string' && typeof value !== 'number') {
     return {
       kind: 'invalid-value',
@@ -47,8 +37,8 @@ const checkScalar = (
 
 /**
  * Lists what in a binding value the directive will silently ignore or that the preset will not
- * style: properties outside the configured list, breakpoint keys that do not exist, numeric
- * zeros, and values that are neither strings nor numbers.
+ * style: properties outside the known ones, breakpoint keys that do not exist, and values
+ * that are neither strings nor numbers.
  */
 export const inspectValue = (
   value: unknown,
@@ -72,11 +62,11 @@ export const inspectValue = (
   Object.entries(config).forEach(([property, responsive]) => {
     if (isEmpty(responsive)) return
 
-    if (properties && !properties.names.includes(property)) {
+    if (properties && !properties.known.includes(property)) {
       warnings.push({
         kind: 'unknown-property',
         property,
-        message: `"${property}" is not a configured property, so its classes are not safelisted.`
+        message: `"${property}" is neither configured nor a default property, so its classes are not safelisted.`
       })
     }
 

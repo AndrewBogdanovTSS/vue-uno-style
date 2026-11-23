@@ -251,12 +251,19 @@ const override = { sm: '#16a34a', md: '#2563eb' }
       </section>
 
       <section>
+        <h2>Default properties</h2>
+        <p><code>mt</code> and <code>px</code> are not in the playground's <code>properties</code>. They are default properties, and the preset finds them in this template, so it generates their classes. <code>mb</code>, <code>pl</code> and the other sides appear in no template here, so the CSS has none of their classes.</p>
+        <p data-playground-scanned class="sample outlined" v-uno-style="{ mt: { sm: '0.5rem', md: '1.5rem' }, px: '2rem' }">Margin above, padding at the sides</p>
+        <GeneratedOutput :value="{ mt: { sm: '0.5rem', md: '1.5rem' }, px: '2rem' }" />
+      </section>
+
+      <section>
         <h2>Custom value formats</h2>
-        <p>You can extend the directive with custom value formats. In the playground project you can find a custom <code>bgi</code> rule, which is configured as <code>{ name: 'bgi', format: 'url' }</code>, so plain image URLs are wrapped in <code>url()</code>.</p>
+        <p><code>bgi</code> takes <code>format: 'url'</code> on its own, so plain image URLs are wrapped in <code>url()</code>. The preset ships the rules for <code>bgi</code> and <code>bgv</code>, since no base preset has them.</p>
         <div data-playground-format class="pattern" v-uno-style="pattern" />
         <GeneratedOutput :value="pattern" />
         <pre><code>// config/vue-uno-style.ts
-export const properties = ['c', 'bg', 'p', 'gap', 'w', 'bgv', { name: 'bgi', format: 'url' }]</code></pre>
+export const properties = ['c', 'bg', 'p', 'gap', 'w', 'bgv', 'bgi']</code></pre>
       </section>
 
       <section>

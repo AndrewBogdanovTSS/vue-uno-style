@@ -31,6 +31,8 @@ const expectations = {
   'data-playground-scalar': ['vs:p-$p', '--p:1.5rem'],
   // `md` repeats `sm`, so it must collapse: no `md` class or variable
   'data-playground-collapsed': ['vs:w-$w', 'vs:lg:w-$w-lg', '--w-lg:50%'],
+  // Default properties the preset found in the template, not configured
+  'data-playground-scanned': ['vs:mt-$mt', 'vs:md:mt-$mt-md', 'vs:px-$px', '--mt-md:1.5rem'],
   // The `url` format wraps the plain URLs, which carry the site's base path
   'data-playground-format': ['vs:bgi-$bgi', `--bgi:url(${base}dots.svg)`, `--bgi-md:url(${base}grid.svg)`],
   'data-playground-update': ['vs:md:p-$p-md', '--bgv:linear-gradient(135deg, #e0e7ff, #f5f3ff)'],
@@ -66,5 +68,15 @@ for (const property of properties) {
 }
 assert.match(css, /@media \((?:min-width: ?768px|width>=768px)\)/)
 
+// The preset scanned the template: default properties it set have CSS at every breakpoint, and
+// the sides no template sets have none.
+for (const selector of ['.vs\\:mt-\\$mt{', '.vs\\:md\\:mt-\\$mt-md{', '.vs\\:lg\\:mt-\\$mt-lg{', '.vs\\:px-\\$px{']) {
+  assert.ok(css.includes(selector), `no CSS for the scanned selector ${selector}`)
+}
+for (const unused of ['mb', 'ml', 'mr', 'my', 'pl', 'pr', 'pb', 'pt']) {
+  assert.ok(!css.includes(`.vs\\:${unused}-\\$${unused}`), `CSS has the unused default property "${unused}"`)
+}
+
 console.log('PASS  generated HTML contains the directive output for every demo')
 console.log(`PASS  every configured property has CSS, and assets resolve under ${base}`)
+console.log('PASS  scanned default properties have CSS, and unused ones have none')

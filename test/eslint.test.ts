@@ -57,8 +57,18 @@ describe('vue-uno-style/no-multiple-v-style', () => {
         .toHaveLength(0)
     })
 
-    it('accepts any property when none are configured', () => {
-      expect(verify('<template><div v-uno-style:paddign="value" /></template>'))
+    it.each(['mt', 'px', 'gap-y', 'bgv'])('allows the default "%s" property without configuration', (prop) => {
+      expect(verify(`<template><div v-uno-style:${prop}="value" /></template>`)).toHaveLength(0)
+    })
+
+    it('accepts any property when the defaults are off and none are configured', () => {
+      const config: LinterType.Config[] = [{
+        ...createConfig()[0],
+        rules: { 'vue-uno-style/no-multiple-v-style': ['error', { defaultProperties: false }] }
+      }]
+
+      expect(new Linter({ configType: 'flat' })
+        .verify('<template><div v-uno-style:paddign="value" /></template>', config, { filename: 'test.vue' }))
         .toHaveLength(0)
     })
 
@@ -73,77 +83,80 @@ describe('vue-uno-style/no-multiple-v-style', () => {
   })
 
   describe('invalid', () => {
-    it('reports a static property outside the configured ones', () => {
+    it('reports a static property that is neither configured nor a default one', () => {
+      const expected = [expect.objectContaining({
+        messageId: 'unknownStyleProp',
+        message:
+          'Unknown v-uno-style property "paddign". It is not a default property: add it to the configured properties.'
+      })]
+
       expect(verify('<template><div v-uno-style:paddign="value" /></template>', undefined, properties))
-        .toEqual([expect.objectContaining({
-          messageId: 'unknownStyleProp',
-          message:
-            'Unknown v-uno-style property "paddign". Add it to the configured properties.'
-        })])
+        .toEqual(expected)
+      expect(verify('<template><div v-uno-style:paddign="value" /></template>')).toEqual(expected)
     })
 
     it('reports an unconfigured property for a renamed directive', () => {
       expect(verify('<template><div v-style:paddign="value" /></template>', 'style', properties))
         .toEqual([expect.objectContaining({
           messageId: 'unknownStyleProp',
-          message: 'Unknown v-style property "paddign". Add it to the configured properties.'
+          message: 'Unknown v-style property "paddign". It is not a default property: add it to the configured properties.'
         })])
     })
 
     it('merges two argument-style directives into an object', () => {
-      const code = '<template><div v-uno-style:c="textColor" v-uno-style:display="display" /></template>'
+      const code = '<template><div v-uno-style:c="textColor" v-uno-style:z="display" /></template>'
 
       expect(verify(code)).toEqual([
         expect.objectContaining({ messageId: 'multipleVStyle' })
       ])
       expect(fix(code)).toBe(
-        '<template><div v-uno-style="{ c: textColor, display: display }" /></template>'
+        '<template><div v-uno-style="{ c: textColor, z: display }" /></template>'
       )
     })
 
     it('merges directives using the configured name', () => {
-      const code = '<template><div v-style:c="textColor" v-style:display="display" /></template>'
+      const code = '<template><div v-style:c="textColor" v-style:z="display" /></template>'
 
       expect(verify(code, 'style')).toEqual([
         expect.objectContaining({ messageId: 'multipleVStyle' })
       ])
       expect(fix(code, 'style')).toBe(
-        '<template><div v-style="{ c: textColor, display: display }" /></template>'
+        '<template><div v-style="{ c: textColor, z: display }" /></template>'
       )
     })
 
     it('merges three argument-style directives into a single object', () => {
-      const code = '<template><div v-uno-style:c="a" v-uno-style:display="b" v-uno-style:p="c" /></template>'
+      const code = '<template><div v-uno-style:c="a" v-uno-style:z="b" v-uno-style:p="c" /></template>'
 
       expect(fix(code)).toBe(
-        '<template><div v-uno-style="{ c: a, display: b, p: c }" /></template>'
+        '<template><div v-uno-style="{ c: a, z: b, p: c }" /></template>'
       )
     })
 
     it('inlines object-syntax properties beside an argument directive', () => {
-      const code = '<template><div v-uno-style="{ c: a }" v-uno-style:display="b" /></template>'
+      const code = '<template><div v-uno-style="{ c: a }" v-uno-style:z="b" /></template>'
 
       expect(fix(code)).toBe(
-        '<template><div v-uno-style="{ c: a, display: b }" /></template>'
+        '<template><div v-uno-style="{ c: a, z: b }" /></template>'
       )
     })
 
     it('spreads a plain directive expression into the merged object', () => {
-      const code = '<template><div v-uno-style="myStyles" v-uno-style:display="b" /></template>'
+      const code = '<template><div v-uno-style="myStyles" v-uno-style:z="b" /></template>'
 
       expect(fix(code)).toBe(
-        '<template><div v-uno-style="{ ...myStyles, display: b }" /></template>'
+        '<template><div v-uno-style="{ ...myStyles, z: b }" /></template>'
       )
     })
 
     it('reports only the violating element and leaves siblings untouched', () => {
-      const code = '<template><div v-uno-style:c="a" v-uno-style:display="b" /><span v-uno-style:c="c" /></template>'
+      const code = '<template><div v-uno-style:c="a" v-uno-style:z="b" /><span v-uno-style:c="c" /></template>'
 
       expect(verify(code)).toEqual([
         expect.objectContaining({ messageId: 'multipleVStyle' })
       ])
       expect(fix(code)).toBe(
-        '<template><div v-uno-style="{ c: a, display: b }" /><span v-uno-style:c="c" /></template>'
+        '<template><div v-uno-style="{ c: a, z: b }" /><span v-uno-style:c="c" /></template>'
       )
     })
 

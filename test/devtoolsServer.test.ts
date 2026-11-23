@@ -25,8 +25,7 @@ const configured = ['c', 'bg', 'nope', { name: 'bgi', format: 'url' as const }, 
 /** The context the Nuxt module builds, for an app on `base`. */
 const createContext = async ({ preset }: Pick<BasePreset, 'preset'>): Promise<DevtoolsContext> => {
   const generator = await createGenerator({
-    presets: [preset(), presetVUnoStyle({ properties: configured, breakpoints })],
-    rules: [[/^bgi-\$([\w-]+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })]]
+    presets: [preset(), presetVUnoStyle({ properties: configured, breakpoints })]
   })
 
   return {
@@ -158,7 +157,7 @@ describe.each(basePresets)('generateSample with $name', (base) => {
   })
 
   it('applies value formats and reports warnings', async () => {
-    const result = await generateSample(context, { value: { bgi: 'a.png', p: { xl: '1rem' } } })
+    const result = await generateSample(context, { value: { bgi: 'a.png', paddign: { xl: '1rem' } } })
     if ('error' in result) throw new Error(result.error)
 
     expect(result.style).toEqual({ '--bgi': 'url(a.png)' })

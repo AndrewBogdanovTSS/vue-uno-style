@@ -20,6 +20,7 @@ vi.mock('../src/webTypes', () => ({
   writeWebTypes: vi.fn(() => 'written')
 }))
 
+import { defaultProperties } from '../src/core/properties'
 import module from '../src/nuxt'
 import { writeWebTypes } from '../src/webTypes'
 
@@ -37,6 +38,7 @@ type ModuleDefinition = {
       breakpoints?: Record<string, number | string>
       directiveName?: string
       properties?: Array<string | { name: string, format?: 'url' }>
+      defaultProperties?: boolean
       webTypes?: boolean
     },
     nuxt: unknown
@@ -110,19 +112,48 @@ describe('vue-uno-style Nuxt module', () => {
 
     expect(file).toBe('/pkg/dist/web-types.json')
     expect(directive.name).toBe('style')
+    // The configured properties, then the defaults they do not repeat
+    expect(directive.argument.pattern.or).toEqual([
+      'c', 'bg', 'bgi', ...defaultProperties.filter((name) => !['c', 'bg', 'bgi'].includes(name))
+    ])
+  })
+
+  it('offers only the configured properties once the defaults are off', async () => {
+    await setupModule({ directiveName: 'style', webTypes: true, defaultProperties: false })
+
+    const [, contents] = vi.mocked(writeWebTypes).mock.calls[0]!
+    const [directive] = JSON.parse(contents).contributions.html['vue-directives']
+
     expect(directive.argument.pattern.or).toEqual(['c', 'bg', 'bgi'])
   })
 
   it.each([
     ['missing', undefined],
     ['empty', []]
-  ])('fails the build when properties are %s', async (_label, configured) => {
+  ])('fails the build when properties are %s and the defaults are off', async (_label, configured) => {
     const { nuxt } = createNuxt()
 
     await expect(async () => moduleDefinition.setup(
-      { directiveName: 'style', properties: configured as never },
+      { directiveName: 'style', properties: configured as never, defaultProperties: false },
       nuxt
     )).rejects.toThrow('No properties configured')
+  })
+
+  it('passes an empty list to the runtime directive when no properties are configured', async () => {
+    const { hooks } = await setupModule({
+      directiveName: 'style',
+      breakpoints: { sm: 0, md: 768 },
+      properties: undefined
+    })
+
+    await hooks.get('modules:done')?.()
+
+    const template = vi.mocked(addPluginTemplate).mock.calls[0]?.[0]
+    if (!template || typeof template === 'string') throw new Error('Expected a plugin template')
+    const contents = await template.getContents?.({} as never)
+
+    expect(contents).toContain('"properties":[]')
+    expect(contents).not.toContain('defaultProperties')
   })
 
   it('passes the configured properties to the runtime directive', async () => {
@@ -173,7 +204,8 @@ describe('vue-uno-style Nuxt module', () => {
         && 'name' in variant
         && variant.name === 'vue-uno-style-layer'
     )).toHaveLength(1)
-    expect(config.rules ?? []).toHaveLength(0)
+    // The built-in bgi and bgv rules, merged once
+    expect(config.rules).toHaveLength(2)
     expect(config.safelist).toHaveLength(1)
     expect(nuxt.options.unocss.presets?.some(
       (preset) => !Array.isArray(preset) && 'name' in preset && preset.name === 'vue-uno-style'

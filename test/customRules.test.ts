@@ -65,16 +65,21 @@ describe('custom rules', () => {
   })
 
   it('pairs the url rule with format: \'url\', so the rule itself stays a plain var()', async () => {
-    const properties = [{ name: 'bgi', format: 'url' }] as const
-    const { style } = getStyle({ sm: '/hero.png' }, resolved, 'bgi', resolveProperties(properties))
-    const uno = await createGenerator({
-      presets: [presetMini(), presetVUnoStyle({ properties, breakpoints })],
-      rules: [urlRule]
-    })
-    const { css } = await uno.generate('', { preflights: false })
+    const properties = [{ name: 'mask', format: 'url' }] as const
+    const { style } = getStyle({ sm: '/shape.svg' }, resolved, 'mask', resolveProperties(properties))
 
-    expect(style).toEqual({ '--bgi': 'url(/hero.png)' })
-    expect(css).toContain('background-image:var(--bgi);')
+    expect(style).toEqual({ '--mask': 'url(/shape.svg)' })
+
+    for (const preset of Object.values(presets)) {
+      const uno = await createGenerator({
+        presets: [preset(), presetVUnoStyle({ properties, breakpoints })],
+        rules: [urlRule]
+      })
+      const { css } = await uno.generate('', { preflights: false })
+
+      expect(css).toContain('.vs\\:mask-\\$mask{mask-image:var(--mask);}')
+      expect(css).toContain('.vs\\:md\\:mask-\\$mask-md{mask-image:var(--mask-md);}')
+    }
   })
 
   it('replaces the preset\'s own rule for the same class, which is why the README warns', async () => {

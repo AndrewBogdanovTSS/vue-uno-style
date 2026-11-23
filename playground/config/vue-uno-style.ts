@@ -8,9 +8,6 @@ import type { BreakpointConfig, PropertyConfig } from 'vue-uno-style'
 /** `sm: 0` is the unprefixed base; `md` and `lg` become media queries. */
 export const breakpoints = { sm: '0px', md: '768px', lg: '1024px' } satisfies BreakpointConfig
 
-// Every property the page's directives set. presetWind3 already has a `<prefix>-$<variable>` rule for the plain ones
-export const properties = [
-  'c', 'bg', 'p', 'gap', 'w', 'bgv',
-  // `bgi` and `bgv` are served by rules in `../uno.config.ts`, and `bgi` values are plain URLs that the `url` format wraps
-  { name: 'bgi', format: 'url' }
-] satisfies PropertyConfig[]
+// Every property the page's directives set. Every base preset has a `<prefix>-$<variable>` rule for the plain ones,
+// and the package's preset serves `bgv` and `bgi`, whose plain URL values take the built-in `url` format
+export const properties = ['c', 'bg', 'p', 'gap', 'w', 'bgv', 'bgi'] satisfies PropertyConfig[]

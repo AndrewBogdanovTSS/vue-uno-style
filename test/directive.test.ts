@@ -592,6 +592,41 @@ describe('vUnoStyle directive', () => {
       expect(element.classList.toString()).toContain('w-$w')
     })
 
+    it('writes a numeric zero, as a scalar and at a breakpoint', () => {
+      // @ts-expect-error Testing directive lifecycle hooks
+      vUnoStyle.beforeMount(element, { arg: 'm', value: 0 } as never, null as never, null)
+
+      expect(element.style.getPropertyValue('--m')).toBe('0')
+      expect(element.classList.contains('vs:m-$m')).toBe(true)
+
+      const other = document.createElement('div')
+      const value: ResponsiveStyles = { p: { sm: '16px', md: 0 } }
+
+      // @ts-expect-error Testing directive lifecycle hooks
+      vUnoStyle.beforeMount(other, { value } as never, null as never, null)
+
+      expect(other.style.getPropertyValue('--p')).toBe('16px')
+      expect(other.style.getPropertyValue('--p-md')).toBe('0')
+      expect(other.classList.contains('vs:md:p-$p-md')).toBe(true)
+    })
+
+    it('clears a numeric zero once the value is emptied', () => {
+      // @ts-expect-error Testing directive lifecycle hooks
+      vUnoStyle.beforeMount(element, { arg: 'm', value: 0 } as never, null as never, null)
+      // @ts-expect-error Testing directive lifecycle hooks
+      vUnoStyle.updated(element, { arg: 'm', value: '', oldValue: 0 } as never, null as never, null)
+
+      expect(element.style.getPropertyValue('--m')).toBe('')
+      expect(element.classList.contains('vs:m-$m')).toBe(false)
+    })
+
+    it('renders a numeric zero on the server', () => {
+      expect(vUnoStyle.getSSRProps!({ arg: 'm', value: 0 } as never, null as never)).toEqual({
+        class: 'vs:m-$m',
+        style: { '--m': 0 }
+      })
+    })
+
     it('handles string values', () => {
       const value: ResponsiveStyles = { p: { sm: '1rem' } } as any
 

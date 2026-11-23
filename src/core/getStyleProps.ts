@@ -14,6 +14,13 @@ type ObjectValue = Responsive | StyleValue | undefined
 const isObject = (value: unknown): value is Responsive =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
 
+/**
+ * Whether a value leaves its property or breakpoint unset: `''`, `null` or `undefined`. The number
+ * `0` is a value like any other and writes `0`.
+ */
+export const isEmptyValue = (value: unknown): value is '' | null | undefined =>
+  value === undefined || value === null || value === ''
+
 const getClassValue = (prop: string, breakpoint: string, baseBreakpoint: string) =>
   breakpoint === baseBreakpoint
     ? `${prop}-$${prop}`
@@ -31,14 +38,14 @@ export const getStyleProps = (
   breakpoints: ResolvedBreakpoints,
   format?: PropertyFormat
 ): StylePropsResult => {
-  if (!obj) return {}
+  if (isEmptyValue(obj)) return {}
 
   const values = isObject(obj) ? obj : { [breakpoints.base]: obj }
   const orderedBreakpoints = [breakpoints.base, ...breakpoints.prefixed]
 
   const filteredValues = orderedBreakpoints.reduce((acc, breakpoint) => {
     const value = values[breakpoint]
-    if (value && acc[acc.length - 1]?.[1] !== value) acc.push([breakpoint, value])
+    if (!isEmptyValue(value) && acc[acc.length - 1]?.[1] !== value) acc.push([breakpoint, value])
     return acc
   }, [] as Array<[string, StyleValue]>)
 

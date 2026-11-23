@@ -27,15 +27,25 @@ export type KnownRulePrefix = keyof typeof knownRules
 export const isKnownRulePrefix = (prefix: string): prefix is KnownRulePrefix =>
   Object.hasOwn(knownRules, prefix)
 
-/** The rule for UnoCSS's `rules`. */
-export const knownRule = (prefix: KnownRulePrefix): Rule => {
-  const { property, value } = knownRules[prefix]
+/**
+ * Prefixes no base preset ships, so `presetVUnoStyle` adds their rules itself. They still need
+ * an entry in `properties` to be safelisted, and a rule writes no CSS until its class is used.
+ */
+export const builtInRules = {
+  'bgi': { property: 'background-image', value: 'var(--{name})' },
+  'bgv': { property: 'background', value: 'var(--{name})' }
+} as const satisfies Record<string, KnownRule>
 
-  return [
-    new RegExp(`^${prefix}-\\$([\\w-]+)$`),
-    ([, name]) => ({ [property]: value.replaceAll('{name}', name) })
-  ]
-}
+const toRule = ([prefix, { property, value }]: [string, KnownRule]): Rule => [
+  new RegExp(`^${prefix}-\\$([\\w-]+)$`),
+  ([, name]) => ({ [property]: value.replaceAll('{name}', name) })
+]
+
+/** The preset's own rules, for the built-in prefixes. */
+export const builtInRuleList = (): Rule[] => Object.entries(builtInRules).map(toRule)
+
+/** The rule for UnoCSS's `rules`. */
+export const knownRule = (prefix: KnownRulePrefix): Rule => toRule([prefix, knownRules[prefix]])
 
 /** The same rule as source text, in the shape the README's recipe teaches. */
 export const knownRuleSource = (prefix: KnownRulePrefix): string => {

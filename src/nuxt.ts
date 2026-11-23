@@ -11,7 +11,7 @@ import { resolveBreakpoints } from './core/breakpoints'
 import { resolveProperties } from './core/properties'
 import { createWebTypes, serializeWebTypes } from './core/webTypes'
 import { createDevtoolsData, createDevtoolsMiddleware, DEVTOOLS_ROUTE, generateSample } from './devtools/server'
-import { presetVUnoStyle } from './preset'
+import { DEFAULT_DIRECTIVE_NAME, presetVUnoStyle } from './preset'
 import { breakpointThemeKey, resolveThemeBreakpoints } from './themeBreakpoints'
 import { packageWebTypesPath, writeWebTypes } from './webTypes'
 
@@ -51,6 +51,8 @@ const syncWebTypes = (directiveName: string, properties: string[]): WebTypesStat
   const contents = serializeWebTypes(createWebTypes({
     directiveName,
     properties,
+    // `properties` is already every known property
+    defaultProperties: false,
     version: version()
   }))
 
@@ -104,6 +106,7 @@ const addResolvedPreset = (
   config.variants = [...(config.variants ?? []), ...(preset.variants ?? [])]
   config.rules = [...(config.rules ?? []), ...(preset.rules ?? [])]
   config.safelist = [...(config.safelist ?? []), ...(preset.safelist ?? [])]
+  config.extractors = [...(config.extractors ?? []), ...(preset.extractors ?? [])]
 
   // Queued rather than applied here: `config.theme` is only the user's theme, while the preset
   // needs the merged one to tell presetWind4's `breakpoint` key from the others' `breakpoints`.
@@ -137,15 +140,21 @@ const getThemeBreakpoints = (generator: Awaited<ReturnType<typeof createGenerato
   return breakpoints as BreakpointConfig
 }
 
+/** The options the runtime plugin passes to the directive and, in development, to the registry. */
+interface RuntimeOptions {
+  breakpoints: BreakpointConfig
+  baseBreakpoint: string
+  properties: NonNullable<VUnoStyleNuxtModuleOptions['properties']>
+  defaultProperties?: boolean
+}
+
 const renderRuntimePlugin = (
   directiveName: string,
-  breakpoints: BreakpointConfig,
-  baseBreakpoint: string,
-  properties: VUnoStyleNuxtModuleOptions['properties']
+  options: RuntimeOptions
 ) => `import { defineNuxtPlugin } from '#app'
 import { createVUnoStyle } from 'vue-uno-style'
 
-const directive = createVUnoStyle(${JSON.stringify({ breakpoints, baseBreakpoint, properties })})
+const directive = createVUnoStyle(${JSON.stringify(options)})
 
 export default defineNuxtPlugin((nuxtApp) => {
   nuxtApp.vueApp.directive(${JSON.stringify(directiveName)}, directive)
@@ -159,14 +168,12 @@ export default defineNuxtPlugin((nuxtApp) => {
  */
 const renderDevtoolsRuntimePlugin = (
   directiveName: string,
-  breakpoints: BreakpointConfig,
-  baseBreakpoint: string,
-  properties: VUnoStyleNuxtModuleOptions['properties']
+  options: RuntimeOptions
 ) => `import { defineNuxtPlugin } from '#app'
 import { createVUnoStyle } from 'vue-uno-style'
 import { createDevtoolsRegistry } from 'vue-uno-style/devtools'
 
-const options = ${JSON.stringify({ breakpoints, baseBreakpoint, properties })}
+const options = ${JSON.stringify(options)}
 const directive = createVUnoStyle(options)
 
 export default defineNuxtPlugin((nuxtApp) => {
@@ -197,13 +204,15 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
     devtools: true
   },
   setup(options, nuxt) {
-    // Fails the build here, naming the option, when no properties are configured
-    const resolvedProperties = resolveProperties(options.properties)
-    const { names } = resolvedProperties
-    const directiveName = options.directiveName ?? 'uno-style'
+    // Fails the build here, naming the option, on an invalid entry or when no property is known
+    const resolvedProperties = resolveProperties(options.properties, {
+      defaultProperties: options.defaultProperties
+    })
+    const { known } = resolvedProperties
+    const directiveName = options.directiveName ?? DEFAULT_DIRECTIVE_NAME
 
     const webTypes: WebTypesStatus = options.webTypes !== false
-      ? syncWebTypes(directiveName, names)
+      ? syncWebTypes(directiveName, known)
       : { status: 'disabled' }
 
     const devtools = Boolean(nuxt.options.dev)
@@ -256,6 +265,8 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
 
     const preset = presetVUnoStyle({
       properties: options.properties,
+      defaultProperties: options.defaultProperties,
+      directiveName,
       breakpoints: options.breakpoints,
       baseBreakpoint: options.baseBreakpoint,
       layer: options.layer ?? `v-${directiveName}`
@@ -331,12 +342,13 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
 
       addPluginTemplate({
         filename: 'vue-uno-style.mjs',
-        getContents: () => (devtools ? renderDevtoolsRuntimePlugin : renderRuntimePlugin)(
-          directiveName,
+        getContents: () => (devtools ? renderDevtoolsRuntimePlugin : renderRuntimePlugin)(directiveName, {
           breakpoints,
-          resolved.base,
-          options.properties
-        )
+          baseBreakpoint: resolved.base,
+          // Always a list, so the directive knows the default properties and warns about others
+          properties: options.properties ?? [],
+          ...(options.defaultProperties === false ? { defaultProperties: false } : {})
+        })
       })
 
       if (devtools) {

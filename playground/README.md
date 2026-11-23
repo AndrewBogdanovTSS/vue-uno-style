@@ -27,14 +27,14 @@ After changing the package's source, run `pnpm build` again and restart the dev 
 PLAYGROUND_PRESET=wind4 pnpm playground:verify
 ```
 
-The page needs no extra rules under `presetMini`: its properties are either in every preset or are the playground's own `bgi` and `bgv` rules.
+The page needs no extra rules under any preset: its properties are either in every preset or are `bgi` and `bgv`, whose rules the package's preset ships.
 
 ## What it shows
 
 | Where | What |
 |-------|------|
 | `config/vue-uno-style.ts` | The breakpoints and properties, in one TypeScript file that `nuxt.config.ts`, `uno.config.ts`, `eslint.config.js` and the page all import. |
-| `uno.config.ts` | The base preset chosen by `PLAYGROUND_PRESET`, and the playground's own `bgi-$*` and `bgv-$*` rules, since the package predefines no properties. |
+| `uno.config.ts` | The base preset chosen by `PLAYGROUND_PRESET`. |
 | `app/app.vue` | The page, one section per behaviour: values per breakpoint, argument and object forms, scalars and collapsed repeats, value formats, updates, composition and the directive's layer. |
 | `app/components/GeneratedOutput.vue` | Shows the classes and variables for a value, from the same `getStyle()` call the directive makes. |
 | `app/components/StatusBadge.vue` | A component with its own directive on its root, for the composition demo. |

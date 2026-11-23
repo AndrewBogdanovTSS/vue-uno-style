@@ -7,8 +7,13 @@ declare const __PACKAGE_VERSION__: string
 export interface NoMultipleVStyleOptions {
   /** Directive registration name without the `v-` prefix. */
   directiveName?: string
-  /** The properties configured for the preset. When set, other argument names are reported. */
+  /** The properties configured for the preset. Arguments outside them and the defaults are reported. */
   properties?: PropertyConfig[]
+  /**
+   * Whether the default properties are known. Defaults to `true`. With `false` and no
+   * `properties`, any argument is accepted.
+   */
+  defaultProperties?: boolean
 }
 
 export interface VUnoStyleEslintPlugin {
@@ -64,14 +69,14 @@ const asRuleNode = (node: VueNode): Rule.Node => node as unknown as Rule.Node
 
 /**
  * Disallows multiple v-uno-style directives on one element, and argument names outside the
- * configured properties when they are passed.
+ * known properties: the configured ones and the defaults.
  */
 export const noMultipleVStyle: Rule.RuleModule = {
   meta: {
     type: 'problem',
     fixable: 'code',
     docs: {
-      description: 'Disallow multiple v-uno-style directives and unconfigured properties'
+      description: 'Disallow multiple v-uno-style directives and unknown properties'
     },
     schema: [{
       type: 'object',
@@ -97,6 +102,9 @@ export const noMultipleVStyle: Rule.RuleModule = {
               }
             ]
           }
+        },
+        defaultProperties: {
+          type: 'boolean'
         }
       },
       additionalProperties: false
@@ -106,7 +114,7 @@ export const noMultipleVStyle: Rule.RuleModule = {
         'Multiple v-{{directiveName}} directives on a single element are not allowed. '
         + 'Combine them using the object syntax: v-{{directiveName}}="{ prop1: val1, prop2: val2 }".',
       unknownStyleProp:
-        'Unknown v-{{directiveName}} property "{{prop}}". Add it to the configured properties.'
+        'Unknown v-{{directiveName}} property "{{prop}}". It is not a default property: add it to the configured properties.'
     }
   },
 
@@ -117,8 +125,9 @@ export const noMultipleVStyle: Rule.RuleModule = {
     const sourceCode = context.sourceCode
     const options = context.options[0] as NoMultipleVStyleOptions | undefined
     const directiveName = options?.directiveName ?? defaultDirectiveName
-    const configured = options?.properties
-      ? new Set(resolveProperties(options.properties).names)
+    const defaultProperties = options?.defaultProperties ?? true
+    const configured = defaultProperties || options?.properties
+      ? new Set(resolveProperties(options?.properties, { defaultProperties }).known)
       : undefined
 
     return parserServices.defineTemplateBodyVisitor({
