@@ -154,6 +154,12 @@ const renderOverview = () => {
       <dt>Rule coverage</dt><dd>${missing.length
         ? `<span class="error">${missing.length} of ${data.coverage.length} properties have no rule</span>`
         : `<span class="ok">all ${data.coverage.length} properties generate CSS</span>`}</dd>
+      <dt>UnoCSS blocklist</dt><dd>${data.unoBlocked.length
+        ? `<span class="error">removes ${data.unoBlocked.length} known propert${data.unoBlocked.length > 1 ? 'ies' : 'y'}</span>`
+        : '<span class="ok">removes no known property</span>'}</dd>
+      <dt>Blocked</dt><dd>${data.blocked.length
+        ? data.blocked.map(({ name }) => `<code>${esc(name)}</code>`).join(' ')
+        : '<span class="muted">none</span>'}</dd>
       <dt>Safelist</dt><dd>${data.safelist.classes} classes, ${formatBytes(data.safelist.bytes)}</dd>
       <dt>Used this session</dt><dd>${seen
         ? `${data.properties.length - unused.length} of ${data.properties.length} properties`
@@ -189,7 +195,9 @@ const renderOverview = () => {
       const matched = item.tokens.filter((token) => token.matched).length
       const rule = matched === item.tokens.length
         ? pill('ok', 'ok')
-        : matched === 0 ? pill('no rule', 'error') : pill(`${matched}/${item.tokens.length} tokens`, 'warn')
+        : item.unoBlocked
+          ? pill('UnoCSS blocklist', 'error')
+          : matched === 0 ? pill('no rule', 'error') : pill(`${matched}/${item.tokens.length} tokens`, 'warn')
       const used = !seen ? '<span class="muted">–</span>' : seen.has(item.property) ? pill('yes', 'ok') : pill('not yet')
       return `<tr>
         <td><code>${esc(item.property)}</code></td>
@@ -218,6 +226,33 @@ const renderOverview = () => {
     <p class="muted">Configured and safelisted, but no directive on the pages visited so far set them.
     If no page ever does, removing them shrinks the safelist.</p>
     <div class="tokens">${unused.map(({ name }) => `<code>${esc(name)}</code>`).join(' ')}</div>
+  </section>` : ''}
+
+  ${data.unoBlocked.length ? `<section>
+    <h2>Removed by the UnoCSS blocklist</h2>
+    <p>An entry of your UnoCSS <code>blocklist</code> matches these properties' classes once
+    <code>vs:</code> is stripped, so they have no CSS. The directive still writes them, and nothing
+    else reports it. To forbid a property, move it to <code>blockedProperties</code>, which ESLint and
+    the directive report. To allow it, narrow the blocklist entry.</p>
+    <table><thead><tr><th>Property</th><th>Blocklist entry</th><th>Message</th></tr></thead><tbody>
+    ${data.unoBlocked.map((item) => `<tr>
+      <td><code>${esc(item.property)}</code></td>
+      <td><code>${esc(item.rule)}</code></td>
+      <td>${item.message ? esc(item.message) : '<span class="muted">–</span>'}</td>
+    </tr>`).join('')}
+    </tbody></table>
+  </section>` : ''}
+
+  ${data.blocked.length ? `<section>
+    <h2>Blocked properties</h2>
+    <p class="muted">From <code>blockedProperties</code>. The preset never safelists them, and ESLint,
+    the directive and the Warnings tab report every use.</p>
+    <table><thead><tr><th>Property</th><th>Message</th></tr></thead><tbody>
+    ${data.blocked.map((item) => `<tr>
+      <td><code>${esc(item.name)}</code></td>
+      <td>${item.message ? esc(item.message) : '<span class="muted">–</span>'}</td>
+    </tr>`).join('')}
+    </tbody></table>
   </section>` : ''}`
 }
 

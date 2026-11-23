@@ -39,6 +39,7 @@ type ModuleDefinition = {
       directiveName?: string
       properties?: Array<string | { name: string, format?: 'url' }>
       defaultProperties?: boolean
+      blockedProperties?: Array<string | { name: string, message?: string }>
       webTypes?: boolean
     },
     nuxt: unknown
@@ -137,6 +138,25 @@ describe('vue-uno-style Nuxt module', () => {
       { directiveName: 'style', properties: configured as never, defaultProperties: false },
       nuxt
     )).rejects.toThrow('No properties configured')
+  })
+
+  it('passes blocked properties to the runtime directive and keeps them out of web-types', async () => {
+    const blockedProperties = [{ name: 'opacity', message: 'Use op instead.' }]
+    const { hooks } = await setupModule({
+      directiveName: 'style',
+      breakpoints: { sm: 0, md: 768 },
+      webTypes: true,
+      blockedProperties
+    })
+
+    await hooks.get('modules:done')?.()
+
+    const template = vi.mocked(addPluginTemplate).mock.calls[0]?.[0]
+    if (!template || typeof template === 'string') throw new Error('Expected a plugin template')
+    const [, webTypes] = vi.mocked(writeWebTypes).mock.calls[0]!
+
+    expect(await template.getContents?.({} as never)).toContain('"blockedProperties":[{"name":"opacity","message":"Use op instead."}]')
+    expect(JSON.parse(webTypes).contributions.html['vue-directives'][0].argument.pattern.or).not.toContain('opacity')
   })
 
   it('passes an empty list to the runtime directive when no properties are configured', async () => {

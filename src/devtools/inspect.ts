@@ -1,7 +1,9 @@
 import type { ResolvedBreakpoints } from '../core/breakpoints'
 import type { ResolvedProperties } from '../core/properties'
+import { blockedPropertyMessage, findBlocked } from '../core/properties'
 
 export type ValueWarningKind =
+  | 'blocked-property'
   | 'unknown-property'
   | 'unknown-breakpoint'
   | 'invalid-value'
@@ -37,7 +39,7 @@ const checkScalar = (
 
 /**
  * Lists what in a binding value the directive will silently ignore or that the preset will not
- * style: properties outside the known ones, breakpoint keys that do not exist, and values
+ * style: blocked properties, properties outside the known ones, breakpoint keys that do not exist, and values
  * that are neither strings nor numbers.
  */
 export const inspectValue = (
@@ -62,7 +64,11 @@ export const inspectValue = (
   Object.entries(config).forEach(([property, responsive]) => {
     if (isEmpty(responsive)) return
 
-    if (properties && !properties.known.includes(property)) {
+    const blocked = findBlocked(properties, property)
+    if (blocked) {
+      warnings.push({ kind: 'blocked-property', property, message: blockedPropertyMessage(blocked) })
+    }
+    else if (properties && !properties.known.includes(property)) {
       warnings.push({
         kind: 'unknown-property',
         property,

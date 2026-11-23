@@ -138,6 +138,49 @@ describe.each(basePresets)('createDevtoolsData with $name', (base) => {
   })
 })
 
+/**
+ * A UnoCSS `blocklist` entry such as `/^opacity-/` also matches the directive's classes once `vs:`
+ * is stripped, so their CSS disappears. The tab names the entry instead of suggesting a rule.
+ */
+describe.each(basePresets)('UnoCSS blocklist with $name', ({ preset }) => {
+  const createBlockedContext = async (): Promise<DevtoolsContext> => {
+    const generator = await createGenerator({
+      presets: [preset(), presetVUnoStyle({ properties: ['c', 'opacity'], breakpoints })],
+      blocklist: [/^opacity-/, [/^tracking-/, { message: 'Use the type scale.' }]]
+    })
+
+    return {
+      ...context,
+      properties: resolveProperties(['c', 'opacity'], { blockedProperties: [{ name: 'z', message: 'Use the layer tokens.' }] }),
+      generator
+    }
+  }
+
+  it('names the blocklist entry for a configured property instead of suggesting a rule', async () => {
+    const { coverage } = await createDevtoolsData(await createBlockedContext())
+    const opacity = coverage.find((item) => item.property === 'opacity')!
+
+    expect(opacity.unoBlocked).toEqual({ rule: '/^opacity-/' })
+    expect(opacity.suggestion).toBeUndefined()
+    expect(coverage.find((item) => item.property === 'c')!.unoBlocked).toBeUndefined()
+  })
+
+  it('lists every known property the blocklist removes, default ones included, with the entry\'s message', async () => {
+    const { unoBlocked } = await createDevtoolsData(await createBlockedContext())
+
+    expect(unoBlocked).toEqual([
+      { property: 'opacity', rule: '/^opacity-/' },
+      { property: 'tracking', rule: '/^tracking-/', message: 'Use the type scale.' }
+    ])
+  })
+
+  it('lists the project\'s own blocked properties', async () => {
+    const { blocked } = await createDevtoolsData(await createBlockedContext())
+
+    expect(blocked).toEqual([{ name: 'z', message: 'Use the layer tokens.' }])
+  })
+})
+
 describe.each(basePresets)('generateSample with $name', (base) => {
   let context: DevtoolsContext
 

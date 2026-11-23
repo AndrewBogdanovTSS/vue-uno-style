@@ -1,4 +1,4 @@
-import type { PropertyConfig } from './properties'
+import type { BlockedPropertyConfig, PropertyConfig } from './properties'
 import { resolveProperties } from './properties'
 
 export interface WebTypesOptions {
@@ -13,6 +13,8 @@ export interface WebTypesOptions {
    * `properties`, any argument is accepted.
    */
   defaultProperties?: boolean
+  /** Properties never offered, even default ones. */
+  blockedProperties?: readonly BlockedPropertyConfig[]
 }
 
 /** Shape of the generated file, limited to the parts this package writes. */
@@ -47,7 +49,7 @@ const DOC_URL = 'https://github.com/AndrewBogdanovTSS/vue-uno-style#readme'
  * `v-<directiveName>` and the known properties as its arguments: the configured ones and the
  * defaults. The list is the same one the preset accepts, so completion cannot drift from it.
  */
-export const createWebTypes = ({ directiveName, version, properties, defaultProperties = true }: WebTypesOptions): WebTypes => ({
+export const createWebTypes = ({ directiveName, version, properties, defaultProperties = true, blockedProperties }: WebTypesOptions): WebTypes => ({
   '$schema': 'https://raw.githubusercontent.com/JetBrains/web-types/master/schema/web-types.json',
   'name': 'vue-uno-style',
   version,
@@ -72,7 +74,7 @@ export const createWebTypes = ({ directiveName, version, properties, defaultProp
           description: 'Style property to set responsively. Omit it to pass several '
             + 'properties as an object.',
           ...(defaultProperties || properties?.length
-            ? { pattern: { or: resolveProperties(properties, { defaultProperties }).known } }
+            ? { pattern: { or: resolveProperties(properties, { defaultProperties, blockedProperties }).known } }
             : {})
         }
       }]

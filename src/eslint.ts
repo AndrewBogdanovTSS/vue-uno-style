@@ -1,6 +1,6 @@
-import type { PropertyConfig } from './core/properties'
+import type { BlockedPropertyConfig, PropertyConfig } from './core/properties'
 import type { Linter, Rule } from 'eslint'
-import { resolveProperties } from './core/properties'
+import { blockedPropertyMessage, findBlocked, resolveProperties } from './core/properties'
 
 declare const __PACKAGE_VERSION__: string
 
@@ -14,6 +14,11 @@ export interface NoMultipleVStyleOptions {
    * `properties`, any argument is accepted.
    */
   defaultProperties?: boolean
+  /**
+   * Properties the project forbids. A static argument or an object literal key naming one is
+   * reported with its message, default properties included.
+   */
+  blockedProperties?: BlockedPropertyConfig[]
 }
 
 export interface VUnoStyleEslintPlugin {
@@ -38,6 +43,20 @@ interface VueIdentifier extends VueNode {
 interface VueDirectiveKey {
   name?: { name?: string }
   argument?: VueNode | VueIdentifier | null
+}
+
+interface ObjectProperty extends VueNode {
+  type: string
+  computed?: boolean
+  key?: VueNode & { name?: string, value?: unknown }
+}
+
+/** The static name of an object literal key: `mt` in `{ mt: a }` or `{ 'mt': a }`. */
+const objectKeyName = (property: ObjectProperty): string | undefined => {
+  if (property.type !== 'Property' || property.computed || !property.key) return undefined
+  if (property.key.type === 'Identifier') return property.key.name
+  if (property.key.type === 'Literal' && typeof property.key.value === 'string') return property.key.value
+  return undefined
 }
 
 interface VueDirectiveAttribute extends VueNode {
@@ -105,6 +124,23 @@ export const noMultipleVStyle: Rule.RuleModule = {
         },
         defaultProperties: {
           type: 'boolean'
+        },
+        blockedProperties: {
+          type: 'array',
+          items: {
+            anyOf: [
+              { type: 'string', minLength: 1 },
+              {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', minLength: 1 },
+                  message: { type: 'string' }
+                },
+                required: ['name'],
+                additionalProperties: false
+              }
+            ]
+          }
         }
       },
       additionalProperties: false
@@ -113,6 +149,7 @@ export const noMultipleVStyle: Rule.RuleModule = {
       multipleVStyle:
         'Multiple v-{{directiveName}} directives on a single element are not allowed. '
         + 'Combine them using the object syntax: v-{{directiveName}}="{ prop1: val1, prop2: val2 }".',
+      blockedStyleProp: 'v-{{directiveName}}: {{text}}',
       unknownStyleProp:
         'Unknown v-{{directiveName}} property "{{prop}}". It is not a default property: add it to the configured properties.'
     }
@@ -126,9 +163,27 @@ export const noMultipleVStyle: Rule.RuleModule = {
     const options = context.options[0] as NoMultipleVStyleOptions | undefined
     const directiveName = options?.directiveName ?? defaultDirectiveName
     const defaultProperties = options?.defaultProperties ?? true
-    const configured = defaultProperties || options?.properties
-      ? new Set(resolveProperties(options?.properties, { defaultProperties }).known)
-      : undefined
+    // With the defaults off and no properties, nothing is known, so any argument passes. The
+    // defaults then only stand in to resolve the blocked properties, which are still checked.
+    const checksKnown = defaultProperties || Boolean(options?.properties?.length)
+    const resolved = resolveProperties(options?.properties, {
+      defaultProperties: checksKnown ? defaultProperties : true,
+      blockedProperties: options?.blockedProperties
+    })
+    const configured = checksKnown ? new Set(resolved.known) : undefined
+
+    /** Reports `name` when the project blocks it, and says whether it did. */
+    const reportBlocked = (node: VueNode, name: string): boolean => {
+      const blocked = findBlocked(resolved, name)
+      if (blocked) {
+        context.report({
+          node: asRuleNode(node),
+          messageId: 'blockedStyleProp',
+          data: { directiveName, text: blockedPropertyMessage(blocked) }
+        })
+      }
+      return Boolean(blocked)
+    }
 
     return parserServices.defineTemplateBodyVisitor({
       VStartTag(node) {
@@ -137,7 +192,16 @@ export const noMultipleVStyle: Rule.RuleModule = {
         )
 
         directiveAttributes.forEach((attribute) => {
+          const expression = attribute.value?.expression
+          if (!attribute.key?.argument && expression?.type === 'ObjectExpression') {
+            (expression as unknown as { properties: ObjectProperty[] }).properties.forEach((property) => {
+              const name = objectKeyName(property)
+              if (name && property.key) reportBlocked(property.key, name)
+            })
+          }
+
           const argument = attribute.key?.argument
+          if (argument?.type === 'VIdentifier' && reportBlocked(argument, (argument as VueIdentifier).name)) return
           if (
             configured
             && argument?.type === 'VIdentifier'

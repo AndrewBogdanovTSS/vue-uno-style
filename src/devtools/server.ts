@@ -1,6 +1,6 @@
 import type { BreakpointConfig, ResolvedBreakpoints } from '../core/breakpoints'
 import type { StyleValue } from '../core/getStyle'
-import type { PropertyFormat, ResolvedProperties } from '../core/properties'
+import type { BlockedProperty, PropertyFormat, ResolvedProperties } from '../core/properties'
 import type { BreakpointThemeKey } from '../themeBreakpoints'
 import type { ValueWarning } from './inspect'
 import type { IncomingMessage, ServerResponse } from 'node:http'
@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getStyle } from '../core/getStyle'
-import { getVarsClasses } from '../core/varsClasses'
+import { getVarsClasses, VARIANT_PREFIX } from '../core/varsClasses'
 import { isKnownRulePrefix, knownRuleSource } from '../knownRules'
 import { inspectValue } from './inspect'
 import { renderDevtoolsPage } from './page'
@@ -28,8 +28,18 @@ export interface PropertyCoverage {
   tokens: Array<{ token: string, matched: boolean }>
   /** Bytes of CSS the property's safelisted tokens generate. */
   bytes: number
-  /** A `rules` entry to add when no token generated CSS. */
+  /** A `rules` entry to add when no token generated CSS and no blocklist entry explains it. */
   suggestion?: string
+  /** The UnoCSS `blocklist` entry that removes the property's CSS, when one does. */
+  unoBlocked?: UnoBlocked
+}
+
+/** A UnoCSS `blocklist` entry that removes a property's CSS. */
+export interface UnoBlocked {
+  /** The entry, as text: a string, a regular expression or a function's source. */
+  rule: string
+  /** The entry's own message, when it has one. */
+  message?: string
 }
 
 export interface DevtoolsData {
@@ -52,6 +62,13 @@ export interface DevtoolsData {
   webTypes: WebTypesStatus
   coverage: PropertyCoverage[]
   safelist: { classes: number, bytes: number }
+  /** The properties the project blocks through `blockedProperties`. */
+  blocked: BlockedProperty[]
+  /**
+   * Known properties, configured or default, whose CSS the app's UnoCSS `blocklist` removes.
+   * The directive still writes their classes, so they style nothing, and nothing else reports it.
+   */
+  unoBlocked: Array<UnoBlocked & { property: string }>
 }
 
 export interface DevtoolsContext {
@@ -66,7 +83,7 @@ export interface DevtoolsContext {
   unoPresets: string[]
   configSources: string[]
   webTypes: WebTypesStatus
-  generator: Pick<UnoGenerator, 'generate'>
+  generator: Pick<UnoGenerator, 'generate' | 'getBlocked'>
 }
 
 export interface SampleInput {
@@ -103,8 +120,30 @@ const generateCss = async (generator: DevtoolsContext['generator'], tokens: stri
 }
 
 /**
+ * The UnoCSS `blocklist` entry that removes `property`'s CSS. UnoCSS checks the token as written
+ * and again once the variants are stripped, so both forms are asked. Only meaningful for a
+ * property whose classes generated nothing.
+ */
+const findUnoBlocked = (generator: DevtoolsContext['generator'], property: string): UnoBlocked | undefined => {
+  const entry = generator.getBlocked(`${property}-${property}`)
+    ?? generator.getBlocked(`${VARIANT_PREFIX}${property}-${property}`)
+  if (!entry) return undefined
+
+  const [rule, meta] = entry
+  const message = typeof meta?.message === 'function'
+    ? meta.message(`${property}-${property}`)
+    : meta?.message
+
+  return {
+    rule: rule instanceof RegExp ? String(rule) : typeof rule === 'function' ? 'a function' : JSON.stringify(rule),
+    ...(message ? { message } : {})
+  }
+}
+
+/**
  * Checks every safelisted token of every configured property against the app's generator. A
- * property whose tokens generate nothing has no UnoCSS rule for `<prefix>-$<variable>`.
+ * property whose tokens generate nothing has no UnoCSS rule for `<prefix>-$<variable>`, or an
+ * entry of the app's `blocklist` removes it.
  */
 export const createCoverage = async (context: DevtoolsContext): Promise<PropertyCoverage[]> =>
   Promise.all(context.properties.names.map(async (property) => {
@@ -112,19 +151,35 @@ export const createCoverage = async (context: DevtoolsContext): Promise<Property
     const { css, matched } = await generateCss(context.generator, tokens)
     const format = context.properties.formats[property]
     const anyMatched = tokens.some((token) => matched.has(token))
+    const unoBlocked = anyMatched ? undefined : findUnoBlocked(context.generator, property)
 
     return {
       property,
       ...(format ? { format } : {}),
       tokens: tokens.map((token) => ({ token, matched: matched.has(token) })),
       bytes: byteLength(css),
-      ...(anyMatched ? {} : { suggestion: suggestRule(property) })
+      ...(unoBlocked ? { unoBlocked } : anyMatched ? {} : { suggestion: suggestRule(property) })
     }
   }))
 
+/**
+ * Every known property, configured or default, whose base class the app's UnoCSS `blocklist`
+ * removes. One generate call covers them all.
+ */
+export const findUnoBlockedProperties = async (context: DevtoolsContext): Promise<DevtoolsData['unoBlocked']> => {
+  const tokens = context.properties.known.map((property) => `${VARIANT_PREFIX}${property}-${property}`)
+  const { matched } = await generateCss(context.generator, tokens)
+
+  return context.properties.known.flatMap((property) => {
+    if (matched.has(`${VARIANT_PREFIX}${property}-${property}`)) return []
+    const unoBlocked = findUnoBlocked(context.generator, property)
+    return unoBlocked ? [{ property, ...unoBlocked }] : []
+  })
+}
+
 /** Everything the tab shows about the build: config, rule coverage, safelist cost and status. */
 export const createDevtoolsData = async (context: DevtoolsContext): Promise<DevtoolsData> => {
-  const coverage = await createCoverage(context)
+  const [coverage, unoBlocked] = await Promise.all([createCoverage(context), findUnoBlockedProperties(context)])
 
   return {
     version: context.version,
@@ -149,7 +204,9 @@ export const createDevtoolsData = async (context: DevtoolsContext): Promise<Devt
     safelist: {
       classes: coverage.reduce((total, item) => total + item.tokens.length, 0),
       bytes: coverage.reduce((total, item) => total + item.bytes, 0)
-    }
+    },
+    blocked: context.properties.blocked,
+    unoBlocked
   }
 }
 

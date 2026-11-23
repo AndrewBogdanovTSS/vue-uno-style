@@ -217,6 +217,37 @@ entry you configure yourself. The Nuxt module passes it on.
 > your source sets, safelists their classes and the configured ones, and adds
 > the `vs:` variant and its layer. See [The directive's layer](#the-directives-layer).
 
+### Blocked properties
+
+`blockedProperties` forbids properties across the project, default ones
+included. Give an entry a `message` to say what to use instead:
+
+```ts
+// vue-uno-style.properties.js
+export const blockedProperties = [
+  'tracking',
+  { name: 'opacity', message: 'Use op instead.' }
+]
+```
+
+A blocked property is never known:
+
+- **The preset** neither scans for it nor safelists it, so it has no CSS.
+- **ESLint** reports it as a static argument and as a key of an object literal,
+  with its message: `v-uno-style: Property "opacity" is blocked in this project. Use op instead.`
+- **The directive** logs the same sentence in development builds, for values
+  from data too. It still writes the class and the variable, which have no CSS.
+- **The DevTools tab** shows it as a `blocked-property` warning.
+- **WebStorm** no longer offers it.
+
+Listing a property in both `properties` and `blockedProperties` throws. Pass
+the same list to every entry you configure yourself; the Nuxt module passes it
+on.
+
+A UnoCSS `blocklist` entry such as `/^opacity-/` also removes the property's
+CSS: UnoCSS checks the class again once `vs:` is stripped. Nothing but the
+DevTools tab reports that, so forbid a property with `blockedProperties`.
+
 ### Custom rules
 
 A property needs a UnoCSS rule that turns `<prefix>-$<variable>` into CSS.
@@ -359,8 +390,11 @@ During `nuxt dev`, the module adds a **vue-uno-style** tab to Nuxt DevTools:
     For a prefix from [Prefixes your preset lacks](#prefixes-your-preset-lacks),
     that is the tested rule from the table. For any other prefix, it is the
     general shape with the CSS property left for you to fill in.
-  - **Status.** It also shows the safelist size, the web-types status, and which
-    properties no page has used yet this session.
+  - **UnoCSS blocklist.** It lists every known property, configured or default,
+    whose CSS an entry of your UnoCSS `blocklist` removes, with the entry and
+    its message. Coverage names that entry instead of suggesting a rule.
+  - **Status.** It also shows the safelist size, the web-types status, the
+    blocked properties, and which properties no page has used yet this session.
 - **Elements**: every element on the current page that carries the directive.
   For each one it shows the owning component, the value per breakpoint with the
   active breakpoint marked, each binding's classes and variables, and what one
@@ -390,6 +424,7 @@ the element, the kind and a message. Click the element to open it in
 
 | Kind | When | Example |
 |------|------|---------|
+| `blocked-property` | The property is in `blockedProperties`. The message says what to use instead. | `v-uno-style:opacity="'0.5'"` |
 | `unknown-property` | The property is neither in `properties` nor a default one. The preset does not safelist its classes. | `v-uno-style:blur="'4px'"` |
 | `unknown-breakpoint` | A key is not one of your breakpoints. The directive drops its value. | `{ sm: '1rem', tablet: '2rem' }` |
 | `invalid-value` | A value is neither a string nor a number, or the directive has no argument and the value is not an object. | `v-uno-style:c="true"`, `v-uno-style="'red'"` |
@@ -534,14 +569,15 @@ Nuxt.
 ## Options
 
 Every option each entry accepts. The Nuxt module passes `properties`,
-`defaultProperties`, `breakpoints` and `baseBreakpoint` on to the preset and
+`defaultProperties`, `blockedProperties`, `breakpoints` and `baseBreakpoint` on to the preset and
 the directive, and `directiveName` and `layer` to the preset, so a Nuxt app
 sets them once.
 
 ### Property entries
 
 Each item in `properties` is a string or an object. `'c'` is the same as
-`{ name: 'c' }`.
+`{ name: 'c' }`. Items in `blockedProperties` take the same name, with an
+optional `message` string in place of `format`.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
@@ -567,6 +603,7 @@ registered, and fails the build without it.
 |--------|------|---------|-------------|
 | `properties` | `PropertyConfig[]` | none | Properties safelisted always, next to the default properties the source sets. See [Configured properties](#configured-properties) and [Property entries](#property-entries). |
 | `defaultProperties` | `boolean` | `true` | Whether the [default properties](#default-properties) are known. `false` makes `properties` required. |
+| `blockedProperties` | `BlockedPropertyConfig[]` | none | Properties the project forbids. See [Blocked properties](#blocked-properties). |
 | `breakpoints` | `Record<string, number \| string>` | the UnoCSS theme's | Breakpoints for the preset and the directive. They replace the theme's breakpoints, so the base preset's own variants use them too. |
 | `baseBreakpoint` | `string` | the zero-valued breakpoint | The unprefixed breakpoint. See [Breakpoints](#breakpoints). |
 | `directiveName` | `string` | `'uno-style'` | Registration name without `v-`. `'style'` registers `v-style`. |
@@ -592,6 +629,7 @@ the DevTools tab loads it on its first request.
 |--------|------|---------|-------------|
 | `properties` | `PropertyConfig[]` | none | Safelists every class the directive can write for these properties. |
 | `defaultProperties` | `boolean` | `true` | Whether the [default properties](#default-properties) are known. The preset safelists each one the source sets. `false` makes `properties` required. |
+| `blockedProperties` | `BlockedPropertyConfig[]` | none | Never scanned for or safelisted, default ones included. One also in `properties` throws. |
 | `directiveName` | `string` | `'uno-style'` | Directive name without `v-`, so the preset finds the properties the source sets. |
 | `breakpoints` | `Record<string, number \| string>` | `theme.breakpoints`, or `theme.breakpoint` under `presetWind4` | Breakpoints for the media queries and the safelist. They replace that theme key, so the base preset's own variants use them too. |
 | `baseBreakpoint` | `string` | the zero-valued breakpoint | The unprefixed breakpoint. |
@@ -610,6 +648,7 @@ preset.
 | `baseBreakpoint` | `string` | the zero-valued breakpoint | The unprefixed breakpoint. |
 | `properties` | `PropertyConfig[]` | none | Applies value formats. In development, warns about a property that is neither listed nor a default one. Without it, nothing is warned about. |
 | `defaultProperties` | `boolean` | `true` | Whether the default properties are known. |
+| `blockedProperties` | `BlockedPropertyConfig[]` | none | In development, each use logs that the property is blocked, with its message. |
 
 `vUnoStyle` is `createVUnoStyle({ breakpoints: { sm: 0, md: 768, lg: 1024 } })`,
 with no properties, so it applies only `bgi`'s built-in `url` format.
@@ -623,6 +662,7 @@ Options for `vue-uno-style/no-multiple-v-style`.
 | `directiveName` | `string` | `'uno-style'` | Directive name without `v-`. |
 | `properties` | `PropertyConfig[]` | none | Known next to the defaults. A static argument (`v-uno-style:x`) that is neither listed nor a default property is reported. Object keys and dynamic arguments are not checked. |
 | `defaultProperties` | `boolean` | `true` | Whether the default properties are known. With `false` and no `properties`, no argument is reported. |
+| `blockedProperties` | `BlockedPropertyConfig[]` | none | A static argument or object literal key naming one is reported with its message, whatever the other options. |
 
 `configs.recommended` turns the rule on as `error` for `**/*.vue`, without
 options and without a parser, so it reports any argument outside the default
@@ -640,6 +680,7 @@ result into the file's text.
 | `version` | `string` | required | Version recorded in the file. WebStorm uses it to tell revisions apart. |
 | `properties` | `PropertyConfig[]` | none | Arguments offered for completion, before the default properties. |
 | `defaultProperties` | `boolean` | `true` | Whether the default properties are offered. With `false` and no `properties`, any argument is accepted. |
+| `blockedProperties` | `BlockedPropertyConfig[]` | none | Never offered, default ones included. |
 
 ## API
 

@@ -146,6 +146,7 @@ interface RuntimeOptions {
   baseBreakpoint: string
   properties: NonNullable<VUnoStyleNuxtModuleOptions['properties']>
   defaultProperties?: boolean
+  blockedProperties?: VUnoStyleNuxtModuleOptions['blockedProperties']
 }
 
 const renderRuntimePlugin = (
@@ -206,7 +207,8 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
   setup(options, nuxt) {
     // Fails the build here, naming the option, on an invalid entry or when no property is known
     const resolvedProperties = resolveProperties(options.properties, {
-      defaultProperties: options.defaultProperties
+      defaultProperties: options.defaultProperties,
+      blockedProperties: options.blockedProperties
     })
     const { known } = resolvedProperties
     const directiveName = options.directiveName ?? DEFAULT_DIRECTIVE_NAME
@@ -266,6 +268,7 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
     const preset = presetVUnoStyle({
       properties: options.properties,
       defaultProperties: options.defaultProperties,
+      blockedProperties: options.blockedProperties,
       directiveName,
       breakpoints: options.breakpoints,
       baseBreakpoint: options.baseBreakpoint,
@@ -347,7 +350,8 @@ export default defineNuxtModule<VUnoStyleNuxtModuleOptions>({
           baseBreakpoint: resolved.base,
           // Always a list, so the directive knows the default properties and warns about others
           properties: options.properties ?? [],
-          ...(options.defaultProperties === false ? { defaultProperties: false } : {})
+          ...(options.defaultProperties === false ? { defaultProperties: false } : {}),
+          ...(options.blockedProperties?.length ? { blockedProperties: options.blockedProperties } : {})
         })
       })
 

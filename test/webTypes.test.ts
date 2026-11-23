@@ -25,6 +25,13 @@ describe('createWebTypes', () => {
     ])
   })
 
+  it('never offers a blocked property', () => {
+    const [directive] = createWebTypes({ directiveName: 'uno-style', version: '1.2.3', blockedProperties: ['mt', { name: 'opacity' }] })
+      .contributions.html['vue-directives']
+
+    expect(directive.argument.pattern?.or).toEqual(defaultProperties.filter((name) => !['mt', 'opacity'].includes(name)))
+  })
+
   it('offers the default properties when none are configured', () => {
     const [shipped] = createWebTypes({ directiveName: 'uno-style', version: '1.2.3' })
       .contributions.html['vue-directives']

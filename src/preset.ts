@@ -1,5 +1,5 @@
 import type { BreakpointConfig } from './core/breakpoints'
-import type { PropertyConfig } from './core/properties'
+import type { BlockedPropertyConfig, PropertyConfig } from './core/properties'
 import type { Extractor, Variant } from 'unocss'
 import { definePreset } from 'unocss'
 import { resolveBreakpoints } from './core/breakpoints'
@@ -22,6 +22,11 @@ export interface PresetVUnoStyleOptions {
    * one it finds in the source. With `false`, only `properties` are known and safelisted.
    */
   defaultProperties?: boolean
+  /**
+   * Properties the project forbids, with an optional message: `['tracking', { name: 'opacity',
+   * message: 'Use op instead.' }]`. A blocked property is never known, even a default one.
+   */
+  blockedProperties?: readonly BlockedPropertyConfig[]
   /**
    * Directive registration name without the `v-` prefix, so the preset finds the properties the
    * source sets. Defaults to `uno-style`. The Nuxt module passes its own.
@@ -122,9 +127,10 @@ export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions | undefined>(
     baseBreakpoint,
     layer = DEFAULT_LAYER,
     directiveName = DEFAULT_DIRECTIVE_NAME,
-    defaultProperties
+    defaultProperties,
+    blockedProperties
   } = options ?? {}
-  const { names, known } = resolveProperties(options?.properties, { defaultProperties })
+  const { names, known } = resolveProperties(options?.properties, { defaultProperties, blockedProperties })
   const configuredBreakpoints = breakpoints
     ? toUnoBreakpoints(breakpoints)
     : undefined

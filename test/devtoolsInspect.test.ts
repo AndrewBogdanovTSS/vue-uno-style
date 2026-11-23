@@ -25,6 +25,16 @@ describe('inspectValue', () => {
     expect(inspectValue({ blur: '4px' }, undefined, breakpoints)).toEqual([])
   })
 
+  it('reports a blocked property with its message, and not as unknown', () => {
+    const blocking = resolveProperties(['c'], { blockedProperties: [{ name: 'mt', message: 'Use gap.' }] })
+
+    expect(inspectValue({ mt: '8px', c: 'red' }, undefined, breakpoints, blocking)).toEqual([{
+      kind: 'blocked-property',
+      property: 'mt',
+      message: 'Property "mt" is blocked in this project. Use gap.'
+    }])
+  })
+
   it('reports a default property once the defaults are off', () => {
     const configuredOnly = resolveProperties(['c'], { defaultProperties: false })
 

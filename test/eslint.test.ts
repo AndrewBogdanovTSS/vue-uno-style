@@ -82,6 +82,40 @@ describe('vue-uno-style/no-multiple-v-style', () => {
     })
   })
 
+  describe('blocked properties', () => {
+    const blockedProperties = ['tracking', { name: 'opacity', message: 'Use op instead.' }]
+    const lint = (code: string, options: Record<string, unknown> = { blockedProperties }) => new Linter({ configType: 'flat' })
+      .verify(code, [{
+        ...createConfig()[0],
+        rules: { 'vue-uno-style/no-multiple-v-style': ['error', options] }
+      }], { filename: 'test.vue' })
+
+    it('reports a blocked argument with its message, and not as unknown', () => {
+      expect(lint('<template><div v-uno-style:opacity="a" /></template>')).toEqual([expect.objectContaining({
+        messageId: 'blockedStyleProp',
+        message: 'v-uno-style: Property "opacity" is blocked in this project. Use op instead.'
+      })])
+    })
+
+    it('reports a blocked key of an object literal, quoted or not', () => {
+      const messages = lint('<template><div v-uno-style="{ c: a, tracking: b, \'opacity\': c, [dynamic]: d, ...rest }" /></template>')
+
+      expect(messages.map(({ message }) => message)).toEqual([
+        'v-uno-style: Property "tracking" is blocked in this project.',
+        'v-uno-style: Property "opacity" is blocked in this project. Use op instead.'
+      ])
+    })
+
+    it('reports blocked properties even with the defaults off and nothing configured', () => {
+      const messages = lint('<template><div v-uno-style:tracking="a" /><p v-uno-style:anything="b" /></template>', {
+        defaultProperties: false,
+        blockedProperties
+      })
+
+      expect(messages.map(({ messageId }) => messageId)).toEqual(['blockedStyleProp'])
+    })
+  })
+
   describe('invalid', () => {
     it('reports a static property that is neither configured nor a default one', () => {
       const expected = [expect.objectContaining({

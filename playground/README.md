@@ -17,7 +17,7 @@ pnpm playground:dev
 
 After changing the package's source, run `pnpm build` again and restart the dev server.
 
-`pnpm playground:verify` lints the app, lints a fixture that must fail, generates the static site into `playground/.output/public` and checks the generated HTML and CSS.
+`pnpm playground:verify` lints the app, lints two fixtures that must fail (two directives on one element, and a blocked property), generates the static site into `playground/.output/public` and checks the generated HTML and CSS.
 
 ## Base presets
 
@@ -33,7 +33,7 @@ The page needs no extra rules under any preset: its properties are either in eve
 
 | Where | What |
 |-------|------|
-| `config/vue-uno-style.ts` | The breakpoints and properties, in one TypeScript file that `nuxt.config.ts`, `uno.config.ts`, `eslint.config.js` and the page all import. |
+| `config/vue-uno-style.ts` | The breakpoints, properties and blocked properties, in one TypeScript file that `nuxt.config.ts`, `uno.config.ts`, `eslint.config.js` and the page all import. |
 | `uno.config.ts` | The base preset chosen by `PLAYGROUND_PRESET`. |
 | `app/app.vue` | The page, one section per behaviour: values per breakpoint, argument and object forms, scalars and collapsed repeats, value formats, updates, composition and the directive's layer. |
 | `app/components/GeneratedOutput.vue` | Shows the classes and variables for a value, from the same `getStyle()` call the directive makes. |

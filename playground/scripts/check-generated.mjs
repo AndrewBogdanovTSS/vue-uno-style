@@ -73,7 +73,7 @@ assert.match(css, /@media \((?:min-width: ?768px|width>=768px)\)/)
 for (const selector of ['.vs\\:mt-\\$mt{', '.vs\\:md\\:mt-\\$mt-md{', '.vs\\:lg\\:mt-\\$mt-lg{', '.vs\\:px-\\$px{']) {
   assert.ok(css.includes(selector), `no CSS for the scanned selector ${selector}`)
 }
-for (const unused of ['mb', 'ml', 'mr', 'my', 'pl', 'pr', 'pb', 'pt']) {
+for (const unused of ['mb', 'ml', 'mr', 'my', 'pl', 'pr', 'pb', 'pt', 'tracking', 'indent']) {
   assert.ok(!css.includes(`.vs\\:${unused}-\\$${unused}`), `CSS has the unused default property "${unused}"`)
 }
 

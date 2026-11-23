@@ -318,6 +318,18 @@ describe.each(basePresets)('presetVUnoStyle scanning with $name', ({ preset, the
     expect(vsClasses(matched)).toEqual(classesOf(['c']))
   })
 
+  it('neither scans for nor safelists a blocked default property', async () => {
+    const uno = await createUno({ blockedProperties: ['mt', { name: 'px', message: 'Use the container.' }] })
+    const { matched } = await uno.generate('<div v-uno-style:mt="a" v-uno-style="{ px: b, pb: c }" />', { preflights: false })
+
+    expect(vsClasses(matched)).toEqual(classesOf(['pb']))
+  })
+
+  it('throws when a property is both configured and blocked', () => {
+    expect(() => presetVUnoStyle({ properties: ['mt'], blockedProperties: ['mt'] }))
+      .toThrow('Property "mt" is both configured and blocked')
+  })
+
   it('serves every default property with a rule', async () => {
     const uno = await createUno({ properties: [...defaultProperties] })
     const { matched } = await uno.generate('', { preflights: false })

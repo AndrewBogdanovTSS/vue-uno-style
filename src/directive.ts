@@ -1,6 +1,6 @@
 import type { ResolveBreakpointsOptions, ResolvedBreakpoints } from './core/breakpoints'
 import type { Responsive, ResponsiveStyles, StyleResult, StyleValue } from './core/getStyle'
-import type { PropertyConfig, ResolvedProperties } from './core/properties'
+import type { BlockedPropertyConfig, PropertyConfig, ResolvedProperties } from './core/properties'
 import type { DirectiveBinding, ObjectDirective, VNode } from 'vue'
 import { normalizeClass, normalizeStyle } from 'vue'
 import { resolveBreakpoints } from './core/breakpoints'
@@ -19,6 +19,11 @@ export interface VUnoStyleOptions extends ResolveBreakpointsOptions {
   properties?: readonly PropertyConfig[]
   /** Whether the default properties count as known. Defaults to `true`. */
   defaultProperties?: boolean
+  /**
+   * Properties the project forbids, with an optional message: `['tracking', { name: 'opacity',
+   * message: 'Use op instead.' }]`. A blocked property is never known, even a default one.
+   */
+  blockedProperties?: readonly BlockedPropertyConfig[]
 }
 
 const DEFAULT_OPTIONS = {
@@ -105,7 +110,10 @@ export const createVUnoStyle = (options: VUnoStyleOptions): ObjectDirective<HTML
   const context: DirectiveContext = {
     breakpoints: resolveBreakpoints(options),
     properties: options.properties
-      ? resolveProperties(options.properties, { defaultProperties: options.defaultProperties })
+      ? resolveProperties(options.properties, {
+          defaultProperties: options.defaultProperties,
+          blockedProperties: options.blockedProperties
+        })
       : undefined
   }
 

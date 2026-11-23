@@ -11,12 +11,30 @@ export type PropertyFormat = 'url'
  */
 export type PropertyConfig = string | { name: string, format?: PropertyFormat }
 
+/**
+ * A property the project forbids, with an optional message saying what to use instead. Use the
+ * object form to give it the message.
+ */
+export type BlockedPropertyConfig = string | { name: string, message?: string }
+
+export interface BlockedProperty {
+  name: string
+  /** What to use instead, shown next to every report of the property. */
+  message?: string
+}
+
 export interface ResolvePropertiesOptions {
   /**
    * Whether the default properties count as known. Defaults to `true`. With `false`, only the
    * configured properties are known, and the list must not be empty.
    */
   defaultProperties?: boolean
+  /**
+   * Properties the project forbids, default ones included. They are never known: the preset
+   * neither scans for nor safelists them, and ESLint, the directive and the DevTools tab report
+   * them with their message. Listing one in `properties` too throws.
+   */
+  blockedProperties?: readonly BlockedPropertyConfig[]
 }
 
 export interface ResolvedProperties {
@@ -30,6 +48,8 @@ export interface ResolvedProperties {
   known: string[]
   /** Value format per property, for the properties that take one. */
   formats: Record<string, PropertyFormat>
+  /** The blocked properties, in configured order. None of them is known. */
+  blocked: BlockedProperty[]
 }
 
 const NAME = /^[a-z][a-z0-9-]*$/i
@@ -72,7 +92,7 @@ export const builtInFormats: Readonly<Record<string, PropertyFormat>> = { bgi: '
  */
 export const resolveProperties = (
   properties: readonly PropertyConfig[] | undefined,
-  { defaultProperties: withDefaults = true }: ResolvePropertiesOptions = {}
+  { defaultProperties: withDefaults = true, blockedProperties }: ResolvePropertiesOptions = {}
 ): ResolvedProperties => {
   if (!withDefaults && !properties?.length) {
     throw new Error(
@@ -107,17 +127,60 @@ export const resolveProperties = (
     if (format) formats[name] = format
   })
 
+  const blocked = resolveBlocked(blockedProperties)
+  const conflict = blocked.find(({ name }) => names.includes(name))
+  if (conflict) {
+    throw new Error(
+      `[vue-uno-style] Property "${conflict.name}" is both configured and blocked. Remove it from one of the lists.`
+    )
+  }
+
+  const blockedNames = new Set(blocked.map(({ name }) => name))
   const known = withDefaults
-    ? [...names, ...defaultProperties.filter((name) => !names.includes(name))]
+    ? [...names, ...defaultProperties.filter((name) => !names.includes(name) && !blockedNames.has(name))]
     : [...names]
 
   return {
     names,
     known,
+    blocked,
     // Only the formats of known properties, so `bgi` keeps none once the defaults are off
     formats: Object.fromEntries(Object.entries(formats).filter(([name]) => known.includes(name)))
   }
 }
+
+const resolveBlocked = (entries: readonly BlockedPropertyConfig[] | undefined): BlockedProperty[] => {
+  const blocked: BlockedProperty[] = []
+
+  entries?.forEach((entry) => {
+    const { name, message } = typeof entry === 'string' ? { name: entry, message: undefined } : entry
+
+    if (!isPropertyName(name)) {
+      throw new Error(
+        `[vue-uno-style] Invalid blocked property name ${JSON.stringify(name)}. `
+        + 'Use a UnoCSS utility prefix made of letters, digits and dashes.'
+      )
+    }
+    if (blocked.some((item) => item.name === name)) {
+      throw new Error(`[vue-uno-style] Property "${name}" is blocked more than once.`)
+    }
+    if (message !== undefined && typeof message !== 'string') {
+      throw new Error(`[vue-uno-style] The message for blocked property "${name}" must be a string.`)
+    }
+
+    blocked.push(message ? { name, message } : { name })
+  })
+
+  return blocked
+}
+
+/** The blocked entry for `name`, if the project blocks it. */
+export const findBlocked = (properties: Pick<ResolvedProperties, 'blocked'> | undefined, name: string): BlockedProperty | undefined =>
+  properties?.blocked.find((item) => item.name === name)
+
+/** The sentence every report of a blocked property uses, with its message when it has one. */
+export const blockedPropertyMessage = ({ name, message }: BlockedProperty): string =>
+  `Property "${name}" is blocked in this project.${message ? ` ${message}` : ''}`
 
 /** Applies a property's configured format to one runtime value. */
 export const formatValue = <T>(value: T, format: PropertyFormat | undefined): T | string =>

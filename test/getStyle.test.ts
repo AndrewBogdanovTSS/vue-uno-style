@@ -46,6 +46,16 @@ describe('getStyle', () => {
     )
   })
 
+  it('warns about a blocked property with its message, instead of the unknown-property warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const properties = resolveProperties(['c'], { blockedProperties: [{ name: 'opacity', message: 'Use op instead.' }] })
+
+    getStyle({ sm: '0.5' }, breakpoints, 'opacity', properties)
+
+    expect(warn).toHaveBeenCalledOnce()
+    expect(warn).toHaveBeenCalledWith('[vue-uno-style] Property "opacity" is blocked in this project. Use op instead.')
+  })
+
   it('accepts any property without warning when none are passed', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
