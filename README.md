@@ -33,14 +33,14 @@ build time, decides which variable applies at which screen width:
 
 ```html
 <!-- what the directive renders -->
-<h1 class="o:c-$c o:md:c-$c-md" style="--c: #111827; --c-md: #4f46e5">Responsive heading</h1>
+<h1 class="vs:c-$c vs:md:c-$c-md" style="--c: #111827; --c-md: #4f46e5">Responsive heading</h1>
 ```
 
 ```css
 /* what the preset generated at build time */
-.o\:c-\$c { color: var(--c); }
+.vs\:c-\$c { color: var(--c); }
 @media (min-width: 768px) {
-  .o\:md\:c-\$c-md { color: var(--c-md); }
+  .vs\:md\:c-\$c-md { color: var(--c-md); }
 }
 ```
 
@@ -129,7 +129,8 @@ image URLs.
 > [!IMPORTANT]
 > The directive creates class names at runtime, so source scanning cannot find
 > them. Always install `presetVUnoStyle()` as well: it safelists the classes for
-> every configured property and adds the `o:` variant and override layer.
+> every configured property and adds the `vs:` variant and its layer. See
+> [The directive's layer](#the-directives-layer).
 
 ### Custom rules
 
@@ -137,7 +138,7 @@ A property needs a UnoCSS rule that turns `<prefix>-$<variable>` into CSS.
 Without one, its classes get no CSS, and nothing reports it: neither UnoCSS nor
 the preset warns. When you add a property, check its CSS once.
 
-Every rule has the same shape. The preset's variants remove `o:` and the
+Every rule has the same shape. The preset's variants remove `vs:` and the
 breakpoint before the rule runs, so the rule only ever sees
 `<prefix>-$<variable>`, and `name` is the variable without its `--`:
 
@@ -194,6 +195,26 @@ rules: [
 > add only the rules your preset lacks. Under `presetWind3`, for example, a custom
 > `blur` rule sets `filter` on its own, which drops any other filter utility on
 > the element.
+
+### The directive's layer
+
+Every class the directive writes starts with `vs:`. The preset's variant strips
+it and puts the CSS in the directive's own UnoCSS layer, ordered after
+`default`, so a value from data beats the element's ordinary utilities.
+
+The layer is `v-uno-style` by default. Name it after your directive with
+`layer`: the Nuxt module does that on its own, so `directiveName: 'style'`
+gives `v-style`. Pass the same name if you also add the preset yourself.
+
+The `vs:` variant and its layer belong to the package. A project's own
+variant, such as an `o:` override layer, stays separate. The layer order
+decides which of the two wins on a shared property:
+
+```ts
+// uno.config.ts - a project override layer that beats v-style values
+layers: { override: 20 },
+variants: [(matcher) => matcher.startsWith('o:') ? { matcher: matcher.slice(2), layer: 'override' } : undefined]
+```
 
 ## Breakpoints
 
@@ -366,7 +387,7 @@ The directive does not throw on a value it cannot use. What it does instead:
   `tablet` in `{ sm: '1rem', tablet: '2rem' }` is dropped. Only your
   breakpoints are read.
 - **A property outside `properties`.** The class and the variable are still
-  written (`o:mt-$mt`, `--mt`), but the preset does not safelist the class, so
+  written (`vs:mt-$mt`, `--mt`), but the preset does not safelist the class, so
   it has no CSS. When the directive has `properties`, development builds log
   `[vue-uno-style] Property "mt" is not configured, so its classes are not safelisted.`
 - **A value that is neither a string nor a number.** It is written as text:
@@ -374,7 +395,7 @@ The directive does not throw on a value it cannot use. What it does instead:
   value it cannot use.
 - **No argument and a value that is not an object.** `v-uno-style="'red'"`
   reads the string as an object of characters. It writes the classes
-  `o:0-$0 o:1-$1 o:2-$2` and the variables `--0: r`, `--1: e`, `--2: d`. With
+  `vs:0-$0 vs:1-$1 vs:2-$2` and the variables `--0: r`, `--1: e`, `--2: d`. With
   `properties`, development builds also log the unconfigured-property warning
   for `0`, `1` and `2`.
 
@@ -424,8 +445,8 @@ Nuxt.
 ## Options
 
 Every option each entry accepts. The Nuxt module passes `properties`,
-`breakpoints` and `baseBreakpoint` on to the preset and the directive, so a
-Nuxt app sets them once.
+`breakpoints` and `baseBreakpoint` on to the preset and the directive, and
+`layer` to the preset, so a Nuxt app sets them once.
 
 ### Property entries
 
@@ -458,6 +479,7 @@ registered, and fails the build without it.
 | `breakpoints` | `Record<string, number \| string>` | the UnoCSS theme's | Breakpoints for the preset and the directive. They replace the theme's breakpoints, so the base preset's own variants use them too. |
 | `baseBreakpoint` | `string` | the zero-valued breakpoint | The unprefixed breakpoint. See [Breakpoints](#breakpoints). |
 | `directiveName` | `string` | `'uno-style'` | Registration name without `v-`. `'style'` registers `v-style`. |
+| `layer` | `string` | `v-<directiveName>` | The UnoCSS layer of the `vs:` classes: `v-uno-style`, or `v-style` with `directiveName: 'style'`. See [The directive's layer](#the-directives-layer). |
 | `webTypes` | `boolean` | `true` | Rewrites the installed package's `web-types.json` with `directiveName` and `properties`. `false` keeps the shipped file. |
 | `devtools` | `boolean` | `true` | Adds the [Nuxt DevTools](#nuxt-devtools) tab during `nuxt dev`. It has no effect in production or when Nuxt DevTools is off. |
 
@@ -480,6 +502,7 @@ the DevTools tab loads it on its first request.
 | `properties` | `PropertyConfig[]` | required | Safelists every class the directive can write for these properties. |
 | `breakpoints` | `Record<string, number \| string>` | `theme.breakpoints`, or `theme.breakpoint` under `presetWind4` | Breakpoints for the media queries and the safelist. They replace that theme key, so the base preset's own variants use them too. |
 | `baseBreakpoint` | `string` | the zero-valued breakpoint | The unprefixed breakpoint. |
+| `layer` | `string` | `'v-uno-style'` | The UnoCSS layer of the `vs:` classes. |
 
 The preset throws when it finds neither `breakpoints` nor breakpoints in the theme.
 

@@ -64,10 +64,10 @@ describe('createDevtoolsRegistry', () => {
       connected: true,
       variables: { '--c': 'red', '--c-md': 'blue', '--p': '1rem' }
     }))
-    expect(element!.className).toBe('card o:c-$c o:md:c-$c-md o:p-$p')
+    expect(element!.className).toBe('card vs:c-$c vs:md:c-$c-md vs:p-$p')
     expect(element!.bindings).toEqual([{
       value: { c: { sm: 'red', md: 'blue' }, p: '1rem' },
-      classes: 'o:c-$c o:md:c-$c-md o:p-$p',
+      classes: 'vs:c-$c vs:md:c-$c-md vs:p-$p',
       style: { '--c': 'red', '--c-md': 'blue', '--p': '1rem' },
       component: { name: 'Card' }
     }])
@@ -279,7 +279,7 @@ describe('createDevtoolsRegistry', () => {
       setup: () => () => withDirectives(h('p'), [[resolveDirective('uno-style')!, 'red', 'c']])
     }), { global: { directives: { 'uno-style': instrumented } } })
 
-    expect(wrapper.element.className).toBe('o:c-$c')
+    expect(wrapper.element.className).toBe('vs:c-$c')
     expect(registry.elements()).toHaveLength(1)
   })
 })

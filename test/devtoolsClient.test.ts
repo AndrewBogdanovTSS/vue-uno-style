@@ -65,7 +65,7 @@ describe('DevTools client helpers', () => {
   })
 
   it('filters by label, property or class', () => {
-    const element = { label: 'Card › section', properties: ['bg'], className: 'card o:bg-$bg' }
+    const element = { label: 'Card › section', properties: ['bg'], className: 'card vs:bg-$bg' }
 
     expect(matchesFilter(element, '')).toBe(true)
     expect(matchesFilter(element, 'card')).toBe(true)

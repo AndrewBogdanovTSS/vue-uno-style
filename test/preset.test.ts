@@ -28,16 +28,16 @@ describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, de
 
   it('generates color utilities for base and responsive runtime variables', async () => {
     const uno = await createUno()
-    const tokens = ['o:c-$c', 'o:md:c-$c-md']
+    const tokens = ['vs:c-$c', 'vs:md:c-$c-md']
     const { css, matched } = await uno.generate(tokens, {
       preflights: false,
       safelist: false
     })
 
     expect([...matched]).toEqual(tokens)
-    expect(css).toContain('.o\\:c-\\$c{color:var(--c);}')
+    expect(css).toContain('.vs\\:c-\\$c{color:var(--c);}')
     expect(css).toContain('@media (min-width: 768px)')
-    expect(css).toContain('.o\\:md\\:c-\\$c-md{color:var(--c-md);}')
+    expect(css).toContain('.vs\\:md\\:c-\\$c-md{color:var(--c-md);}')
   })
 
   it('ships no rules of its own, so a consumer rule serves a custom property', async () => {
@@ -49,7 +49,7 @@ describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, de
     const { css, matched } = await uno.generate('', { preflights: false })
 
     expect(presetVUnoStyle({ properties }).rules).toBeUndefined()
-    expect(matched).toContain('o:bgi-$bgi')
+    expect(matched).toContain('vs:bgi-$bgi')
     expect(css).toContain('background-image:var(--bgi);')
   })
 
@@ -71,8 +71,8 @@ describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, de
     const { matched } = await uno.generate('', { preflights: false })
 
     expect([...matched].sort()).toEqual(safelisted(canvasBreakpoints))
-    expect(matched).not.toContain('o:xl:c-$c-xl')
-    expect(matched).not.toContain('o:2xl:c-$c-2xl')
+    expect(matched).not.toContain('vs:xl:c-$c-xl')
+    expect(matched).not.toContain('vs:2xl:c-$c-2xl')
   })
 
   it('falls back to the preset\'s own breakpoints when the app sets none', async () => {
@@ -106,22 +106,52 @@ describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, de
     expect(mediaOrder(css)).toEqual(Object.values(breakpoints).slice(1))
   })
 
-  it('emits the override layer after the default layer', async () => {
+  it('emits the v-uno-style layer after the default layer', async () => {
     const uno = await createUno()
-    const { css } = await uno.generate(['c-red', 'o:c-$c'], {
+    const { css } = await uno.generate(['c-red', 'vs:c-$c'], {
       preflights: false,
       safelist: false
     })
 
     expect(css.indexOf('/* layer: default */')).toBeGreaterThanOrEqual(0)
-    expect(css.indexOf('/* layer: override */')).toBeGreaterThan(css.indexOf('/* layer: default */'))
+    expect(css.indexOf('/* layer: v-uno-style */')).toBeGreaterThan(css.indexOf('/* layer: default */'))
+  })
+
+  it('puts the vs: classes in the layer the option names', async () => {
+    const uno = await createUno({ layer: 'v-style' })
+    const { css } = await uno.generate(['c-red', 'vs:c-$c'], {
+      preflights: false,
+      safelist: false
+    })
+
+    expect(uno.config.layers['v-style']).toBeGreaterThan(uno.config.layers.default ?? 0)
+    expect(uno.config.layers['v-uno-style']).toBeUndefined()
+    expect(css.indexOf('/* layer: v-style */')).toBeGreaterThan(css.indexOf('/* layer: default */'))
+    expect(css.slice(css.indexOf('/* layer: v-style */'))).toContain('.vs\\:c-\\$c{color:var(--c);}')
+  })
+
+  it('leaves a project\'s own o: variant and override layer alone', async () => {
+    const uno = await createGenerator({
+      presets: [preset(), presetVUnoStyle({ properties })],
+      theme: { [themeKey]: canvasBreakpoints },
+      layers: { override: 20 },
+      variants: [(matcher) => matcher.startsWith('o:') ? { matcher: matcher.slice(2), layer: 'override' } : undefined]
+    })
+    const { css } = await uno.generate(['o:c-red', 'vs:c-$c'], {
+      preflights: false,
+      safelist: false
+    })
+
+    expect(css.slice(css.indexOf('/* layer: override */'))).toContain('.o\\:c-red{')
+    expect(css.slice(css.indexOf('/* layer: v-uno-style */'), css.indexOf('/* layer: override */')))
+      .toContain('.vs\\:c-\\$c{color:var(--c);}')
   })
 
   /**
    * The emission-order test above cannot fail in the direction that matters.
    * UnoCSS sorts layers by `(layers[a] ?? 0) - (layers[b] ?? 0) || a.localeCompare(b)`,
    * so with no declared order both layers sit at 0 and the tiebreak is
-   * alphabetical - and `default` happens to sort before `override`. Delete the
+   * alphabetical - and `default` happens to sort before `v-uno-style`. Delete the
    * `layers` declaration from the preset and the emission test still passes,
    * because the layer would be winning by how the word is spelled.
    *
@@ -133,7 +163,7 @@ describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, de
     const uno = await createUno()
     const { layers } = uno.config
 
-    expect(layers.override).toBeGreaterThan(layers.default ?? 0)
+    expect(layers['v-uno-style']).toBeGreaterThan(layers.default ?? 0)
   })
 
   it('supports a stock theme when the base breakpoint is explicit', async () => {
@@ -143,8 +173,8 @@ describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, de
     )
     const { matched } = await uno.generate('', { preflights: false })
 
-    expect(matched).toContain('o:c-$c')
-    expect(matched).toContain('o:md:c-$c-md')
+    expect(matched).toContain('vs:c-$c')
+    expect(matched).toContain('vs:md:c-$c-md')
   })
 
   it('supports an explicit breakpoint override', async () => {
@@ -153,9 +183,9 @@ describe.each(basePresets)('presetVUnoStyle with $name', ({ preset, themeKey, de
     })
     const { css, matched } = await uno.generate('', { preflights: false })
 
-    expect(matched).toContain('o:c-$c')
-    expect(matched).toContain('o:desktop:c-$c-desktop')
-    expect(matched).not.toContain('o:md:c-$c-md')
+    expect(matched).toContain('vs:c-$c')
+    expect(matched).toContain('vs:desktop:c-$c-desktop')
+    expect(matched).not.toContain('vs:md:c-$c-md')
     expect(css).toContain('@media (min-width: 64rem)')
   })
 

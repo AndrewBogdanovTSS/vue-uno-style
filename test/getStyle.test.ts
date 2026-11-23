@@ -17,7 +17,7 @@ describe('getStyle', () => {
       c: { sm: 'red', md: 'green' },
       bg: { sm: 'white', lg: 'black' }
     }, breakpoints)).toEqual({
-      classes: 'o:c-$c o:md:c-$c-md o:bg-$bg o:lg:bg-$bg-lg',
+      classes: 'vs:c-$c vs:md:c-$c-md vs:bg-$bg vs:lg:bg-$bg-lg',
       style: {
         '--c': 'red',
         '--c-md': 'green',
@@ -29,7 +29,7 @@ describe('getStyle', () => {
 
   it('supports the argument form', () => {
     expect(getStyle({ sm: 'red', md: 'green' }, breakpoints, 'c')).toEqual({
-      classes: 'o:c-$c o:md:c-$c-md',
+      classes: 'vs:c-$c vs:md:c-$c-md',
       style: { '--c': 'red', '--c-md': 'green' }
     })
   })
@@ -47,7 +47,7 @@ describe('getStyle', () => {
   it('accepts any property without warning when none are passed', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    expect(getStyle({ sm: '1rem' }, breakpoints, 'anything').classes).toBe('o:anything-$anything')
+    expect(getStyle({ sm: '1rem' }, breakpoints, 'anything').classes).toBe('vs:anything-$anything')
     expect(warn).not.toHaveBeenCalled()
   })
 

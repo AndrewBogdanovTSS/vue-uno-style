@@ -4,7 +4,7 @@ import type { Variant } from 'unocss'
 import { definePreset } from 'unocss'
 import { resolveBreakpoints } from './core/breakpoints'
 import { resolveProperties } from './core/properties'
-import { getVarsClasses } from './core/varsClasses'
+import { getVarsClasses, VARIANT_PREFIX } from './core/varsClasses'
 import { breakpointThemeKey, resolveThemeBreakpoints } from './themeBreakpoints'
 
 export interface PresetVUnoStyleOptions {
@@ -22,19 +22,28 @@ export interface PresetVUnoStyleOptions {
   breakpoints?: BreakpointConfig
   /** Explicitly select the unprefixed base breakpoint. */
   baseBreakpoint?: string
+  /**
+   * The UnoCSS layer the `vs:` classes go to, ordered after `default`. Defaults to
+   * `v-uno-style`. Name it after the directive, e.g. `v-style` for `directiveName: 'style'`,
+   * so the CSS says which directive wrote it. The Nuxt module does this on its own.
+   */
+  layer?: string
 }
 
-const overrideVariant: Variant = {
-  name: 'vue-uno-style-override',
+/** The layer of the `vs:` classes when `layer` is not set. */
+export const DEFAULT_LAYER = 'v-uno-style'
+
+const createLayerVariant = (layer: string): Variant => ({
+  name: 'vue-uno-style-layer',
   match(matcher) {
-    if (!matcher.startsWith('o:')) return
+    if (!matcher.startsWith(VARIANT_PREFIX)) return
 
     return {
-      matcher: matcher.slice(2),
-      layer: 'override'
+      matcher: matcher.slice(VARIANT_PREFIX.length),
+      layer
     }
   }
-}
+})
 
 const toUnoBreakpoints = (breakpoints: BreakpointConfig): Record<string, string> =>
   Object.fromEntries(Object.entries(breakpoints).map(([name, value]) => [
@@ -71,12 +80,12 @@ const createBreakpointVariant = (configuredBreakpoints?: BreakpointConfig): Vari
 })
 
 /**
- * Adds the vue-uno-style variants, the safelist for the configured properties, and an explicit
- * layer order. Throws when no properties are configured.
+ * Adds the `vs:` variant and its layer, the breakpoint variant, and the safelist for the
+ * configured properties. Throws when no properties are configured.
  */
 export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions>((options) => {
   const { names } = resolveProperties(options?.properties)
-  const { breakpoints, baseBreakpoint } = (options ?? {}) as Partial<PresetVUnoStyleOptions>
+  const { breakpoints, baseBreakpoint, layer = DEFAULT_LAYER } = (options ?? {}) as Partial<PresetVUnoStyleOptions>
   const configuredBreakpoints = breakpoints
     ? toUnoBreakpoints(breakpoints)
     : undefined
@@ -84,9 +93,9 @@ export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions>((options) =>
   return {
     name: 'vue-uno-style',
     layers: {
-      override: 10
+      [layer]: 10
     },
-    variants: [overrideVariant, createBreakpointVariant(configuredBreakpoints)],
+    variants: [createLayerVariant(layer), createBreakpointVariant(configuredBreakpoints)],
     // Written under the key the base preset reads, so its own breakpoint variants serve the
     // configured values instead of their defaults.
     extendTheme: configuredBreakpoints

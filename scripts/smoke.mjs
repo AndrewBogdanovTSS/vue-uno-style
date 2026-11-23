@@ -35,11 +35,11 @@ check('the built preset generates runtime CSS and its safelist', async () => {
   })
   const { css, matched } = await uno.generate('', { preflights: false })
 
-  assert.ok(matched.has('o:c-$c'))
-  assert.ok(matched.has('o:md:c-$c-md'))
+  assert.ok(matched.has('vs:c-$c'))
+  assert.ok(matched.has('vs:md:c-$c-md'))
   assert.match(css, /color:var\(--c\)/)
   assert.match(css, /@media \(min-width: 768px\)/)
-  assert.ok(!matched.has('o:bg-$bg'), 'only configured properties are safelisted')
+  assert.ok(!matched.has('vs:bg-$bg'), 'only configured properties are safelisted')
   assert.throws(() => presetVUnoStyle({ breakpoints }), /No properties configured/)
 })
 

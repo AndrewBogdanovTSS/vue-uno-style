@@ -110,9 +110,9 @@ describe.each(basePresets)('createDevtoolsData with $name', (base) => {
     const color = coverage.find((item) => item.property === 'c')!
 
     expect(color.tokens).toEqual([
-      { token: 'o:c-$c', matched: true },
-      { token: 'o:md:c-$c-md', matched: true },
-      { token: 'o:lg:c-$c-lg', matched: true }
+      { token: 'vs:c-$c', matched: true },
+      { token: 'vs:md:c-$c-md', matched: true },
+      { token: 'vs:lg:c-$c-lg', matched: true }
     ])
     expect(color.bytes).toBeGreaterThan(0)
     expect(color.suggestion).toBeUndefined()
@@ -150,7 +150,7 @@ describe.each(basePresets)('generateSample with $name', (base) => {
     const result = await generateSample(context, { property: 'c', value: { sm: 'red', md: 'blue' } })
     if ('error' in result) throw new Error(result.error)
 
-    expect(result.classes).toBe('o:c-$c o:md:c-$c-md')
+    expect(result.classes).toBe('vs:c-$c vs:md:c-$c-md')
     expect(result.style).toEqual({ '--c': 'red', '--c-md': 'blue' })
     expect(result.css).toContain('color:var(--c)')
     expect(result.css).toContain('@media (min-width: 768px)')
@@ -270,7 +270,7 @@ describe('createDevtoolsMiddleware', () => {
     )
 
     expect(statusCode).toBe(200)
-    expect(JSON.parse(body)).toEqual(expect.objectContaining({ classes: 'o:c-$c', style: { '--c': 'red' } }))
+    expect(JSON.parse(body)).toEqual(expect.objectContaining({ classes: 'vs:c-$c', style: { '--c': 'red' } }))
   })
 
   it('rejects a body that is not JSON', async () => {
