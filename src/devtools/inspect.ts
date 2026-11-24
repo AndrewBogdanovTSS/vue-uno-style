@@ -1,11 +1,12 @@
 import type { ResolvedBreakpoints } from '../core/breakpoints'
 import type { ResolvedProperties } from '../core/properties'
+import { blockedPropertyMessage, findBlocked, isKnownProperty } from '../core/properties'
 
 export type ValueWarningKind =
+  | 'blocked-property'
   | 'unknown-property'
   | 'unknown-breakpoint'
   | 'invalid-value'
-  | 'dropped-value'
 
 export interface ValueWarning {
   kind: ValueWarningKind
@@ -25,15 +26,6 @@ const checkScalar = (
   breakpoint: string
 ): ValueWarning | undefined => {
   if (isEmpty(value)) return undefined
-  // getStyleProps skips falsy values, so a numeric 0 never reaches the CSS
-  if (value === 0) {
-    return {
-      kind: 'dropped-value',
-      property,
-      breakpoint,
-      message: `"${property}" at "${breakpoint}" is the number 0, which the directive skips. Use the string '0'.`
-    }
-  }
   if (typeof value !== 'string' && typeof value !== 'number') {
     return {
       kind: 'invalid-value',
@@ -47,8 +39,8 @@ const checkScalar = (
 
 /**
  * Lists what in a binding value the directive will silently ignore or that the preset will not
- * style: properties outside the configured list, breakpoint keys that do not exist, numeric
- * zeros, and values that are neither strings nor numbers.
+ * style: blocked properties, properties outside the known ones, breakpoint keys that do not exist, and values
+ * that are neither strings nor numbers.
  */
 export const inspectValue = (
   value: unknown,
@@ -72,11 +64,15 @@ export const inspectValue = (
   Object.entries(config).forEach(([property, responsive]) => {
     if (isEmpty(responsive)) return
 
-    if (properties && !properties.names.includes(property)) {
+    const blocked = findBlocked(properties, property)
+    if (blocked) {
+      warnings.push({ kind: 'blocked-property', property, message: blockedPropertyMessage(blocked) })
+    }
+    else if (properties && !isKnownProperty(properties, property)) {
       warnings.push({
         kind: 'unknown-property',
         property,
-        message: `"${property}" is not a configured property, so its classes are not safelisted.`
+        message: `"${property}" is neither configured nor a default property, so its classes are not safelisted.`
       })
     }
 

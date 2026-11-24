@@ -134,6 +134,8 @@ const renderOverview = () => {
   const seen = registry ? new Set(registry.seenProperties()) : undefined
   const unused = seen ? data.properties.filter(({ name }) => !seen.has(name)) : []
   const missing = data.coverage.filter((item) => item.suggestion)
+  const scannedCount = data.coverage.filter((item) => item.source === 'scanned').length
+  const configuredCount = data.coverage.length - scannedCount
   const order = [data.breakpoints.base, ...data.breakpoints.prefixed]
 
   return `
@@ -154,7 +156,16 @@ const renderOverview = () => {
       <dt>Rule coverage</dt><dd>${missing.length
         ? `<span class="error">${missing.length} of ${data.coverage.length} properties have no rule</span>`
         : `<span class="ok">all ${data.coverage.length} properties generate CSS</span>`}</dd>
-      <dt>Safelist</dt><dd>${data.safelist.classes} classes, ${formatBytes(data.safelist.bytes)}</dd>
+      <dt>UnoCSS blocklist</dt><dd>${data.unoBlocked.length
+        ? `<span class="error">removes ${data.unoBlocked.length} known propert${data.unoBlocked.length > 1 ? 'ies' : 'y'}</span>`
+        : '<span class="ok">removes no known property</span>'}</dd>
+      <dt>Blocked</dt><dd>${data.blocked.length
+        ? data.blocked.map(({ name }) => `<code>${esc(name)}</code>`).join(' ')
+        : '<span class="muted">none</span>'}</dd>
+      <dt>Safelist</dt><dd>${data.safelist.classes} classes, ${formatBytes(data.safelist.bytes)}<br>
+        <span class="muted">${data.scanTracked
+          ? `${configuredCount} configured, ${scannedCount} found in the source so far`
+          : `${configuredCount} configured. The preset in your UnoCSS config adds what it finds in the source, which this tab cannot see.`}</span></dd>
       <dt>Used this session</dt><dd>${seen
         ? `${data.properties.length - unused.length} of ${data.properties.length} properties`
         : '<span class="muted">needs DevTools</span>'}</dd>
@@ -184,15 +195,20 @@ const renderOverview = () => {
 
   <section>
     <h2>Properties</h2>
-    <table><thead><tr><th>Property</th><th>Format</th><th>Rule</th><th>CSS</th><th>Used</th></tr></thead><tbody>
+    <p class="muted">The configured properties, then the default ones the preset has found in the source.
+    In <code>nuxt dev</code> that grows as pages load: reload the tab to update it.</p>
+    <table><thead><tr><th>Property</th><th>Source</th><th>Format</th><th>Rule</th><th>CSS</th><th>Used</th></tr></thead><tbody>
     ${data.coverage.map((item) => {
       const matched = item.tokens.filter((token) => token.matched).length
       const rule = matched === item.tokens.length
         ? pill('ok', 'ok')
-        : matched === 0 ? pill('no rule', 'error') : pill(`${matched}/${item.tokens.length} tokens`, 'warn')
+        : item.unoBlocked
+          ? pill(matched ? `blocklist: ${item.unoBlocked.tokens.length}/${item.tokens.length} tokens` : 'UnoCSS blocklist', 'error')
+          : matched === 0 ? pill('no rule', 'error') : pill(`${matched}/${item.tokens.length} tokens`, 'warn')
       const used = !seen ? '<span class="muted">–</span>' : seen.has(item.property) ? pill('yes', 'ok') : pill('not yet')
       return `<tr>
         <td><code>${esc(item.property)}</code></td>
+        <td>${item.source === 'scanned' ? pill('found in source') : pill('configured')}</td>
         <td>${item.format ? `<code>${esc(item.format)}</code>` : '<span class="muted">–</span>'}</td>
         <td>${rule}${matched < item.tokens.length
           ? `<div class="tokens">${item.tokens.filter((token) => !token.matched)
@@ -218,6 +234,34 @@ const renderOverview = () => {
     <p class="muted">Configured and safelisted, but no directive on the pages visited so far set them.
     If no page ever does, removing them shrinks the safelist.</p>
     <div class="tokens">${unused.map(({ name }) => `<code>${esc(name)}</code>`).join(' ')}</div>
+  </section>` : ''}
+
+  ${data.unoBlocked.length ? `<section>
+    <h2>Removed by the UnoCSS blocklist</h2>
+    <p>An entry of your UnoCSS <code>blocklist</code> matches these classes, as written or once their
+    variants are stripped, so they have no CSS. An entry may hit some breakpoints only. The directive still writes them, and nothing
+    else reports it. To forbid a property, move it to <code>blockedProperties</code>, which ESLint and
+    the directive report. To allow it, narrow the blocklist entry.</p>
+    <table><thead><tr><th>Property</th><th>Removed classes</th><th>Blocklist entry</th><th>Message</th></tr></thead><tbody>
+    ${data.unoBlocked.map((item) => `<tr>
+      <td><code>${esc(item.property)}</code></td>
+      <td><div class="tokens">${item.tokens.map((token) => `<code class="error">${esc(token)}</code>`).join(' ')}</div></td>
+      <td><code>${esc(item.rule)}</code></td>
+      <td>${item.message ? esc(item.message) : '<span class="muted">–</span>'}</td>
+    </tr>`).join('')}
+    </tbody></table>
+  </section>` : ''}
+
+  ${data.blocked.length ? `<section>
+    <h2>Blocked properties</h2>
+    <p class="muted">From <code>blockedProperties</code>. The preset never safelists them, and ESLint,
+    the directive and the Warnings tab report every use.</p>
+    <table><thead><tr><th>Property</th><th>Message</th></tr></thead><tbody>
+    ${data.blocked.map((item) => `<tr>
+      <td><code>${esc(item.name)}</code></td>
+      <td>${item.message ? esc(item.message) : '<span class="muted">–</span>'}</td>
+    </tr>`).join('')}
+    </tbody></table>
   </section>` : ''}`
 }
 

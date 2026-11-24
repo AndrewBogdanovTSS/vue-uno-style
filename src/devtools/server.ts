@@ -1,6 +1,6 @@
 import type { BreakpointConfig, ResolvedBreakpoints } from '../core/breakpoints'
 import type { StyleValue } from '../core/getStyle'
-import type { PropertyFormat, ResolvedProperties } from '../core/properties'
+import type { BlockedProperty, PropertyFormat, ResolvedProperties } from '../core/properties'
 import type { BreakpointThemeKey } from '../themeBreakpoints'
 import type { ValueWarning } from './inspect'
 import type { IncomingMessage, ServerResponse } from 'node:http'
@@ -24,12 +24,24 @@ export type WebTypesStatus =
 
 export interface PropertyCoverage {
   property: string
+  /** `configured` for a `properties` entry, `scanned` for a default property the source sets. */
+  source: 'configured' | 'scanned'
   format?: PropertyFormat
   tokens: Array<{ token: string, matched: boolean }>
   /** Bytes of CSS the property's safelisted tokens generate. */
   bytes: number
-  /** A `rules` entry to add when no token generated CSS. */
+  /** A `rules` entry to add when no token generated CSS and no blocklist entry explains it. */
   suggestion?: string
+  /** The UnoCSS `blocklist` entry that removes some or all of the property's classes, when one does. */
+  unoBlocked?: UnoBlocked & { tokens: string[] }
+}
+
+/** A UnoCSS `blocklist` entry that removes a property's CSS. */
+export interface UnoBlocked {
+  /** The entry, as text: a string, a regular expression or a function's source. */
+  rule: string
+  /** The entry's own message, when it has one. */
+  message?: string
 }
 
 export interface DevtoolsData {
@@ -51,7 +63,20 @@ export interface DevtoolsData {
   configSources: string[]
   webTypes: WebTypesStatus
   coverage: PropertyCoverage[]
+  /** Every class the preset safelists: the configured properties' and the scanned ones'. */
   safelist: { classes: number, bytes: number }
+  /**
+   * Whether the tab sees what the preset found in the source. Only when the module added the
+   * preset: one from the app's UnoCSS config scans on its own, out of the tab's reach.
+   */
+  scanTracked: boolean
+  /** The properties the project blocks through `blockedProperties`. */
+  blocked: BlockedProperty[]
+  /**
+   * Known properties, configured or default, whose CSS the app's UnoCSS `blocklist` removes.
+   * The directive still writes their classes, so they style nothing, and nothing else reports it.
+   */
+  unoBlocked: Array<UnoBlocked & { property: string, tokens: string[] }>
 }
 
 export interface DevtoolsContext {
@@ -66,7 +91,12 @@ export interface DevtoolsContext {
   unoPresets: string[]
   configSources: string[]
   webTypes: WebTypesStatus
-  generator: Pick<UnoGenerator, 'generate'>
+  generator: Pick<UnoGenerator, 'generate' | 'getBlocked'>
+  /**
+   * The default properties the preset has found in the source so far. Absent when the tab cannot
+   * see them, because the preset came from the app's UnoCSS config.
+   */
+  scannedProperties?: () => string[]
 }
 
 export interface SampleInput {
@@ -103,28 +133,88 @@ const generateCss = async (generator: DevtoolsContext['generator'], tokens: stri
 }
 
 /**
- * Checks every safelisted token of every configured property against the app's generator. A
- * property whose tokens generate nothing has no UnoCSS rule for `<prefix>-$<variable>`.
+ * The UnoCSS `blocklist` entry that removes `token`, a class the directive writes. UnoCSS checks
+ * the class as written and again once every variant is stripped, so both forms are asked:
+ * `vs:md:opacity-$opacity-md` and `opacity-$opacity-md`.
  */
-export const createCoverage = async (context: DevtoolsContext): Promise<PropertyCoverage[]> =>
-  Promise.all(context.properties.names.map(async (property) => {
+const findUnoBlocked = (generator: DevtoolsContext['generator'], token: string): UnoBlocked | undefined => {
+  const utility = token.slice(token.lastIndexOf(':') + 1)
+  const entry = generator.getBlocked(token) ?? generator.getBlocked(utility)
+  if (!entry) return undefined
+
+  const [rule, meta] = entry
+  const message = typeof meta?.message === 'function' ? meta.message(utility) : meta?.message
+
+  return {
+    rule: rule instanceof RegExp ? String(rule) : typeof rule === 'function' ? 'a function' : JSON.stringify(rule),
+    ...(message ? { message } : {})
+  }
+}
+
+/** The blocklist entry behind the first of `tokens` that generated no CSS, if an entry explains it. */
+const findUnoBlockedToken = (
+  generator: DevtoolsContext['generator'],
+  tokens: string[],
+  matched: ReadonlySet<string>
+): UnoBlocked & { tokens: string[] } | undefined => {
+  const blocked = tokens
+    .filter((token) => !matched.has(token))
+    .map((token) => [token, findUnoBlocked(generator, token)] as const)
+    .filter((entry): entry is readonly [string, UnoBlocked] => Boolean(entry[1]))
+  const [first] = blocked
+
+  return first ? { ...first[1], tokens: blocked.map(([token]) => token) } : undefined
+}
+
+/**
+ * Checks every safelisted token of every configured or scanned property against the app's
+ * generator. A token that generates nothing has no UnoCSS rule for `<prefix>-$<variable>`, or an
+ * entry of the app's `blocklist` removes it, which may hit some breakpoints only.
+ */
+export const createCoverage = async (context: DevtoolsContext): Promise<PropertyCoverage[]> => {
+  const { names } = context.properties
+  const scanned = (context.scannedProperties?.() ?? []).filter((property) => !names.includes(property))
+  const sources = [
+    ...names.map((property) => [property, 'configured'] as const),
+    ...scanned.map((property) => [property, 'scanned'] as const)
+  ]
+
+  return Promise.all(sources.map(async ([property, source]) => {
     const tokens = getVarsClasses(property, context.resolved).split(' ')
     const { css, matched } = await generateCss(context.generator, tokens)
     const format = context.properties.formats[property]
     const anyMatched = tokens.some((token) => matched.has(token))
+    const unoBlocked = findUnoBlockedToken(context.generator, tokens, matched)
 
     return {
       property,
+      source,
       ...(format ? { format } : {}),
       tokens: tokens.map((token) => ({ token, matched: matched.has(token) })),
       bytes: byteLength(css),
-      ...(anyMatched ? {} : { suggestion: suggestRule(property) })
+      ...(unoBlocked ? { unoBlocked } : anyMatched ? {} : { suggestion: suggestRule(property) })
     }
   }))
+}
+
+/**
+ * Every known property, configured or default, with a class the app's UnoCSS `blocklist` removes,
+ * at any breakpoint. One generate call covers them all.
+ */
+export const findUnoBlockedProperties = async (context: DevtoolsContext): Promise<DevtoolsData['unoBlocked']> => {
+  const tokensOf = Object.fromEntries(context.properties.known
+    .map((property) => [property, getVarsClasses(property, context.resolved).split(' ')]))
+  const { matched } = await generateCss(context.generator, Object.values(tokensOf).flat())
+
+  return context.properties.known.flatMap((property) => {
+    const unoBlocked = findUnoBlockedToken(context.generator, tokensOf[property]!, matched)
+    return unoBlocked ? [{ property, ...unoBlocked }] : []
+  })
+}
 
 /** Everything the tab shows about the build: config, rule coverage, safelist cost and status. */
 export const createDevtoolsData = async (context: DevtoolsContext): Promise<DevtoolsData> => {
-  const coverage = await createCoverage(context)
+  const [coverage, unoBlocked] = await Promise.all([createCoverage(context), findUnoBlockedProperties(context)])
 
   return {
     version: context.version,
@@ -149,7 +239,10 @@ export const createDevtoolsData = async (context: DevtoolsContext): Promise<Devt
     safelist: {
       classes: coverage.reduce((total, item) => total + item.tokens.length, 0),
       bytes: coverage.reduce((total, item) => total + item.bytes, 0)
-    }
+    },
+    scanTracked: Boolean(context.scannedProperties),
+    blocked: context.properties.blocked,
+    unoBlocked
   }
 }
 

@@ -55,8 +55,9 @@ describe('DevTools client helpers', () => {
     expect(effectiveValue({ sm: 'a', lg: 'c' }, order, 'md')).toBe('a')
     expect(effectiveValue({ sm: 'a', lg: 'c' }, order, 'lg')).toBe('c')
     expect(effectiveValue({ md: 'b' }, order, 'sm')).toBeUndefined()
-    // The directive skips a numeric zero, so the cascade does too
-    expect(effectiveValue({ sm: 'a', md: 0 }, order, 'md')).toBe('a')
+    // A numeric zero is a value, so it beats the one below it
+    expect(effectiveValue({ sm: 'a', md: 0 }, order, 'md')).toBe(0)
+    expect(effectiveValue({ sm: 'a', md: '' }, order, 'md')).toBe('a')
   })
 
   it('flags unchanged and churning elements', () => {

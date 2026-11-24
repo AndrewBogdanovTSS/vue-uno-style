@@ -25,8 +25,7 @@ const configured = ['c', 'bg', 'nope', { name: 'bgi', format: 'url' as const }, 
 /** The context the Nuxt module builds, for an app on `base`. */
 const createContext = async ({ preset }: Pick<BasePreset, 'preset'>): Promise<DevtoolsContext> => {
   const generator = await createGenerator({
-    presets: [preset(), presetVUnoStyle({ properties: configured, breakpoints })],
-    rules: [[/^bgi-\$([\w-]+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })]]
+    presets: [preset(), presetVUnoStyle({ properties: configured, breakpoints })]
   })
 
   return {
@@ -139,6 +138,83 @@ describe.each(basePresets)('createDevtoolsData with $name', (base) => {
   })
 })
 
+describe('scanned properties in the tab', () => {
+  it('covers the default properties the preset found, and counts them in the safelist', async () => {
+    const data = await createDevtoolsData({ ...context, scannedProperties: () => ['mt', 'c', 'px'] })
+    const scanned = data.coverage.filter((item) => item.source === 'scanned')
+
+    expect(scanned.map((item) => item.property)).toEqual(['mt', 'px'])
+    expect(scanned.every((item) => item.tokens.every((token) => token.matched))).toBe(true)
+    expect(data.coverage.find((item) => item.property === 'c')!.source).toBe('configured')
+    expect(data.safelist.classes).toBe((configured.length + 2) * 3)
+    expect(data.scanTracked).toBe(true)
+  })
+
+  it('says so when it cannot see the scan', async () => {
+    const data = await createDevtoolsData(context)
+
+    expect(data.scanTracked).toBe(false)
+    expect(data.coverage.every((item) => item.source === 'configured')).toBe(true)
+  })
+})
+
+/**
+ * A UnoCSS `blocklist` entry such as `/^opacity-/` also matches the directive's classes once `vs:`
+ * is stripped, so their CSS disappears. The tab names the entry instead of suggesting a rule.
+ */
+describe.each(basePresets)('UnoCSS blocklist with $name', ({ preset }) => {
+  const createBlockedContext = async (): Promise<DevtoolsContext> => {
+    const generator = await createGenerator({
+      presets: [preset(), presetVUnoStyle({ properties: ['c', 'opacity'], breakpoints })],
+      blocklist: [/^opacity-/, [/^tracking-/, { message: 'Use the type scale.' }]]
+    })
+
+    return {
+      ...context,
+      properties: resolveProperties(['c', 'opacity'], { blockedProperties: [{ name: 'z', message: 'Use the layer tokens.' }] }),
+      generator
+    }
+  }
+
+  it('names the blocklist entry for a configured property instead of suggesting a rule', async () => {
+    const { coverage } = await createDevtoolsData(await createBlockedContext())
+    const opacity = coverage.find((item) => item.property === 'opacity')!
+
+    expect(opacity.unoBlocked).toEqual({ rule: '/^opacity-/', tokens: ['vs:opacity-$opacity', 'vs:md:opacity-$opacity-md', 'vs:lg:opacity-$opacity-lg'] })
+    expect(opacity.suggestion).toBeUndefined()
+    expect(coverage.find((item) => item.property === 'c')!.unoBlocked).toBeUndefined()
+  })
+
+  it('lists every known property the blocklist removes, default ones included, with the entry\'s message', async () => {
+    const { unoBlocked } = await createDevtoolsData(await createBlockedContext())
+
+    expect(unoBlocked).toEqual([
+      { property: 'opacity', rule: '/^opacity-/', tokens: ['vs:opacity-$opacity', 'vs:md:opacity-$opacity-md', 'vs:lg:opacity-$opacity-lg'] },
+      { property: 'tracking', rule: '/^tracking-/', message: 'Use the type scale.', tokens: ['vs:tracking-$tracking', 'vs:md:tracking-$tracking-md', 'vs:lg:tracking-$tracking-lg'] }
+    ])
+  })
+
+  it('names an entry that removes one breakpoint only, such as an exact string', async () => {
+    const generator = await createGenerator({
+      presets: [preset(), presetVUnoStyle({ properties: ['opacity'], breakpoints })],
+      blocklist: ['opacity-$opacity-md']
+    })
+    const data = await createDevtoolsData({ ...context, properties: resolveProperties(['opacity']), generator })
+    const opacity = data.coverage.find((item) => item.property === 'opacity')!
+
+    expect(opacity.tokens.map(({ matched }) => matched)).toEqual([true, false, true])
+    expect(opacity.unoBlocked).toEqual({ rule: '"opacity-$opacity-md"', tokens: ['vs:md:opacity-$opacity-md'] })
+    expect(opacity.suggestion).toBeUndefined()
+    expect(data.unoBlocked).toEqual([{ property: 'opacity', rule: '"opacity-$opacity-md"', tokens: ['vs:md:opacity-$opacity-md'] }])
+  })
+
+  it('lists the project\'s own blocked properties', async () => {
+    const { blocked } = await createDevtoolsData(await createBlockedContext())
+
+    expect(blocked).toEqual([{ name: 'z', message: 'Use the layer tokens.' }])
+  })
+})
+
 describe.each(basePresets)('generateSample with $name', (base) => {
   let context: DevtoolsContext
 
@@ -158,7 +234,7 @@ describe.each(basePresets)('generateSample with $name', (base) => {
   })
 
   it('applies value formats and reports warnings', async () => {
-    const result = await generateSample(context, { value: { bgi: 'a.png', p: { xl: '1rem' } } })
+    const result = await generateSample(context, { value: { bgi: 'a.png', paddign: { xl: '1rem' } } })
     if ('error' in result) throw new Error(result.error)
 
     expect(result.style).toEqual({ '--bgi': 'url(a.png)' })

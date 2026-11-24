@@ -1,6 +1,6 @@
 import type { BreakpointConfig, ResolvedBreakpoints } from '../core/breakpoints'
 import type { StyleValue } from '../core/getStyle'
-import type { PropertyConfig, ResolvedProperties } from '../core/properties'
+import type { BlockedPropertyConfig, PropertyConfig, ResolvedProperties } from '../core/properties'
 import type { VUnoStyleValue } from '../directive'
 import type { ValueWarning } from './inspect'
 import type { DirectiveBinding, ObjectDirective, VNode } from 'vue'
@@ -97,6 +97,8 @@ export interface DevtoolsRegistryOptions {
   breakpoints: BreakpointConfig
   baseBreakpoint?: string
   properties?: readonly PropertyConfig[]
+  defaultProperties?: boolean
+  blockedProperties?: readonly BlockedPropertyConfig[]
   /** The window the app runs in. Defaults to the global `window`. */
   window?: Window
 }
@@ -167,7 +169,10 @@ const safeJson = (value: unknown) => {
 export const createDevtoolsRegistry = (options: DevtoolsRegistryOptions) => {
   const resolved: ResolvedBreakpoints = resolveBreakpoints(options)
   const properties: ResolvedProperties | undefined = options.properties
-    ? resolveProperties(options.properties)
+    ? resolveProperties(options.properties, {
+        defaultProperties: options.defaultProperties,
+        blockedProperties: options.blockedProperties
+      })
     : undefined
   const fallback = { breakpoints: resolved, properties }
   const view = options.window ?? (typeof window === 'undefined' ? undefined : window)

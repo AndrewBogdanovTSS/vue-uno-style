@@ -2,6 +2,7 @@ import { existsSync, linkSync, mkdirSync, mkdtempSync, readdirSync, readFileSync
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { defaultProperties } from '../src/core/properties'
 import { createWebTypes, serializeWebTypes } from '../src/core/webTypes'
 import { packageWebTypesPath, writeWebTypes } from '../src/webTypes'
 
@@ -18,12 +19,35 @@ describe('createWebTypes', () => {
     expect(webTypes.framework).toBe('vue')
   })
 
-  it('offers exactly the configured properties as arguments', () => {
-    expect(directive.argument.pattern?.or).toEqual(['c', 'bg', 'bgi'])
+  it('offers the configured properties, then the defaults they do not repeat', () => {
+    expect(directive.argument.pattern?.or).toEqual([
+      'c', 'bg', 'bgi', ...defaultProperties.filter((name) => !['c', 'bg', 'bgi'].includes(name))
+    ])
   })
 
-  it('accepts any argument when no properties are configured', () => {
-    const [open] = createWebTypes({ directiveName: 'uno-style', version: '1.2.3' })
+  it('never offers a blocked property', () => {
+    const [directive] = createWebTypes({ directiveName: 'uno-style', version: '1.2.3', blockedProperties: ['mt', { name: 'opacity' }] })
+      .contributions.html['vue-directives']
+
+    expect(directive.argument.pattern?.or).toEqual(defaultProperties.filter((name) => !['mt', 'opacity'].includes(name)))
+  })
+
+  it('offers the default properties when none are configured', () => {
+    const [shipped] = createWebTypes({ directiveName: 'uno-style', version: '1.2.3' })
+      .contributions.html['vue-directives']
+
+    expect(shipped.argument.pattern?.or).toEqual(defaultProperties)
+  })
+
+  it('offers exactly the configured properties once the defaults are off', () => {
+    const [configuredOnly] = createWebTypes({ directiveName: 'uno-style', version: '1.2.3', properties, defaultProperties: false })
+      .contributions.html['vue-directives']
+
+    expect(configuredOnly.argument.pattern?.or).toEqual(['c', 'bg', 'bgi'])
+  })
+
+  it('accepts any argument when the defaults are off and no properties are configured', () => {
+    const [open] = createWebTypes({ directiveName: 'uno-style', version: '1.2.3', defaultProperties: false })
       .contributions.html['vue-directives']
 
     expect(open.argument).not.toHaveProperty('pattern')

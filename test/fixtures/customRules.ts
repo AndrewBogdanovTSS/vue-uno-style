@@ -4,13 +4,13 @@ import { knownRule, knownRules } from '../../src/knownRules'
 
 /**
  * The custom rules the README's "Custom rules" section shows. `test/customRules.test.ts` runs
- * them, and `pnpm check:docs` checks that the README quotes each rule line verbatim: the `bgi`
+ * them, and `pnpm check:docs` checks that the README quotes each rule line verbatim: the `mask`
  * example below as written, the gap rules as `knownRuleSource()` prints them from
  * `src/knownRules.ts`, which the DevTools tab suggests too.
  */
 
 /** The README's `format: 'url'` example: the directive writes `url(...)`, the rule stays plain. */
-export const urlRule: Rule = [/^bgi-\$([\w-]+)$/, ([, name]) => ({ 'background-image': `var(--${name})` })]
+export const urlRule: Rule = [/^mask-\$([\w-]+)$/, ([, name]) => ({ 'mask-image': `var(--${name})` })]
 
 export type GapPrefix = KnownRulePrefix
 

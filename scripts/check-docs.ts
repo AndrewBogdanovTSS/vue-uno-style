@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import type { KnownRulePrefix } from '../src/knownRules'
+import { defaultProperties } from '../src/core/properties'
 import { knownRuleSource, knownRules } from '../src/knownRules'
 import { builtIn } from '../test/fixtures/customRules'
 import { basePresets } from '../test/fixtures/presets'
@@ -70,16 +71,19 @@ const packageChecks = (): Finding[] => {
       'README is missing part of the base-breakpoint contract'
     ),
     verdict(
-      readme.includes('source scanning cannot find') && readme.includes('Always install `presetVUnoStyle()`'),
+      readme.includes('own scanning cannot') && readme.includes('Always install `presetVUnoStyle()`'),
       'the README explains why the preset is required',
       'runtime-generated classes and safelisting are connected',
       'README does not explain that runtime classes require the preset'
     ),
     verdict(
-      readme.includes('`properties` is required') && !/^## Supported properties/m.test(readme),
-      'properties are documented as consumer configuration',
-      'required `properties`, no predefined property table',
-      'README must state that `properties` is required and must not list predefined properties'
+      readme.includes('### Default properties')
+      && readme.includes('### Configured properties')
+      && readme.includes('`defaultProperties: false` turns the defaults off')
+      && readme.includes('`properties` is\nrequired'),
+      'default and configured properties are both documented',
+      'scan-only defaults, always-safelisted `properties`, and the opt-out that makes them required',
+      'README must document the default properties, `properties`, and `defaultProperties: false`'
     ),
     verdict(
       readme.includes('vue-uno-style/no-multiple-v-style'),
@@ -175,6 +179,18 @@ const customRuleChecks = (): Finding[] => {
   ]
 }
 
+/** The README's list of default properties must be the package's, in the same order. */
+const defaultPropertyChecks = (): Finding[] => {
+  const line = defaultProperties.map((name) => `\`${name}\``).join(', ')
+
+  return [verdict(
+    readmeLines.includes(line),
+    'the README lists the default properties',
+    `${defaultProperties.length} properties from src/core/properties.ts`,
+    `no README line reads: ${line}`
+  )]
+}
+
 const buildChecks = (): Finding[] => {
   const files = Object.values(pkg.exports ?? {})
     .flatMap((entry) => typeof entry === 'string'
@@ -199,7 +215,13 @@ const buildChecks = (): Finding[] => {
   )]
 }
 
-const findings = [...packageChecks(), ...optionChecks(), ...customRuleChecks(), ...buildChecks()]
+const findings = [
+  ...packageChecks(),
+  ...optionChecks(),
+  ...customRuleChecks(),
+  ...defaultPropertyChecks(),
+  ...buildChecks()
+]
 const symbol: Record<Level, string> = { pass: 'PASS ', error: 'FAIL ', unverifiable: '?????' }
 
 console.log('\nREADME claims, checked against the package')

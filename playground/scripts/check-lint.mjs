@@ -35,3 +35,15 @@ assert.equal(
 )
 
 console.log(`PASS  ${ruleId} fires on the fixture and withholds the unsafe fix`)
+
+// A blocked property is reported with its configured message, even as an object literal key.
+const [blocked] = await new ESLint({ cwd: root }).lintFiles([join(root, 'fixtures', 'blocked-property.vue')])
+const blockedReports = blocked.messages.filter((message) => message.ruleId === ruleId)
+
+assert.deepEqual(
+  blockedReports.map((message) => message.message),
+  ['v-uno-style: Property "tracking" is blocked in this project. Use the type scale instead.'],
+  `expected one blocked-property report, got: ${JSON.stringify(blocked.messages.map((m) => m.message))}`
+)
+
+console.log(`PASS  ${ruleId} reports a blocked property with its message`)

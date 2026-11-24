@@ -1,19 +1,37 @@
 import type { BreakpointConfig } from './core/breakpoints'
-import type { PropertyConfig } from './core/properties'
-import type { Variant } from 'unocss'
+import type { BlockedPropertyConfig, PropertyConfig } from './core/properties'
+import type { Extractor, Preset, Variant } from 'unocss'
 import { definePreset } from 'unocss'
 import { resolveBreakpoints } from './core/breakpoints'
 import { resolveProperties } from './core/properties'
+import { findUsedProperties } from './core/usage'
 import { getVarsClasses, VARIANT_PREFIX } from './core/varsClasses'
+import { builtInRuleList } from './knownRules'
 import { breakpointThemeKey, resolveThemeBreakpoints } from './themeBreakpoints'
 
 export interface PresetVUnoStyleOptions {
   /**
-   * Every UnoCSS utility prefix the directive may set, e.g. `['c', 'bg', 'p']`. Each needs a
-   * UnoCSS rule that accepts a `<prefix>-$<variable>` value. Required: the classes are composed at
-   * runtime, so only the ones safelisted from this list get CSS.
+   * UnoCSS utility prefixes the preset always safelists, e.g. `['c', 'bg', 'p']`, on top of the
+   * default properties. Each needs a UnoCSS rule that accepts a `<prefix>-$<variable>` value.
+   * List a property here when it reaches the directive only through data, such as
+   * `v-uno-style="block.styles"`, or when it is not a default property.
    */
-  properties: readonly PropertyConfig[]
+  properties?: readonly PropertyConfig[]
+  /**
+   * Whether the default properties are known. Defaults to `true`: the preset then safelists each
+   * one it finds in the source. With `false`, only `properties` are known and safelisted.
+   */
+  defaultProperties?: boolean
+  /**
+   * Properties the project forbids, with an optional message: `['tracking', { name: 'opacity',
+   * message: 'Use op instead.' }]`. A blocked property is never known, even a default one.
+   */
+  blockedProperties?: readonly BlockedPropertyConfig[]
+  /**
+   * Directive registration name without the `v-` prefix, so the preset finds the properties the
+   * source sets. Defaults to `uno-style`. The Nuxt module passes its own.
+   */
+  directiveName?: string
   /**
    * Override breakpoints instead of reading them from the UnoCSS theme (`theme.breakpoint` in
    * presetWind4, `theme.breakpoints` otherwise). They replace that theme key, so the base preset's
@@ -32,6 +50,9 @@ export interface PresetVUnoStyleOptions {
 
 /** The layer of the `vs:` classes when `layer` is not set. */
 export const DEFAULT_LAYER = 'v-uno-style'
+
+/** The directive's registration name when `directiveName` is not set. */
+export const DEFAULT_DIRECTIVE_NAME = 'uno-style'
 
 const createLayerVariant = (layer: string): Variant => ({
   name: 'vue-uno-style-layer',
@@ -80,22 +101,64 @@ const createBreakpointVariant = (configuredBreakpoints?: BreakpointConfig): Vari
 })
 
 /**
- * Adds the `vs:` variant and its layer, the breakpoint variant, and the safelist for the
- * configured properties. Throws when no properties are configured.
+ * Finds the known properties each scanned file sets through the directive and records them in
+ * `used`, for the safelist to read. It also returns their base class, so a dev server that sees a
+ * new property regenerates the CSS - which runs the safelist again.
+ *
+ * The extractor has no theme, so it cannot name the breakpoint classes itself.
  */
-export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions>((options) => {
-  const { names } = resolveProperties(options?.properties)
-  const { breakpoints, baseBreakpoint, layer = DEFAULT_LAYER } = (options ?? {}) as Partial<PresetVUnoStyleOptions>
+const createUsageExtractor = (directiveName: string, known: ReadonlySet<string>, used: Set<string>): Extractor => ({
+  name: 'vue-uno-style-usage',
+  extract({ code }) {
+    const found = findUsedProperties(code, directiveName).filter((name) => known.has(name))
+    found.forEach((name) => used.add(name))
+    return found.map((name) => `${VARIANT_PREFIX}${name}-$${name}`)
+  }
+})
+
+/** Each preset object's scan results, for `getScannedProperties`. */
+const scanned = new WeakMap<object, ReadonlySet<string>>()
+
+/**
+ * The properties a `presetVUnoStyle()` object has found in the source so far, in the order it
+ * found them, or `undefined` for any other object. UnoCSS scans as it transforms each module, so
+ * during `nuxt dev` the list grows as pages load.
+ */
+export const getScannedProperties = (preset: unknown): string[] | undefined => {
+  const used = typeof preset === 'object' && preset !== null ? scanned.get(preset) : undefined
+  return used ? [...used] : undefined
+}
+
+/**
+ * Adds the `vs:` variant and its layer, the breakpoint variant, the `bgi` and `bgv` rules, and the
+ * safelist: every configured property, and each known one the scanned source sets. Throws when no
+ * property is known.
+ */
+export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions | undefined>((options) => {
+  const {
+    breakpoints,
+    baseBreakpoint,
+    layer = DEFAULT_LAYER,
+    directiveName = DEFAULT_DIRECTIVE_NAME,
+    defaultProperties,
+    blockedProperties
+  } = options ?? {}
+  const { names, known } = resolveProperties(options?.properties, { defaultProperties, blockedProperties })
   const configuredBreakpoints = breakpoints
     ? toUnoBreakpoints(breakpoints)
     : undefined
+  // Filled while UnoCSS scans the source, read each time it generates the CSS
+  const used = new Set<string>()
 
-  return {
+  const preset: Preset = {
     name: 'vue-uno-style',
     layers: {
       [layer]: 10
     },
     variants: [createLayerVariant(layer), createBreakpointVariant(configuredBreakpoints)],
+    extractors: [createUsageExtractor(directiveName, new Set(known), used)],
+    // No base preset serves `bgi` or `bgv`. A rule writes CSS only for a class that is used.
+    rules: builtInRuleList(),
     // Written under the key the base preset reads, so its own breakpoint variants serve the
     // configured values instead of their defaults.
     extendTheme: configuredBreakpoints
@@ -115,7 +178,11 @@ export const presetVUnoStyle = definePreset<PresetVUnoStyleOptions>((options) =>
         baseBreakpoint
       })
 
-      return names.flatMap((prop) => getVarsClasses(prop, resolved).split(' '))
+      const safelisted = new Set([...names, ...used])
+      return [...safelisted].flatMap((prop) => getVarsClasses(prop, resolved).split(' '))
     }]
   }
+  scanned.set(preset, used)
+
+  return preset
 })

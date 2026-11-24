@@ -21,9 +21,11 @@ check('the root entry exports the directive and core API', async () => {
     'getStyleProps',
     'getVarsClasses',
     'resolveBreakpoints',
-    'resolveProperties'
+    'resolveProperties',
+    'defaultProperties',
+    'findUsedProperties'
   ]) assert.ok(name in api, `missing export: ${name}`)
-  assert.ok(!('styleProps' in api), 'the package must not predefine properties')
+  assert.ok(!('styleProps' in api), 'the removed styleProps export must stay gone')
 })
 
 check('the built preset generates runtime CSS and its safelist', async () => {
@@ -39,8 +41,10 @@ check('the built preset generates runtime CSS and its safelist', async () => {
   assert.ok(matched.has('vs:md:c-$c-md'))
   assert.match(css, /color:var\(--c\)/)
   assert.match(css, /@media \(min-width: 768px\)/)
-  assert.ok(!matched.has('vs:bg-$bg'), 'only configured properties are safelisted')
-  assert.throws(() => presetVUnoStyle({ breakpoints }), /No properties configured/)
+  assert.ok(!matched.has('vs:bg-$bg'), 'a default property is not safelisted until the source uses it')
+  const scanned = await uno.generate('<div v-uno-style:mt="a" />', { preflights: false })
+  assert.ok(scanned.matched.has('vs:md:mt-$mt-md'), 'a default property the source uses is safelisted')
+  assert.throws(() => presetVUnoStyle({ breakpoints, defaultProperties: false }), /No properties configured/)
 })
 
 check('the built ESLint plugin reports its version and fixes real Vue input', async () => {
@@ -83,7 +87,8 @@ check('the package points WebStorm at a built web-types file', async () => {
 
   assert.equal(webTypes.version, pkg.version)
   assert.equal(directive.name, 'uno-style')
-  assert.equal(directive.argument.pattern, undefined, 'the shipped file must not predefine properties')
+  const { defaultProperties } = await import(built('index.mjs'))
+  assert.deepEqual(directive.argument.pattern?.or, [...defaultProperties], 'the shipped file offers the default properties')
   assert.ok(pkg.files.includes('dist'), 'web-types must ship inside a published folder')
 })
 

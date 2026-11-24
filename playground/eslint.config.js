@@ -1,7 +1,7 @@
 import vUnoStyle from 'vue-uno-style/eslint'
 import babelParser from '@babel/eslint-parser'
 import vueParser from 'vue-eslint-parser'
-import { properties } from './config/vue-uno-style.ts'
+import { blockedProperties, properties } from './config/vue-uno-style.ts'
 
 const typescriptParserOptions = {
   // Babel parses TypeScript syntax without type checking
@@ -38,9 +38,9 @@ export default [
       }
     },
     rules: {
-      // `mt` is not a configured property: app.vue uses it on purpose to give the DevTools
-      // Warnings tab an entry, so only the lint accepts it
-      'vue-uno-style/no-multiple-v-style': ['error', { properties: [...properties, 'mt'] }]
+      // `indent` is neither configured nor a default property: app.vue uses it on purpose to give
+      // the DevTools Warnings tab an entry, so only the lint accepts it
+      'vue-uno-style/no-multiple-v-style': ['error', { properties: [...properties, 'indent'], blockedProperties }]
     }
   }
 ]

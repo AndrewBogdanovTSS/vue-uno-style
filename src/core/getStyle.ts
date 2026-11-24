@@ -1,6 +1,7 @@
 import type { ResolvedBreakpoints } from './breakpoints'
 import type { ResolvedProperties } from './properties'
-import { getStyleProps } from './getStyleProps'
+import { getStyleProps, isEmptyValue } from './getStyleProps'
+import { blockedPropertyMessage, builtInFormats, findBlocked, isKnownProperty } from './properties'
 
 export type StyleValue = number | string
 export type Responsive<T = StyleValue> = Record<string, T | undefined>
@@ -21,7 +22,8 @@ const isDevelopment = () => typeof process === 'undefined' || process.env.NODE_E
  * Converts responsive values into UnoCSS classes and CSS custom properties.
  *
  * Pass the resolved `properties` to apply their value formats and to warn, during development,
- * about a property that is not configured - its classes would never be safelisted.
+ * about a property that is not known - its classes would never be safelisted. Without them,
+ * only the built-in formats apply.
  */
 export const getStyle = (
   config: Responsive | ResponsiveStyles,
@@ -35,13 +37,18 @@ export const getStyle = (
     classes: string[]
     style: Record<string, StyleValue>
   }>((acc, [prop, value]) => {
-    if (!value || (isObject(value) && Object.keys(value).length === 0)) return acc
+    if (isEmptyValue(value) || (isObject(value) && Object.keys(value).length === 0)) return acc
 
-    if (properties && !properties.names.includes(prop) && isDevelopment()) {
-      console.warn(`[vue-uno-style] Property "${prop}" is not configured, so its classes are not safelisted.`)
+    const blocked = findBlocked(properties, prop)
+    if (blocked && isDevelopment()) {
+      console.warn(`[vue-uno-style] ${blockedPropertyMessage(blocked)}`)
+    }
+    else if (properties && !isKnownProperty(properties, prop) && isDevelopment()) {
+      console.warn(`[vue-uno-style] Property "${prop}" is neither configured nor a default property, so its classes are not safelisted.`)
     }
 
-    const { styles = {}, classList = [] } = getStyleProps(prop, value, breakpoints, properties?.formats[prop])
+    const format = properties ? properties.formats[prop] : builtInFormats[prop]
+    const { styles = {}, classList = [] } = getStyleProps(prop, value, breakpoints, format)
 
     return {
       classes: [...acc.classes, ...classList],

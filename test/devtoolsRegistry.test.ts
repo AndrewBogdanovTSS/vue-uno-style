@@ -153,7 +153,7 @@ describe('createDevtoolsRegistry', () => {
   it('collects warnings per element', () => {
     const { registry, instrumented } = setup()
     mount(defineComponent({
-      render: () => withDirectives(h('p'), [[instrumented, { c: { sm: 'red', xl: 'blue' }, gap: '1rem' }]])
+      render: () => withDirectives(h('p'), [[instrumented, { c: { sm: 'red', xl: 'blue' }, blur: '4px' }]])
     }))
 
     expect(registry.warnings().map(({ kind, elementId }) => [kind, elementId])).toEqual([
