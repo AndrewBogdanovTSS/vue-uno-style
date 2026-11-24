@@ -1,7 +1,7 @@
 import type { ResolvedBreakpoints } from './breakpoints'
 import type { ResolvedProperties } from './properties'
 import { getStyleProps, isEmptyValue } from './getStyleProps'
-import { blockedPropertyMessage, builtInFormats, findBlocked } from './properties'
+import { blockedPropertyMessage, builtInFormats, findBlocked, isKnownProperty } from './properties'
 
 export type StyleValue = number | string
 export type Responsive<T = StyleValue> = Record<string, T | undefined>
@@ -43,7 +43,7 @@ export const getStyle = (
     if (blocked && isDevelopment()) {
       console.warn(`[vue-uno-style] ${blockedPropertyMessage(blocked)}`)
     }
-    else if (properties && !properties.known.includes(prop) && isDevelopment()) {
+    else if (properties && !isKnownProperty(properties, prop) && isDevelopment()) {
       console.warn(`[vue-uno-style] Property "${prop}" is neither configured nor a default property, so its classes are not safelisted.`)
     }
 

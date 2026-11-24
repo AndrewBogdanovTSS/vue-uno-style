@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getStyle } from '../core/getStyle'
-import { getVarsClasses, VARIANT_PREFIX } from '../core/varsClasses'
+import { getVarsClasses } from '../core/varsClasses'
 import { isKnownRulePrefix, knownRuleSource } from '../knownRules'
 import { inspectValue } from './inspect'
 import { renderDevtoolsPage } from './page'
@@ -32,8 +32,8 @@ export interface PropertyCoverage {
   bytes: number
   /** A `rules` entry to add when no token generated CSS and no blocklist entry explains it. */
   suggestion?: string
-  /** The UnoCSS `blocklist` entry that removes the property's CSS, when one does. */
-  unoBlocked?: UnoBlocked
+  /** The UnoCSS `blocklist` entry that removes some or all of the property's classes, when one does. */
+  unoBlocked?: UnoBlocked & { tokens: string[] }
 }
 
 /** A UnoCSS `blocklist` entry that removes a property's CSS. */
@@ -76,7 +76,7 @@ export interface DevtoolsData {
    * Known properties, configured or default, whose CSS the app's UnoCSS `blocklist` removes.
    * The directive still writes their classes, so they style nothing, and nothing else reports it.
    */
-  unoBlocked: Array<UnoBlocked & { property: string }>
+  unoBlocked: Array<UnoBlocked & { property: string, tokens: string[] }>
 }
 
 export interface DevtoolsContext {
@@ -133,19 +133,17 @@ const generateCss = async (generator: DevtoolsContext['generator'], tokens: stri
 }
 
 /**
- * The UnoCSS `blocklist` entry that removes `property`'s CSS. UnoCSS checks the token as written
- * and again once the variants are stripped, so both forms are asked. Only meaningful for a
- * property whose classes generated nothing.
+ * The UnoCSS `blocklist` entry that removes `token`, a class the directive writes. UnoCSS checks
+ * the class as written and again once every variant is stripped, so both forms are asked:
+ * `vs:md:opacity-$opacity-md` and `opacity-$opacity-md`.
  */
-const findUnoBlocked = (generator: DevtoolsContext['generator'], property: string): UnoBlocked | undefined => {
-  const entry = generator.getBlocked(`${property}-${property}`)
-    ?? generator.getBlocked(`${VARIANT_PREFIX}${property}-${property}`)
+const findUnoBlocked = (generator: DevtoolsContext['generator'], token: string): UnoBlocked | undefined => {
+  const utility = token.slice(token.lastIndexOf(':') + 1)
+  const entry = generator.getBlocked(token) ?? generator.getBlocked(utility)
   if (!entry) return undefined
 
   const [rule, meta] = entry
-  const message = typeof meta?.message === 'function'
-    ? meta.message(`${property}-${property}`)
-    : meta?.message
+  const message = typeof meta?.message === 'function' ? meta.message(utility) : meta?.message
 
   return {
     rule: rule instanceof RegExp ? String(rule) : typeof rule === 'function' ? 'a function' : JSON.stringify(rule),
@@ -153,10 +151,25 @@ const findUnoBlocked = (generator: DevtoolsContext['generator'], property: strin
   }
 }
 
+/** The blocklist entry behind the first of `tokens` that generated no CSS, if an entry explains it. */
+const findUnoBlockedToken = (
+  generator: DevtoolsContext['generator'],
+  tokens: string[],
+  matched: ReadonlySet<string>
+): UnoBlocked & { tokens: string[] } | undefined => {
+  const blocked = tokens
+    .filter((token) => !matched.has(token))
+    .map((token) => [token, findUnoBlocked(generator, token)] as const)
+    .filter((entry): entry is readonly [string, UnoBlocked] => Boolean(entry[1]))
+  const [first] = blocked
+
+  return first ? { ...first[1], tokens: blocked.map(([token]) => token) } : undefined
+}
+
 /**
  * Checks every safelisted token of every configured or scanned property against the app's
- * generator. A property whose tokens generate nothing has no UnoCSS rule for
- * `<prefix>-$<variable>`, or an entry of the app's `blocklist` removes it.
+ * generator. A token that generates nothing has no UnoCSS rule for `<prefix>-$<variable>`, or an
+ * entry of the app's `blocklist` removes it, which may hit some breakpoints only.
  */
 export const createCoverage = async (context: DevtoolsContext): Promise<PropertyCoverage[]> => {
   const { names } = context.properties
@@ -171,7 +184,7 @@ export const createCoverage = async (context: DevtoolsContext): Promise<Property
     const { css, matched } = await generateCss(context.generator, tokens)
     const format = context.properties.formats[property]
     const anyMatched = tokens.some((token) => matched.has(token))
-    const unoBlocked = anyMatched ? undefined : findUnoBlocked(context.generator, property)
+    const unoBlocked = findUnoBlockedToken(context.generator, tokens, matched)
 
     return {
       property,
@@ -185,16 +198,16 @@ export const createCoverage = async (context: DevtoolsContext): Promise<Property
 }
 
 /**
- * Every known property, configured or default, whose base class the app's UnoCSS `blocklist`
- * removes. One generate call covers them all.
+ * Every known property, configured or default, with a class the app's UnoCSS `blocklist` removes,
+ * at any breakpoint. One generate call covers them all.
  */
 export const findUnoBlockedProperties = async (context: DevtoolsContext): Promise<DevtoolsData['unoBlocked']> => {
-  const tokens = context.properties.known.map((property) => `${VARIANT_PREFIX}${property}-${property}`)
-  const { matched } = await generateCss(context.generator, tokens)
+  const tokensOf = Object.fromEntries(context.properties.known
+    .map((property) => [property, getVarsClasses(property, context.resolved).split(' ')]))
+  const { matched } = await generateCss(context.generator, Object.values(tokensOf).flat())
 
   return context.properties.known.flatMap((property) => {
-    if (matched.has(`${VARIANT_PREFIX}${property}-${property}`)) return []
-    const unoBlocked = findUnoBlocked(context.generator, property)
+    const unoBlocked = findUnoBlockedToken(context.generator, tokensOf[property]!, matched)
     return unoBlocked ? [{ property, ...unoBlocked }] : []
   })
 }

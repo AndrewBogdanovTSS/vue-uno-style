@@ -45,6 +45,26 @@ describe('findUsedProperties', () => {
     expect(findUsedProperties(code, 'style')).toEqual(['mb'])
   })
 
+  it('ignores HTML comments and escaped code samples', () => {
+    const code = '<!-- <p v-uno-style:pl="a" /> --><pre><code>&lt;p v-uno-style:mb="b" /&gt;</code></pre><p v-uno-style:mt="c" />'
+
+    expect(findUsedProperties(code, 'uno-style')).toEqual(['mt'])
+  })
+
+  it('reads attributes after a quoted value that holds < or >', () => {
+    const code = '<div v-if="count > 0 && a < b" title=\'x > y\' v-uno-style:mt="a"></div>'
+
+    expect(findUsedProperties(code, 'uno-style')).toEqual(['mt'])
+  })
+
+  it('reads a string template inside a script', () => {
+    expect(findUsedProperties('const template = `<div v-uno-style:mb="a" />`', 'uno-style')).toEqual(['mb'])
+  })
+
+  it('reads the kebab-case spelling of a camelCase directive name', () => {
+    expect(findUsedProperties('<div v-uno-style:mt="a" v-unoStyle:mb="b" />', 'unoStyle')).toEqual(['mt', 'mb'])
+  })
+
   it('skips a file without the directive', () => {
     expect(findUsedProperties('<div class="mt-4" />', 'uno-style')).toEqual([])
   })

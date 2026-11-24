@@ -203,7 +203,7 @@ const renderOverview = () => {
       const rule = matched === item.tokens.length
         ? pill('ok', 'ok')
         : item.unoBlocked
-          ? pill('UnoCSS blocklist', 'error')
+          ? pill(matched ? `blocklist: ${item.unoBlocked.tokens.length}/${item.tokens.length} tokens` : 'UnoCSS blocklist', 'error')
           : matched === 0 ? pill('no rule', 'error') : pill(`${matched}/${item.tokens.length} tokens`, 'warn')
       const used = !seen ? '<span class="muted">–</span>' : seen.has(item.property) ? pill('yes', 'ok') : pill('not yet')
       return `<tr>
@@ -238,13 +238,14 @@ const renderOverview = () => {
 
   ${data.unoBlocked.length ? `<section>
     <h2>Removed by the UnoCSS blocklist</h2>
-    <p>An entry of your UnoCSS <code>blocklist</code> matches these properties' classes once
-    <code>vs:</code> is stripped, so they have no CSS. The directive still writes them, and nothing
+    <p>An entry of your UnoCSS <code>blocklist</code> matches these classes, as written or once their
+    variants are stripped, so they have no CSS. An entry may hit some breakpoints only. The directive still writes them, and nothing
     else reports it. To forbid a property, move it to <code>blockedProperties</code>, which ESLint and
     the directive report. To allow it, narrow the blocklist entry.</p>
-    <table><thead><tr><th>Property</th><th>Blocklist entry</th><th>Message</th></tr></thead><tbody>
+    <table><thead><tr><th>Property</th><th>Removed classes</th><th>Blocklist entry</th><th>Message</th></tr></thead><tbody>
     ${data.unoBlocked.map((item) => `<tr>
       <td><code>${esc(item.property)}</code></td>
+      <td><div class="tokens">${item.tokens.map((token) => `<code class="error">${esc(token)}</code>`).join(' ')}</div></td>
       <td><code>${esc(item.rule)}</code></td>
       <td>${item.message ? esc(item.message) : '<span class="muted">–</span>'}</td>
     </tr>`).join('')}

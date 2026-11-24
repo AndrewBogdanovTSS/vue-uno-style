@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blockedPropertyMessage, defaultProperties, findBlocked, formatValue, resolveProperties } from '../src/core/properties'
+import { blockedPropertyMessage, defaultProperties, findBlocked, formatValue, isKnownProperty, resolveProperties } from '../src/core/properties'
 
 describe('resolveProperties', () => {
   it('keeps the configured order and collects formats', () => {
@@ -60,6 +60,19 @@ describe('resolveProperties', () => {
     ['a message that is not a string', [{ name: 'mt', message: 1 }], 'must be a string']
   ])('throws on a property %s', (_label, blockedProperties, message) => {
     expect(() => resolveProperties(['c'], { blockedProperties: blockedProperties as never })).toThrow(message)
+  })
+
+  it('drops a built-in format with format: false', () => {
+    expect(resolveProperties([{ name: 'bgi', format: false }]).formats).toEqual({})
+    expect(resolveProperties([{ name: 'c', format: false }]).formats).toEqual({ bgi: 'url' })
+  })
+
+  it('reads properties resolved before 0.4.0, without known or blocked', () => {
+    const legacy = { names: ['c'], formats: {} }
+
+    expect(isKnownProperty(legacy, 'c')).toBe(true)
+    expect(isKnownProperty(legacy, 'mt')).toBe(false)
+    expect(findBlocked(legacy, 'c')).toBeUndefined()
   })
 
   it('gives bgi its built-in url format and bgv none', () => {

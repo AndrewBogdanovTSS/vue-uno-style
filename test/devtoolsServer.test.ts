@@ -180,7 +180,7 @@ describe.each(basePresets)('UnoCSS blocklist with $name', ({ preset }) => {
     const { coverage } = await createDevtoolsData(await createBlockedContext())
     const opacity = coverage.find((item) => item.property === 'opacity')!
 
-    expect(opacity.unoBlocked).toEqual({ rule: '/^opacity-/' })
+    expect(opacity.unoBlocked).toEqual({ rule: '/^opacity-/', tokens: ['vs:opacity-$opacity', 'vs:md:opacity-$opacity-md', 'vs:lg:opacity-$opacity-lg'] })
     expect(opacity.suggestion).toBeUndefined()
     expect(coverage.find((item) => item.property === 'c')!.unoBlocked).toBeUndefined()
   })
@@ -189,9 +189,23 @@ describe.each(basePresets)('UnoCSS blocklist with $name', ({ preset }) => {
     const { unoBlocked } = await createDevtoolsData(await createBlockedContext())
 
     expect(unoBlocked).toEqual([
-      { property: 'opacity', rule: '/^opacity-/' },
-      { property: 'tracking', rule: '/^tracking-/', message: 'Use the type scale.' }
+      { property: 'opacity', rule: '/^opacity-/', tokens: ['vs:opacity-$opacity', 'vs:md:opacity-$opacity-md', 'vs:lg:opacity-$opacity-lg'] },
+      { property: 'tracking', rule: '/^tracking-/', message: 'Use the type scale.', tokens: ['vs:tracking-$tracking', 'vs:md:tracking-$tracking-md', 'vs:lg:tracking-$tracking-lg'] }
     ])
+  })
+
+  it('names an entry that removes one breakpoint only, such as an exact string', async () => {
+    const generator = await createGenerator({
+      presets: [preset(), presetVUnoStyle({ properties: ['opacity'], breakpoints })],
+      blocklist: ['opacity-$opacity-md']
+    })
+    const data = await createDevtoolsData({ ...context, properties: resolveProperties(['opacity']), generator })
+    const opacity = data.coverage.find((item) => item.property === 'opacity')!
+
+    expect(opacity.tokens.map(({ matched }) => matched)).toEqual([true, false, true])
+    expect(opacity.unoBlocked).toEqual({ rule: '"opacity-$opacity-md"', tokens: ['vs:md:opacity-$opacity-md'] })
+    expect(opacity.suggestion).toBeUndefined()
+    expect(data.unoBlocked).toEqual([{ property: 'opacity', rule: '"opacity-$opacity-md"', tokens: ['vs:md:opacity-$opacity-md'] }])
   })
 
   it('lists the project\'s own blocked properties', async () => {

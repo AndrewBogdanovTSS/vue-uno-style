@@ -7,9 +7,9 @@ export type PropertyFormat = 'url'
 /**
  * One property the directive may set: the UnoCSS utility prefix whose rule accepts a
  * `<prefix>-$<variable>` value, such as `c` or `bg` in presetWind3. Use the object form to give
- * it a value format.
+ * it a value format, or `format: false` to drop a built-in one, such as `bgi`'s `url`.
  */
-export type PropertyConfig = string | { name: string, format?: PropertyFormat }
+export type PropertyConfig = string | { name: string, format?: PropertyFormat | false }
 
 /**
  * A property the project forbids, with an optional message saying what to use instead. Use the
@@ -116,7 +116,7 @@ export const resolveProperties = (
     if (names.includes(name)) {
       throw new Error(`[vue-uno-style] Property "${name}" is configured more than once.`)
     }
-    if (format !== undefined && !FORMATS.includes(format)) {
+    if (format !== undefined && format !== false && !FORMATS.includes(format)) {
       throw new Error(
         `[vue-uno-style] Unknown format ${JSON.stringify(format)} for property "${name}". `
         + `Supported: ${FORMATS.join(', ')}.`
@@ -125,6 +125,8 @@ export const resolveProperties = (
 
     names.push(name)
     if (format) formats[name] = format
+    // `false` takes the value as written, even for a property with a built-in format
+    else if (format === false) delete formats[name]
   })
 
   const blocked = resolveBlocked(blockedProperties)
@@ -174,9 +176,19 @@ const resolveBlocked = (entries: readonly BlockedPropertyConfig[] | undefined): 
   return blocked
 }
 
-/** The blocked entry for `name`, if the project blocks it. */
-export const findBlocked = (properties: Pick<ResolvedProperties, 'blocked'> | undefined, name: string): BlockedProperty | undefined =>
-  properties?.blocked.find((item) => item.name === name)
+/**
+ * The blocked entry for `name`, if the project blocks it. Tolerates properties resolved before
+ * 0.4.0, which have no `blocked` list.
+ */
+export const findBlocked = (properties: (Pick<ResolvedProperties, 'names'> & Partial<Pick<ResolvedProperties, 'blocked'>>) | undefined, name: string): BlockedProperty | undefined =>
+  properties?.blocked?.find((item) => item.name === name)
+
+/**
+ * Whether the directive knows `name`. Properties resolved before 0.4.0 have no `known` list, so
+ * their configured `names` stand in for it.
+ */
+export const isKnownProperty = (properties: Pick<ResolvedProperties, 'names'> & Partial<Pick<ResolvedProperties, 'known'>>, name: string): boolean =>
+  (properties.known ?? properties.names).includes(name)
 
 /** The sentence every report of a blocked property uses, with its message when it has one. */
 export const blockedPropertyMessage = ({ name, message }: BlockedProperty): string =>

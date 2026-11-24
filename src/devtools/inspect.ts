@@ -1,6 +1,6 @@
 import type { ResolvedBreakpoints } from '../core/breakpoints'
 import type { ResolvedProperties } from '../core/properties'
-import { blockedPropertyMessage, findBlocked } from '../core/properties'
+import { blockedPropertyMessage, findBlocked, isKnownProperty } from '../core/properties'
 
 export type ValueWarningKind =
   | 'blocked-property'
@@ -68,7 +68,7 @@ export const inspectValue = (
     if (blocked) {
       warnings.push({ kind: 'blocked-property', property, message: blockedPropertyMessage(blocked) })
     }
-    else if (properties && !properties.known.includes(property)) {
+    else if (properties && !isKnownProperty(properties, property)) {
       warnings.push({
         kind: 'unknown-property',
         property,

@@ -38,7 +38,7 @@ describe('vue-uno-style/no-multiple-v-style', () => {
     })
 
     it('allows object syntax on a single directive', () => {
-      expect(verify('<template><div v-uno-style="{ c: color, display }" /></template>'))
+      expect(verify('<template><div v-uno-style="{ c: color, mt }" /></template>'))
         .toHaveLength(0)
     })
 
@@ -70,6 +70,16 @@ describe('vue-uno-style/no-multiple-v-style', () => {
       expect(new Linter({ configType: 'flat' })
         .verify('<template><div v-uno-style:paddign="value" /></template>', config, { filename: 'test.vue' }))
         .toHaveLength(0)
+    })
+
+    it('accepts an empty properties list, which leaves the defaults known', () => {
+      expect(verify('<template><div v-uno-style:mt="a" /></template>', undefined, [])).toHaveLength(0)
+      expect(verify('<template><div v-uno-style:paddign="a" /></template>', undefined, [])).toHaveLength(1)
+    })
+
+    it('reads the kebab-case spelling of a camelCase directive name', () => {
+      expect(verify('<template><div v-uno-style:paddign="a" /></template>', 'unoStyle'))
+        .toEqual([expect.objectContaining({ messageId: 'unknownStyleProp' })])
     })
 
     it('allows a dynamic argument because it cannot be checked statically', () => {
@@ -127,6 +137,15 @@ describe('vue-uno-style/no-multiple-v-style', () => {
       expect(verify('<template><div v-uno-style:paddign="value" /></template>', undefined, properties))
         .toEqual(expected)
       expect(verify('<template><div v-uno-style:paddign="value" /></template>')).toEqual(expected)
+    })
+
+    it('reports an unknown key of an object literal, quoted or not', () => {
+      const messages = verify('<template><div v-uno-style="{ c: a, paddign: b, \'mtt\': c, [dynamic]: d, ...rest }" /></template>')
+
+      expect(messages.map(({ message }) => message)).toEqual([
+        'Unknown v-uno-style property "paddign". It is not a default property: add it to the configured properties.',
+        'Unknown v-uno-style property "mtt". It is not a default property: add it to the configured properties.'
+      ])
     })
 
     it('reports an unconfigured property for a renamed directive', () => {

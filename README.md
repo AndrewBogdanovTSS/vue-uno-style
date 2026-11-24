@@ -138,20 +138,33 @@ the preset adds its own:
 
 | Prefix | CSS | Value |
 |--------|-----|-------|
-| `bgi` | `background-image: var(--bgi)` | A plain image URL. `bgi` takes `format: 'url'` unless its entry names a format. |
+| `bgi` | `background-image: var(--bgi)` | A plain image URL. `bgi` takes `format: 'url'` unless its entry names a format, or `format: false` to take the value as written. |
 | `bgv` | `background: var(--bgv)` | Any `background` value as written, such as a gradient. |
 
 A rule of your own for `bgi` or `bgv` replaces the preset's.
 
+> [!NOTE]
+> Before 0.4.0, `bgi` had no format unless you gave it one. If yours is fed
+> whole values such as `url(/a.png)` or a gradient, write
+> `{ name: 'bgi', format: false }`, or they get wrapped a second time.
+
 ### What the preset finds in your source
 
-The preset reads every file UnoCSS scans: by default the `.vue`, `.html`,
-`.jsx` and `.tsx` files in your build. It finds:
+The preset reads every file UnoCSS scans. By default that includes each `.vue`,
+`.html`, `.jsx`, `.tsx`, `.svelte`, `.astro`, `.md` and `.mdx` file in your
+build; UnoCSS's `content.pipeline` option narrows it. In the attributes of each
+tag, it finds:
 
 - **a static argument**: `v-uno-style:mt="..."`;
 - **the top-level keys of an object literal**: `mt` and `px` in
   `v-uno-style="{ mt: ..., px: { sm: ..., md: ... } }"`, quoted keys and
   shorthand `{ mt }` included.
+
+A directive registered as `unoStyle` is found as `v-unoStyle` and as
+`v-uno-style`, the two spellings Vue resolves. HTML comments and escaped code
+samples (`&lt;p v-uno-style:mb="..."&gt;`) do not count. A tag written out in
+a Markdown code block does: keep such docs out of the scan if they show
+properties your app does not use.
 
 It cannot see a property whose name exists only at runtime:
 
@@ -168,8 +181,9 @@ It cannot see a property whose name exists only at runtime:
 In `nuxt dev`, a property you remove from the source stays safelisted until you
 restart the dev server. A build always starts from scratch.
 
-The scan adds about 1% to UnoCSS's own extraction: 0.07 ms on a 174 KB file,
-next to 6 ms for UnoCSS's default extractor.
+The scan costs little next to UnoCSS's own extraction. On a 174 KB file, it
+takes 0.7 ms when the file uses the directive and 0.06 ms when it does not,
+against 6 ms for UnoCSS's default extractor.
 
 ### Configured properties
 
@@ -393,8 +407,9 @@ During `nuxt dev`, the module adds a **vue-uno-style** tab to Nuxt DevTools:
     that is the tested rule from the table. For any other prefix, it is the
     general shape with the CSS property left for you to fill in.
   - **UnoCSS blocklist.** It lists every known property, configured or default,
-    whose CSS an entry of your UnoCSS `blocklist` removes, with the entry and
-    its message. Coverage names that entry instead of suggesting a rule.
+    with a class an entry of your UnoCSS `blocklist` removes, at any
+    breakpoint, with the classes, the entry and its message. Coverage names
+    that entry instead of suggesting a rule.
   - **Status.** It also shows the safelist size, configured and found in the
     source counted apart, the web-types status, the
     blocked properties, and which properties no page has used yet this session.
@@ -534,9 +549,9 @@ these except empty values, with the element they came from.
 ## ESLint
 
 `vue-uno-style/no-multiple-v-style` reports more than one directive on a tag
-and autofixes adjacent ones into the object form. It also reports an argument
-that is neither a default property nor in `properties`. Pass your
-`properties` so it knows them.
+and autofixes adjacent ones into the object form. It also reports a static
+argument or object literal key that is neither a default property nor in
+`properties`. Pass your `properties` so it knows them; an empty list is fine.
 
 ```js
 // eslint.config.js
@@ -588,7 +603,7 @@ optional `message` string in place of `format`.
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `name` | `string` | required | UnoCSS utility prefix: a letter, then letters, digits or dashes. Each name may appear once. |
-| `format` | `'url'` | none, `'url'` for `bgi` | `url` writes each value as `url(<value>)`. No other format exists. |
+| `format` | `'url' \| false` | none, `'url'` for `bgi` | `url` writes each value as `url(<value>)`. `false` writes it as given, dropping a built-in format. No other format exists. |
 
 An invalid name, a repeated name or an unknown format throws. So does a
 missing or empty list with `defaultProperties: false`.
@@ -666,7 +681,7 @@ Options for `vue-uno-style/no-multiple-v-style`.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `directiveName` | `string` | `'uno-style'` | Directive name without `v-`. |
-| `properties` | `PropertyConfig[]` | none | Known next to the defaults. A static argument (`v-uno-style:x`) that is neither listed nor a default property is reported. Object keys and dynamic arguments are not checked. |
+| `properties` | `PropertyConfig[]` | none | Known next to the defaults; may be empty. A static argument (`v-uno-style:x`) or object literal key that is neither listed nor a default property is reported. Dynamic arguments and computed keys are not checked. |
 | `defaultProperties` | `boolean` | `true` | Whether the default properties are known. With `false` and no `properties`, no argument is reported. |
 | `blockedProperties` | `BlockedPropertyConfig[]` | none | A static argument or object literal key naming one is reported with its message, whatever the other options. |
 

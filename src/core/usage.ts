@@ -2,15 +2,81 @@ import { isPropertyName } from './properties'
 
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+const hyphenate = (name: string) => name.replace(/\B([A-Z])/g, '-$1').toLowerCase()
+
 /**
- * Matches a `v-<directiveName>` attribute with a quoted value: the static argument in group 1,
- * the value in group 2 (double quotes) or 3 (single quotes). A dynamic argument (`:[prop]`) does
- * not match, so it names no property.
+ * The spellings a template may use for a directive registered as `directiveName`: the name as
+ * given, and its kebab-case form, which Vue also resolves - `v-uno-style` for `unoStyle`.
  */
-const attributePattern = (directiveName: string) => new RegExp(
-  `(?<![\\w-])v-${escapeRegExp(directiveName)}(?::([\\w-]+))?(?:\\.[\\w-]+)*\\s*=\\s*(?:"([^"]*)"|'([^']*)')`,
-  'g'
+export const directiveNameForms = (directiveName: string): string[] =>
+  [...new Set([directiveName, hyphenate(directiveName)])]
+
+/**
+ * Matches a whole attribute name of the directive: the static argument in group 1. A dynamic
+ * argument (`:[prop]`) does not match, so it names no property.
+ */
+const directiveAttributePattern = (directiveName: string) => new RegExp(
+  `^v-(?:${directiveNameForms(directiveName).map(escapeRegExp).join('|')})(?::([\\w-]+))?(?:\\.[\\w-]+)*$`
 )
+
+const TAG_START = /<[a-z][\w.:-]*/gi
+const COMMENT = /<!--[\s\S]*?-->/g
+const isSpace = (char: string | undefined) => char !== undefined && /\s/.test(char)
+
+interface Attribute {
+  name: string
+  value?: string
+}
+
+/**
+ * Reads the attributes of the tag whose name ends at `start`, up to its closing `>`. Quoted values
+ * may hold `>` or `<`. Returns them with the index just past the tag.
+ */
+const readAttributes = (source: string, start: number): { attributes: Attribute[], end: number } => {
+  const attributes: Attribute[] = []
+  let index = start
+
+  while (index < source.length) {
+    while (isSpace(source[index])) index++
+    const char = source[index]
+    if (char === undefined || char === '>') return { attributes, end: index + 1 }
+    if (char === '/' || char === '<') {
+      index++
+      continue
+    }
+
+    let name = ''
+    while (index < source.length && !isSpace(source[index]) && !'=>/'.includes(source[index]!)) {
+      name += source[index]
+      index++
+    }
+    while (isSpace(source[index])) index++
+
+    let value: string | undefined
+    if (source[index] === '=') {
+      index++
+      while (isSpace(source[index])) index++
+      const quote = source[index]
+      if (quote === '"' || quote === '\'') {
+        const close = source.indexOf(quote, index + 1)
+        const end = close === -1 ? source.length : close
+        value = source.slice(index + 1, end)
+        index = end + 1
+      }
+      else {
+        value = ''
+        while (index < source.length && !isSpace(source[index]) && source[index] !== '>') {
+          value += source[index]
+          index++
+        }
+      }
+    }
+
+    if (name) attributes.push({ name, value })
+  }
+
+  return { attributes, end: index }
+}
 
 const OPEN = '{[('
 const CLOSE = '}])'
@@ -81,17 +147,31 @@ export const objectLiteralKeys = (expression: string): string[] => {
 }
 
 /**
- * The properties a source file sets through `v-<directiveName>`: each static argument, and the
- * top-level keys of each object literal value. A value that is not an object literal, such as
- * `v-uno-style="block.styles"`, names no property: its keys only exist at runtime.
+ * The properties a source file sets through `v-<directiveName>` on a tag: each static argument,
+ * and the top-level keys of each object literal value. A value that is not an object literal,
+ * such as `v-uno-style="block.styles"`, names no property: its keys only exist at runtime.
+ *
+ * Only attributes of real tags count, so HTML comments and escaped code samples
+ * (`&lt;p v-uno-style:mb="..."&gt;`) do not. A tag written out in a Markdown code block does.
  */
 export const findUsedProperties = (code: string, directiveName: string): string[] => {
-  if (!code.includes(`v-${directiveName}`)) return []
+  if (!directiveNameForms(directiveName).some((form) => code.includes(`v-${form}`))) return []
 
+  const source = code.replace(COMMENT, '')
+  const pattern = directiveAttributePattern(directiveName)
+  const tags = new RegExp(TAG_START.source, TAG_START.flags)
   const found = new Set<string>()
-  for (const [, argument, double, single] of code.matchAll(attributePattern(directiveName))) {
-    if (argument) found.add(argument)
-    else objectLiteralKeys(double ?? single ?? '').forEach((key) => found.add(key))
+
+  for (let match = tags.exec(source); match; match = tags.exec(source)) {
+    const { attributes, end } = readAttributes(source, match.index + match[0].length)
+    tags.lastIndex = end
+
+    for (const { name, value } of attributes) {
+      const directive = pattern.exec(name)
+      if (!directive) continue
+      if (directive[1]) found.add(directive[1])
+      else objectLiteralKeys(value ?? '').forEach((key) => found.add(key))
+    }
   }
 
   return [...found]

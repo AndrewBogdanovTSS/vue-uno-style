@@ -56,6 +56,22 @@ describe('getStyle', () => {
     expect(warn).toHaveBeenCalledWith('[vue-uno-style] Property "opacity" is blocked in this project. Use op instead.')
   })
 
+  it('writes bgi as given once its entry turns the built-in format off', () => {
+    const properties = resolveProperties([{ name: 'bgi', format: false }])
+
+    expect(getStyle({ sm: 'linear-gradient(red, blue)' }, breakpoints, 'bgi', properties).style)
+      .toEqual({ '--bgi': 'linear-gradient(red, blue)' })
+  })
+
+  it('accepts properties resolved before 0.4.0', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const legacy = { names: ['c'], formats: {} } as never
+
+    expect(getStyle({ sm: 'red' }, breakpoints, 'c', legacy).style).toEqual({ '--c': 'red' })
+    getStyle({ sm: '1rem' }, breakpoints, 'mt', legacy)
+    expect(warn).toHaveBeenCalledOnce()
+  })
+
   it('accepts any property without warning when none are passed', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 

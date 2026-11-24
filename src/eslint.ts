@@ -1,13 +1,14 @@
 import type { BlockedPropertyConfig, PropertyConfig } from './core/properties'
 import type { Linter, Rule } from 'eslint'
 import { blockedPropertyMessage, findBlocked, resolveProperties } from './core/properties'
+import { directiveNameForms } from './core/usage'
 
 declare const __PACKAGE_VERSION__: string
 
 export interface NoMultipleVStyleOptions {
   /** Directive registration name without the `v-` prefix. */
   directiveName?: string
-  /** The properties configured for the preset. Arguments outside them and the defaults are reported. */
+  /** The properties configured for the preset. Names outside them and the defaults are reported. */
   properties?: PropertyConfig[]
   /**
    * Whether the default properties are known. Defaults to `true`. With `false` and no
@@ -87,8 +88,9 @@ const defaultDirectiveName = 'uno-style'
 const asRuleNode = (node: VueNode): Rule.Node => node as unknown as Rule.Node
 
 /**
- * Disallows multiple v-uno-style directives on one element, and argument names outside the
- * known properties: the configured ones and the defaults.
+ * Disallows multiple v-uno-style directives on one element, and property names - static arguments
+ * and object literal keys - that are blocked or outside the known properties: the configured ones
+ * and the defaults.
  */
 export const noMultipleVStyle: Rule.RuleModule = {
   meta: {
@@ -106,7 +108,6 @@ export const noMultipleVStyle: Rule.RuleModule = {
         },
         properties: {
           type: 'array',
-          minItems: 1,
           items: {
             anyOf: [
               { type: 'string', minLength: 1 },
@@ -114,7 +115,7 @@ export const noMultipleVStyle: Rule.RuleModule = {
                 type: 'object',
                 properties: {
                   name: { type: 'string', minLength: 1 },
-                  format: { type: 'string' }
+                  format: { anyOf: [{ type: 'string' }, { enum: [false] }] }
                 },
                 required: ['name'],
                 additionalProperties: false
@@ -172,8 +173,8 @@ export const noMultipleVStyle: Rule.RuleModule = {
     })
     const configured = checksKnown ? new Set(resolved.known) : undefined
 
-    /** Reports `name` when the project blocks it, and says whether it did. */
-    const reportBlocked = (node: VueNode, name: string): boolean => {
+    /** Reports `name` when the project blocks it, or else when the directive does not know it. */
+    const checkProperty = (node: VueNode, name: string) => {
       const blocked = findBlocked(resolved, name)
       if (blocked) {
         context.report({
@@ -182,38 +183,37 @@ export const noMultipleVStyle: Rule.RuleModule = {
           data: { directiveName, text: blockedPropertyMessage(blocked) }
         })
       }
-      return Boolean(blocked)
+      else if (configured && !configured.has(name)) {
+        context.report({
+          node: asRuleNode(node),
+          messageId: 'unknownStyleProp',
+          data: { directiveName, prop: name }
+        })
+      }
     }
+
+    // Vue resolves `v-uno-style` for a directive registered as `unoStyle`, so both spellings count
+    const directiveNames = new Set(directiveNameForms(directiveName))
 
     return parserServices.defineTemplateBodyVisitor({
       VStartTag(node) {
         const directiveAttributes = node.attributes.filter(
-          (attribute) => attribute.directive && attribute.key?.name?.name === directiveName
+          (attribute) => attribute.directive && directiveNames.has(attribute.key?.name?.name ?? '')
         )
 
         directiveAttributes.forEach((attribute) => {
-          const expression = attribute.value?.expression
-          if (!attribute.key?.argument && expression?.type === 'ObjectExpression') {
-            (expression as unknown as { properties: ObjectProperty[] }).properties.forEach((property) => {
-              const name = objectKeyName(property)
-              if (name && property.key) reportBlocked(property.key, name)
-            })
+          const argument = attribute.key?.argument
+          if (argument?.type === 'VIdentifier') {
+            checkProperty(argument, (argument as VueIdentifier).name)
+            return
           }
 
-          const argument = attribute.key?.argument
-          if (argument?.type === 'VIdentifier' && reportBlocked(argument, (argument as VueIdentifier).name)) return
-          if (
-            configured
-            && argument?.type === 'VIdentifier'
-            && !configured.has((argument as VueIdentifier).name)
-          ) {
-            context.report({
-              node: asRuleNode(argument),
-              messageId: 'unknownStyleProp',
-              data: {
-                directiveName,
-                prop: (argument as VueIdentifier).name
-              }
+          // The keys of an object literal name properties too, and the preset scans them
+          const expression = attribute.value?.expression
+          if (!argument && expression?.type === 'ObjectExpression') {
+            (expression as unknown as { properties: ObjectProperty[] }).properties.forEach((property) => {
+              const name = objectKeyName(property)
+              if (name && property.key) checkProperty(property.key, name)
             })
           }
         })
