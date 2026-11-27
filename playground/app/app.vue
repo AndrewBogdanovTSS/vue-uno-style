@@ -53,6 +53,17 @@ onMounted(() => {
 })
 onBeforeUnmount(() => window.removeEventListener('resize', updateBreakpoint))
 
+// The resize hint: one segment per breakpoint, highlighted by the directive itself rather than by
+// the script above, so the server renders the right one and it shows before any JavaScript runs.
+const breakpointNames = Object.keys(breakpoints)
+const ruler = breakpointNames.map((name) => ({
+  name,
+  styles: {
+    c: Object.fromEntries(breakpointNames.map((other) => [other, other === name ? 'var(--on-primary)' : 'var(--text-muted)'])),
+    bg: Object.fromEntries(breakpointNames.map((other) => [other, other === name ? 'var(--primary)' : 'transparent']))
+  }
+}))
+
 // Public files live under the app's base URL, which is `/<repository>/` on GitHub Pages.
 const base = useRuntimeConfig().app.baseURL
 
@@ -138,7 +149,8 @@ const override = { sm: '#16a34a', md: '#2563eb' }
     <div class="container topbar-inner" v-uno-style:indent="'1rem'">
       <span class="brand"><span class="brand-mark" aria-hidden="true" /> vue-uno-style</span>
       <span class="breakpoint" :class="{ hidden: !breakpoint }" aria-live="polite">
-        Breakpoint <strong>{{ breakpoint ?? 'sm' }}</strong>
+        <!-- Keyed, so a new breakpoint replaces the element and replays its pop animation -->
+        Breakpoint <strong :key="breakpoint">{{ breakpoint ?? 'sm' }}</strong>
       </span>
       <nav class="links">
         <a :href="`${REPOSITORY}#readme`" target="_blank">Docs</a>
@@ -167,6 +179,23 @@ const override = { sm: '#16a34a', md: '#2563eb' }
           {{ installCommand }}
           <span v-if="copied" class="accent" aria-hidden="true">✓</span>
         </button>
+      </div>
+      <div class="resize-hint" role="note">
+        <span class="resize-demo" aria-hidden="true">
+          <span class="resize-screen"><span class="resize-window"><span class="resize-fill" /></span></span>
+          <span class="resize-stand" />
+        </span>
+        <p class="resize-text"><strong>Resize your window</strong> to see it work</p>
+        <ol class="ruler" aria-label="Breakpoints">
+          <li
+            v-for="segment in ruler"
+            :key="segment.name"
+            :data-playground-ruler="segment.name"
+            v-uno-style="segment.styles"
+          >
+            {{ segment.name }}
+          </li>
+        </ol>
       </div>
     </section>
 
@@ -395,7 +424,8 @@ a:hover { text-decoration: underline; }
 .brand { display: inline-flex; gap: 8px; align-items: center; font-family: var(--font-heading); font-size: 18px; font-weight: 500; color: var(--text-highlighted); }
 .brand-mark { width: 20px; height: 20px; background: linear-gradient(135deg, var(--primary) 50%, #4f46e5 50%); border-radius: 6px; }
 .breakpoint { padding: 2px 10px; font-size: 13px; color: var(--text-muted); border: 1px solid var(--border); border-radius: 999px; }
-.breakpoint strong { color: var(--primary); font-weight: 600; }
+.breakpoint strong { display: inline-block; color: var(--primary); font-weight: 600; animation: breakpoint-pop .45s ease-out; }
+@keyframes breakpoint-pop { from { transform: scale(1.6); } to { transform: none; } }
 .breakpoint.hidden { visibility: hidden; }
 .links { display: flex; gap: 20px; margin-left: auto; font-size: 14px; font-weight: 500; }
 .links a { color: var(--text-muted); }
@@ -408,6 +438,47 @@ a:hover { text-decoration: underline; }
 .hero p { max-width: 620px; margin: 0; font-size: 18px; color: var(--text-muted); }
 .pill { padding: 2px 12px; font-size: 13px; font-weight: 500; color: var(--text-muted); border: 1px solid var(--border); border-radius: 999px; }
 .actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+.resize-hint { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; justify-content: center; max-width: 100%; margin-top: 8px; padding: 16px 24px; background: var(--bg-muted); border: 1px dashed var(--border); border-radius: 12px; }
+.hero .resize-text { max-width: none; font-size: 15px; color: var(--text); }
+.resize-text strong { color: var(--text-highlighted); }
+
+/* A screen with a browser window that widens and narrows, its fill switching colour as it crosses each breakpoint. */
+.resize-demo { display: flex; flex-basis: 100%; flex-direction: column; align-items: center; }
+.resize-screen { display: flex; width: 96px; height: 60px; padding: 5px; background: var(--bg); border: 2px solid var(--text-muted); border-radius: 7px; }
+.resize-window { position: relative; display: flex; flex-direction: column; height: 100%; padding: 7px 3px 3px; background: var(--bg-accented); border-radius: 3px; animation: resize-window 4s linear infinite; }
+/* Three title-bar dots */
+.resize-window::before { content: ''; position: absolute; top: 3px; left: 3px; width: 2px; height: 2px; background: var(--text-muted); border-radius: 50%; box-shadow: 4px 0 var(--text-muted), 8px 0 var(--text-muted); }
+/* The edge being dragged */
+.resize-window::after { content: ''; position: absolute; top: 50%; right: -4px; width: 3px; height: 14px; background: var(--primary); border-radius: 2px; transform: translateY(-50%); }
+.resize-fill { flex: 1; border-radius: 2px; animation: resize-fill 4s linear infinite; }
+.resize-stand { position: relative; width: 36px; height: 9px; }
+.resize-stand::before { content: ''; position: absolute; top: 0; left: 50%; width: 10px; height: 6px; background: var(--text-muted); transform: translateX(-50%); }
+.resize-stand::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: var(--text-muted); border-radius: 2px; }
+@keyframes resize-window {
+  0%, 10% { width: 28px; }
+  40%, 60% { width: 78px; }
+  90%, 100% { width: 28px; }
+}
+/* The first demo's sm, md and lg backgrounds, switched where the frame crosses a breakpoint. */
+@keyframes resize-fill {
+  0%, 19.9% { background: #c7d2fe; }
+  20%, 29.9% { background: #4f46e5; }
+  30%, 69.9% { background: #86efac; }
+  70%, 79.9% { background: #4f46e5; }
+  80%, 100% { background: #c7d2fe; }
+}
+
+.ruler { display: inline-flex; gap: 4px; margin: 0; padding: 4px; list-style: none; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; }
+/* No color or background here: the directive sets both per breakpoint, and a rule here would outrank it. */
+.ruler li { padding: 2px 12px; font: 500 13px/1.6 var(--font-mono); white-space: nowrap; border-radius: 999px; transition: background-color .2s, color .2s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .resize-window, .resize-fill, .breakpoint strong { animation: none; }
+  .resize-window { width: 78px; }
+  .resize-fill { background: #86efac; }
+  .ruler li { transition: none; }
+}
 
 .button { display: inline-flex; gap: 8px; align-items: center; padding: 8px 14px; font: 500 14px/1.5 var(--font-sans); color: var(--text-highlighted); background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; transition: background .15s, border-color .15s; }
 .button:hover { text-decoration: none; background: var(--bg-accented); }
