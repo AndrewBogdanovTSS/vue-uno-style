@@ -77,4 +77,31 @@ describe('getStyleProps', () => {
         classList: ['vs:bgi-$bgi', 'vs:md:bgi-$bgi-md']
       })
   })
+
+  it('skips false, as a scalar and at a breakpoint', () => {
+    expect(getStyleProps(prop, false, breakpoints)).toEqual({})
+    expect(getStyleProps(prop, { sm: '1rem', md: false }, breakpoints)).toEqual({
+      styles: { '--p': '1rem' },
+      classList: ['vs:p-$p']
+    })
+    expect(getStyleProps(prop, { sm: false, md: '2rem' }, breakpoints)).toEqual({
+      styles: { '--p-md': '2rem' },
+      classList: ['vs:md:p-$p-md']
+    })
+  })
+
+  it('skips true, which is never a CSS value', () => {
+    expect(getStyleProps(prop, true as never, breakpoints)).toEqual({})
+    expect(getStyleProps(prop, { sm: '1rem', md: true as never }, breakpoints)).toEqual({
+      styles: { '--p': '1rem' },
+      classList: ['vs:p-$p']
+    })
+  })
+
+  it('still writes a numeric zero next to a skipped false', () => {
+    expect(getStyleProps(prop, { sm: 0, md: false, lg: '1rem' }, breakpoints)).toEqual({
+      styles: { '--p': 0, '--p-lg': '1rem' },
+      classList: ['vs:p-$p', 'vs:lg:p-$p-lg']
+    })
+  })
 })

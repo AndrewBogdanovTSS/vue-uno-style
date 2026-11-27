@@ -93,4 +93,25 @@ describe('getStyle', () => {
     expect(getStyle(value, breakpoints).style).toEqual(expected)
     expect(getStyle(value, breakpoints, undefined, resolveProperties(['bgi', 'bgv'])).style).toEqual(expected)
   })
+
+  it('skips false and true, at the top level, per breakpoint and per property', () => {
+    expect(getStyle(false as never, breakpoints, 'h')).toEqual({ classes: '', style: {} })
+    expect(getStyle(true as never, breakpoints, 'h')).toEqual({ classes: '', style: {} })
+    expect(getStyle({ sm: '10rem', md: false }, breakpoints, 'h')).toEqual({
+      classes: 'vs:h-$h',
+      style: { '--h': '10rem' }
+    })
+    expect(getStyle({ h: false, w: '2rem' } as never, breakpoints)).toEqual({
+      classes: 'vs:w-$w',
+      style: { '--w': '2rem' }
+    })
+  })
+
+  it('gives no unknown-property warning for false', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    getStyle(false as never, breakpoints, 'blur', resolveProperties([]))
+
+    expect(warn).not.toHaveBeenCalled()
+  })
 })

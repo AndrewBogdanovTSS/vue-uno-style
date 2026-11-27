@@ -627,6 +627,49 @@ describe('vUnoStyle directive', () => {
       })
     })
 
+    it('skips false, so `condition && value` leaves the property unset', () => {
+      // @ts-expect-error Testing directive lifecycle hooks
+      vUnoStyle.beforeMount(element, { arg: 'h', value: false } as never, null as never, null)
+
+      expect(element.style.getPropertyValue('--h')).toBe('')
+      expect(element.classList.contains('vs:h-$h')).toBe(false)
+
+      const other = document.createElement('div')
+      // @ts-expect-error Testing directive lifecycle hooks
+      vUnoStyle.beforeMount(other, { value: { h: { sm: '10rem', md: false }, w: false } } as never, null as never, null)
+
+      expect(other.style.getPropertyValue('--h')).toBe('10rem')
+      expect(other.style.getPropertyValue('--h-md')).toBe('')
+      expect(other.style.getPropertyValue('--w')).toBe('')
+      expect(other.classList.contains('vs:md:h-$h-md')).toBe(false)
+    })
+
+    it('skips true, which is never a CSS value', () => {
+      // @ts-expect-error Testing directive lifecycle hooks
+      vUnoStyle.beforeMount(element, { arg: 'h', value: true } as never, null as never, null)
+
+      expect(element.style.getPropertyValue('--h')).toBe('')
+      expect(element.classList.contains('vs:h-$h')).toBe(false)
+    })
+
+    it('clears a value once it turns false', () => {
+      // @ts-expect-error Testing directive lifecycle hooks
+      vUnoStyle.beforeMount(element, { arg: 'h', value: '10rem' } as never, null as never, null)
+      // @ts-expect-error Testing directive lifecycle hooks
+      vUnoStyle.updated(element, { arg: 'h', value: false, oldValue: '10rem' } as never, null as never, null)
+
+      expect(element.style.getPropertyValue('--h')).toBe('')
+      expect(element.classList.contains('vs:h-$h')).toBe(false)
+    })
+
+    it('renders nothing for false on the server', () => {
+      expect(vUnoStyle.getSSRProps!({ arg: 'h', value: false } as never, null as never)).toBeUndefined()
+      expect(vUnoStyle.getSSRProps!({ arg: 'h', value: { sm: '10rem', md: false } } as never, null as never)).toEqual({
+        class: 'vs:h-$h',
+        style: { '--h': '10rem' }
+      })
+    })
+
     it('handles string values', () => {
       const value: ResponsiveStyles = { p: { sm: '1rem' } } as any
 

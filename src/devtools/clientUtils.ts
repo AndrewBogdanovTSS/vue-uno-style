@@ -94,7 +94,7 @@ export const effectiveValue = (
   const index = order.indexOf(breakpoint)
   for (let position = index; position >= 0; position--) {
     const value = values[order[position]!]
-    if (value !== undefined && value !== null && value !== '') return value
+    if (value !== undefined && value !== null && value !== '' && value !== false) return value
   }
   return undefined
 }

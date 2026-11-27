@@ -1,5 +1,6 @@
 import type { ResolvedBreakpoints } from '../core/breakpoints'
 import type { ResolvedProperties } from '../core/properties'
+import { isEmptyValue } from '../core/getStyleProps'
 import { blockedPropertyMessage, findBlocked, isKnownProperty } from '../core/properties'
 
 export type ValueWarningKind =
@@ -18,14 +19,12 @@ export interface ValueWarning {
 const isObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
 
-const isEmpty = (value: unknown) => value === undefined || value === null || value === ''
-
 const checkScalar = (
   value: unknown,
   property: string,
   breakpoint: string
 ): ValueWarning | undefined => {
-  if (isEmpty(value)) return undefined
+  if (isEmptyValue(value)) return undefined
   if (typeof value !== 'string' && typeof value !== 'number') {
     return {
       kind: 'invalid-value',
@@ -48,7 +47,7 @@ export const inspectValue = (
   breakpoints: ResolvedBreakpoints,
   properties?: ResolvedProperties
 ): ValueWarning[] => {
-  if (isEmpty(value)) return []
+  if (isEmptyValue(value)) return []
 
   if (!arg && !isObject(value)) {
     return [{
@@ -62,7 +61,7 @@ export const inspectValue = (
   const warnings: ValueWarning[] = []
 
   Object.entries(config).forEach(([property, responsive]) => {
-    if (isEmpty(responsive)) return
+    if (isEmptyValue(responsive)) return
 
     const blocked = findBlocked(properties, property)
     if (blocked) {
