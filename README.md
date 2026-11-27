@@ -1,5 +1,11 @@
 # vue-uno-style
 
+<p align="center">
+  <a href="https://andrewbogdanovtss.github.io/vue-uno-style/">
+    <img src="docs/playground-banner.svg" width="100%" alt="Open the vue-uno-style playground: resize the window and watch the styles follow each breakpoint">
+  </a>
+</p>
+
 Let data from your CMS or API style an element differently on phones, tablets
 and desktops, with plain CSS that UnoCSS generates at build time. Server-rendered
 pages show the right value at every screen width before any JavaScript runs.
@@ -43,10 +49,6 @@ short:
   value is no way out either: an editor can pick any colour.
 - **An inline style** (`style="color: #4f46e5"`) works, but inline styles have no
   media queries. You get one value for every screen.
-- **Picking the value in JavaScript**, with `matchMedia` or VueUse's
-  `useBreakpoints`, needs a screen to measure, and the server has none. It
-  sends one value for every screen, and the page jumps to the right one once
-  its JavaScript has loaded.
 - **Runtime CSS-in-JS**, or UnoCSS's own runtime, works, but ships a styling
   engine to the browser and writes new CSS rules while the page runs.
 

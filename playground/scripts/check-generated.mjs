@@ -38,7 +38,9 @@ const expectations = {
   'data-playground-update': ['vs:md:p-$p-md', '--bgv:linear-gradient(135deg, #e0e7ff, #f5f3ff)'],
   // Both the component's own binding (`p`) and the usage site's (`md` background) are present
   'data-playground-composed': ['vs:md:p-$p-md', '--bg-md:#2563eb'],
-  'data-playground-override': ['c-slate-400', 'vs:c-$c', '--c:#16a34a']
+  'data-playground-override': ['c-slate-400', 'vs:c-$c', '--c:#16a34a'],
+  // The resize hint's first segment: highlighted below md by the directive alone, with no script
+  'data-playground-ruler': ['vs:bg-$bg', 'vs:md:bg-$bg-md', '--bg:var(--primary)', '--bg-md:transparent', 'vs:md:c-$c-md']
 }
 
 for (const [marker, values] of Object.entries(expectations)) {

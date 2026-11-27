@@ -53,6 +53,20 @@ onMounted(() => {
 })
 onBeforeUnmount(() => window.removeEventListener('resize', updateBreakpoint))
 
+// The resize hint: one segment per breakpoint, highlighted by the directive itself rather than by
+// the script above, so the server renders the right one and it shows before any JavaScript runs.
+const breakpointNames = Object.keys(breakpoints)
+const breakpointWidths = Object.values(breakpoints)
+const thresholds = breakpointWidths.filter((value) => Number.parseFloat(value) > 0)
+const ruler = breakpointNames.map((name, index) => ({
+  name,
+  range: index === 0 ? `under ${breakpointWidths[1]}` : `${breakpointWidths[index]}+`,
+  styles: {
+    c: Object.fromEntries(breakpointNames.map((other) => [other, other === name ? 'var(--on-primary)' : 'var(--text-muted)'])),
+    bg: Object.fromEntries(breakpointNames.map((other) => [other, other === name ? 'var(--primary)' : 'transparent']))
+  }
+}))
+
 // Public files live under the app's base URL, which is `/<repository>/` on GitHub Pages.
 const base = useRuntimeConfig().app.baseURL
 
@@ -138,7 +152,8 @@ const override = { sm: '#16a34a', md: '#2563eb' }
     <div class="container topbar-inner" v-uno-style:indent="'1rem'">
       <span class="brand"><span class="brand-mark" aria-hidden="true" /> vue-uno-style</span>
       <span class="breakpoint" :class="{ hidden: !breakpoint }" aria-live="polite">
-        Breakpoint <strong>{{ breakpoint ?? 'sm' }}</strong>
+        <!-- Keyed, so a new breakpoint replaces the element and replays its pop animation -->
+        Breakpoint <strong :key="breakpoint">{{ breakpoint ?? 'sm' }}</strong>
       </span>
       <nav class="links">
         <a :href="`${REPOSITORY}#readme`" target="_blank">Docs</a>
@@ -167,6 +182,23 @@ const override = { sm: '#16a34a', md: '#2563eb' }
           {{ installCommand }}
           <span v-if="copied" class="accent" aria-hidden="true">✓</span>
         </button>
+      </div>
+      <div class="resize-hint" role="note">
+        <span class="resize-demo" aria-hidden="true"><span class="resize-frame"><span class="resize-fill" /></span></span>
+        <p class="resize-text">
+          <strong>Resize your window</strong> or rotate your device: the demos below change at {{ thresholds.join(' and ') }}.
+        </p>
+        <ol class="ruler" aria-label="Breakpoints">
+          <li
+            v-for="segment in ruler"
+            :key="segment.name"
+            :data-playground-ruler="segment.name"
+            v-uno-style="segment.styles"
+          >
+            <strong>{{ segment.name }}</strong> <span class="ruler-range">{{ segment.range }}</span>
+          </li>
+        </ol>
+        <p class="resize-note">The highlighted breakpoint comes from v-uno-style alone, with no JavaScript, so it is right from the first paint.</p>
       </div>
     </section>
 
@@ -395,7 +427,8 @@ a:hover { text-decoration: underline; }
 .brand { display: inline-flex; gap: 8px; align-items: center; font-family: var(--font-heading); font-size: 18px; font-weight: 500; color: var(--text-highlighted); }
 .brand-mark { width: 20px; height: 20px; background: linear-gradient(135deg, var(--primary) 50%, #4f46e5 50%); border-radius: 6px; }
 .breakpoint { padding: 2px 10px; font-size: 13px; color: var(--text-muted); border: 1px solid var(--border); border-radius: 999px; }
-.breakpoint strong { color: var(--primary); font-weight: 600; }
+.breakpoint strong { display: inline-block; color: var(--primary); font-weight: 600; animation: breakpoint-pop .45s ease-out; }
+@keyframes breakpoint-pop { from { transform: scale(1.6); } to { transform: none; } }
 .breakpoint.hidden { visibility: hidden; }
 .links { display: flex; gap: 20px; margin-left: auto; font-size: 14px; font-weight: 500; }
 .links a { color: var(--text-muted); }
@@ -408,6 +441,42 @@ a:hover { text-decoration: underline; }
 .hero p { max-width: 620px; margin: 0; font-size: 18px; color: var(--text-muted); }
 .pill { padding: 2px 12px; font-size: 13px; font-weight: 500; color: var(--text-muted); border: 1px solid var(--border); border-radius: 999px; }
 .actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+.resize-hint { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; justify-content: center; max-width: min(820px, 100%); margin-top: 8px; padding: 16px 20px; background: var(--bg-muted); border: 1px dashed var(--border); border-radius: 12px; }
+.hero .resize-text { max-width: none; font-size: 15px; color: var(--text); }
+.resize-text strong { color: var(--text-highlighted); }
+.hero .resize-note { flex-basis: 100%; font-size: 13px; }
+
+/* A window that widens and narrows, its fill switching colour as it crosses each breakpoint. */
+.resize-demo { display: flex; align-items: center; width: 72px; height: 32px; }
+.resize-frame { position: relative; display: block; height: 30px; padding: 4px; border: 2px solid var(--text-muted); border-radius: 7px; animation: resize-frame 4s linear infinite; }
+.resize-frame::after { content: ''; position: absolute; top: 50%; right: -7px; width: 4px; height: 14px; background: var(--primary); border-radius: 2px; transform: translateY(-50%); }
+.resize-fill { display: block; height: 100%; border-radius: 3px; animation: resize-fill 4s linear infinite; }
+@keyframes resize-frame {
+  0%, 10% { width: 26px; }
+  40%, 60% { width: 64px; }
+  90%, 100% { width: 26px; }
+}
+/* The first demo's sm, md and lg backgrounds, switched where the frame crosses a breakpoint. */
+@keyframes resize-fill {
+  0%, 19.9% { background: #c7d2fe; }
+  20%, 29.9% { background: #4f46e5; }
+  30%, 69.9% { background: #86efac; }
+  70%, 79.9% { background: #4f46e5; }
+  80%, 100% { background: #c7d2fe; }
+}
+
+.ruler { display: inline-flex; gap: 4px; margin: 0; padding: 4px; list-style: none; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; }
+/* No color or background here: the directive sets both per breakpoint, and a rule here would outrank it. */
+.ruler li { padding: 4px 12px; font-size: 13px; white-space: nowrap; border-radius: 999px; transition: background-color .2s, color .2s; }
+.ruler strong { margin-right: 2px; font-family: var(--font-mono); }
+
+@media (prefers-reduced-motion: reduce) {
+  .resize-frame, .resize-fill, .breakpoint strong { animation: none; }
+  .resize-frame { width: 64px; }
+  .resize-fill { background: #86efac; }
+  .ruler li { transition: none; }
+}
 
 .button { display: inline-flex; gap: 8px; align-items: center; padding: 8px 14px; font: 500 14px/1.5 var(--font-sans); color: var(--text-highlighted); background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; transition: background .15s, border-color .15s; }
 .button:hover { text-decoration: none; background: var(--bg-accented); }
@@ -463,5 +532,11 @@ footer { padding: 24px 0 48px; font-size: 14px; text-align: center; color: var(-
   .hero { padding: 40px 0; }
   .links { gap: 12px; }
   .split, .editor { grid-template-columns: minmax(0, 1fr); }
+  .resize-hint { padding: 14px 12px; }
+  .ruler li { padding: 4px 8px; font-size: 12px; }
+}
+
+@media (max-width: 419px) {
+  .ruler-range { display: none; }
 }
 </style>
