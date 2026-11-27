@@ -1,7 +1,8 @@
 # vue-uno-style
 
 Let data from your CMS or API style an element differently on phones, tablets
-and desktops, with plain CSS that UnoCSS generates at build time.
+and desktops, with plain CSS that UnoCSS generates at build time. Server-rendered
+pages show the right value at every screen width before any JavaScript runs.
 
 ```vue
 <h1 v-uno-style:c="{ sm: '#111827', md: '#4f46e5' }">Responsive heading</h1>
@@ -12,19 +13,57 @@ can come from anywhere: a CMS field, an API response, a user's settings.
 
 ## Why this exists
 
+A CMS often lets editors style the blocks they place on a page: a heading's
+colour, a section's background, the spacing around a card. Each setting can
+take a different value per screen size, so a block's component receives data
+like this:
+
+```ts
+{
+  textColor: { sm: '#111827', md: '#ffffff' },
+  background: { sm: '#ffffff', md: '#4f46e5' }
+}
+```
+
+Two things make that hard to style:
+
+- **You cannot know the classes in advance.** You write the component long
+  before an editor picks the values.
+- **The server cannot see the screen.** With Nuxt or any other server
+  rendering, the HTML has to be right at every screen width before the browser
+  runs any JavaScript.
+
 Utility CSS such as UnoCSS works when you know the values while you write the
 code. You write `md:c-indigo-600`, the build finds that class in your files, and
-it generates the CSS for it.
-
-That stops working when a value only arrives once the page runs. Say a CMS
-editor picks a heading colour per screen size:
+it generates the CSS for it. With values from a CMS, the usual approaches fall
+short:
 
 - **A utility class for the value**, such as `md:c-[#4f46e5]`, appears nowhere
-  in your source, so the build never generated CSS for it.
+  in your source, so the build never generated CSS for it. Safelisting every
+  value is no way out either: an editor can pick any colour.
 - **An inline style** (`style="color: #4f46e5"`) works, but inline styles have no
   media queries. You get one value for every screen.
-- **Runtime CSS-in-JS** works, but ships a styling engine to the browser and
-  writes new CSS rules while the page runs.
+- **Picking the value in JavaScript**, with `matchMedia` or VueUse's
+  `useBreakpoints`, needs a screen to measure, and the server has none. It
+  sends one value for every screen, and the page jumps to the right one once
+  its JavaScript has loaded.
+- **Runtime CSS-in-JS**, or UnoCSS's own runtime, works, but ships a styling
+  engine to the browser and writes new CSS rules while the page runs.
+
+vue-uno-style takes the data as it comes:
+
+```vue
+<section
+  class="c-gray-900 bg-white"
+  v-uno-style="{ c: block.textColor, bg: block.background }"
+>
+  <h2>{{ block.title }}</h2>
+</section>
+```
+
+The preset finds `c` and `bg` in the template and generates their CSS at build
+time. The server renders the section with its classes and variables already
+set, and when an editor leaves a field empty, the template's own classes apply.
 
 ## How it works
 
@@ -52,8 +91,13 @@ generated in the browser.
 What that buys you:
 
 - **Any value from data, per breakpoint.**
+- **Correct HTML from the server.** The server writes the classes and variables
+  into the element, and the media queries sit in a stylesheet built ahead of
+  time. Each screen width shows its own value from the first paint, and
+  hydration leaves the element as the server rendered it. Static generation,
+  such as `nuxt generate`, works the same way.
 - **Static CSS.** There is no styling engine in the browser. The directive only
-  sets classes and CSS variables, and it works with server rendering.
+  sets classes and CSS variables.
 - **Defaults stay in the template.** A value from data overrides the element's
   own utility classes. When the data has no value, the template's class applies:
 
