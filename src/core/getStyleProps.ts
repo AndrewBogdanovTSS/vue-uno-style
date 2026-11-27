@@ -9,17 +9,25 @@ export interface StylePropsResult {
   classList?: string[]
 }
 
-type ObjectValue = Responsive | StyleValue | undefined
+type ObjectValue = Responsive | StyleValue | false | undefined
 
 const isObject = (value: unknown): value is Responsive =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
 
 /**
- * Whether a value leaves its property or breakpoint unset: `''`, `null` or `undefined`. The number
- * `0` is a value like any other and writes `0`.
+ * Whether a value leaves its property or breakpoint unset: `''`, `null`, `undefined` or `false`.
+ * `false` is what `condition && value` gives when the condition fails, so it means no value, the
+ * way `:class` ignores it. The number `0` is a value like any other and writes `0`.
  */
-export const isEmptyValue = (value: unknown): value is '' | null | undefined =>
-  value === undefined || value === null || value === ''
+export const isEmptyValue = (value: unknown): value is '' | null | undefined | false =>
+  value === undefined || value === null || value === '' || value === false
+
+/**
+ * Whether a value writes nothing: an empty value, or `true`, which is never a CSS value. `true` is
+ * not empty, though: Nuxt DevTools still reports it as an invalid value.
+ */
+const isSkipped = (value: unknown): value is '' | null | undefined | boolean =>
+  isEmptyValue(value) || value === true
 
 const getClassValue = (prop: string, breakpoint: string, baseBreakpoint: string) =>
   breakpoint === baseBreakpoint
@@ -38,14 +46,14 @@ export const getStyleProps = (
   breakpoints: ResolvedBreakpoints,
   format?: PropertyFormat
 ): StylePropsResult => {
-  if (isEmptyValue(obj)) return {}
+  if (isSkipped(obj)) return {}
 
   const values = isObject(obj) ? obj : { [breakpoints.base]: obj }
   const orderedBreakpoints = [breakpoints.base, ...breakpoints.prefixed]
 
   const filteredValues = orderedBreakpoints.reduce((acc, breakpoint) => {
     const value = values[breakpoint]
-    if (!isEmptyValue(value) && acc[acc.length - 1]?.[1] !== value) acc.push([breakpoint, value])
+    if (!isSkipped(value) && acc[acc.length - 1]?.[1] !== value) acc.push([breakpoint, value])
     return acc
   }, [] as Array<[string, StyleValue]>)
 

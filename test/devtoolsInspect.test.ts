@@ -53,6 +53,12 @@ describe('inspectValue', () => {
     expect(getStyle({ sm: 0, md: '1rem' }, breakpoints, 'p').style).toEqual({ '--p': 0, '--p-md': '1rem' })
   })
 
+  it('accepts false, which leaves a property or a breakpoint unset', () => {
+    expect(kinds(false, 'h')).toEqual([])
+    expect(kinds({ sm: '10rem', md: false }, 'h')).toEqual([])
+    expect(kinds({ h: false, w: '2rem' })).toEqual([])
+  })
+
   it('reports values that are neither strings nor numbers', () => {
     expect(kinds({ sm: true }, 'c')).toEqual(['invalid-value c sm'])
     expect(kinds({ c: ['#111'] })).toEqual(['invalid-value c sm'])

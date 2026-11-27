@@ -4,7 +4,8 @@ import { getStyleProps, isEmptyValue } from './getStyleProps'
 import { blockedPropertyMessage, builtInFormats, findBlocked, isKnownProperty } from './properties'
 
 export type StyleValue = number | string
-export type Responsive<T = StyleValue> = Record<string, T | undefined>
+/** `false` and `undefined` leave a breakpoint unset, so `condition && value` type-checks. */
+export type Responsive<T = StyleValue> = Record<string, T | false | undefined>
 /** Responsive values per property. Narrow `P` to the configured property names for type safety. */
 export type ResponsiveStyles<P extends string = string> = Partial<Record<P, Responsive>>
 

@@ -58,6 +58,7 @@ describe('DevTools client helpers', () => {
     // A numeric zero is a value, so it beats the one below it
     expect(effectiveValue({ sm: 'a', md: 0 }, order, 'md')).toBe(0)
     expect(effectiveValue({ sm: 'a', md: '' }, order, 'md')).toBe('a')
+    expect(effectiveValue({ sm: 'a', md: false }, order, 'md')).toBe('a')
   })
 
   it('flags unchanged and churning elements', () => {

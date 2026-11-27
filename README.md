@@ -450,8 +450,8 @@ the element, the kind and a message. Click the element to open it in
 | `unknown-breakpoint` | A key is not one of your breakpoints. The directive drops its value. | `{ sm: '1rem', tablet: '2rem' }` |
 | `invalid-value` | A value is neither a string nor a number, or the directive has no argument and the value is not an object. | `v-uno-style:c="true"`, `v-uno-style="'red'"` |
 
-An empty value (`''`, `null` or `undefined`) gives no warning. It is the normal
-way to leave a property or a breakpoint unset.
+An empty value (`''`, `null`, `undefined` or `false`) gives no warning. It is
+the normal way to leave a property or a breakpoint unset.
 
 In development the directive is wrapped to report to the tab, on the client
 only. Production builds and server rendering use the plain directive.
@@ -520,8 +520,11 @@ site applies another. Both apply, and the usage site wins a shared property.
 
 The directive does not throw on a value it cannot use. What it does instead:
 
-- **Empty values.** `''`, `null` and `undefined` write nothing. Use them to
-  leave a property or a breakpoint unset.
+- **Empty values.** `''`, `null`, `undefined` and `false` write nothing. Use
+  them to leave a property or a breakpoint unset. `false` makes
+  `v-uno-style:h="fixedHeight && height"` work: when `fixedHeight` is false, the
+  element keeps the height its own classes give it. `0` is a value and writes
+  `0`.
 - **A key that is not a breakpoint.** With `sm`, `md` and `lg`, the value for
   `tablet` in `{ sm: '1rem', tablet: '2rem' }` is dropped. Only your
   breakpoints are read.
@@ -534,9 +537,11 @@ The directive does not throw on a value it cannot use. What it does instead:
   with `{ mb: '1rem' }` writes `vs:mb-$mb`, but no template sets `mb`, so the
   preset did not safelist it. Nothing warns. See
   [What the preset finds in your source](#what-the-preset-finds-in-your-source).
-- **A value that is neither a string nor a number.** It is written as text:
-  `true` sets `--c: true`, and an object sets `[object Object]`. The CSS gets a
-  value it cannot use.
+- **`true`.** It is never a CSS value, so it writes nothing, like `false`.
+  Unlike `false`, the [Warnings tab](#warnings-tab) reports it as an invalid
+  value, since it usually means a mistake in the binding.
+- **Another value that is neither a string nor a number.** It is written as
+  text: an object sets `[object Object]`. The CSS gets a value it cannot use.
 - **No argument and a value that is not an object.** `v-uno-style="'red'"`
   reads the string as an object of characters. It writes the classes
   `vs:0-$0 vs:1-$1 vs:2-$2` and the variables `--0: r`, `--1: e`, `--2: d`. With
